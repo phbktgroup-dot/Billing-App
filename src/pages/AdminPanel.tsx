@@ -18,6 +18,7 @@ import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { getApiUrl } from '../lib/api';
 
 interface AppUser {
   id: string;
@@ -125,6 +126,7 @@ export default function AdminPanel() {
   const { user: currentUser, profile: currentProfile } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -163,12 +165,13 @@ export default function AdminPanel() {
   const fetchUsers = async () => {
     if (!currentUser?.id) return;
     setLoading(true);
+    setError(null);
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No active session");
 
-      const response = await fetch('/api/admin/users', {
+      const response = await fetch(getApiUrl('/api/admin/users'), {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
@@ -181,8 +184,9 @@ export default function AdminPanel() {
       }
 
       setUsers(result.users || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching users:', error);
+      setError(error.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -195,7 +199,7 @@ export default function AdminPanel() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/admin/create-user', {
+      const response = await fetch(getApiUrl('/api/admin/create-user'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,7 +237,7 @@ export default function AdminPanel() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/admin/update-user', {
+      const response = await fetch(getApiUrl('/api/admin/update-user'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -292,7 +296,7 @@ export default function AdminPanel() {
       // 2. Call backend to delete from Supabase Auth (best effort)
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        await fetch('/api/admin/delete-user', {
+        await fetch(getApiUrl('/api/admin/delete-user'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -323,7 +327,7 @@ export default function AdminPanel() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/admin/toggle-status', {
+      const response = await fetch(getApiUrl('/api/admin/toggle-status'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -393,6 +397,17 @@ export default function AdminPanel() {
           <div className="glass-card p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
             <p className="text-slate-500 text-sm">Loading hierarchy...</p>
+          </div>
+        ) : error ? (
+          <div className="glass-card p-12 text-center text-red-500">
+            <p className="font-bold mb-2">Error loading users</p>
+            <p className="text-sm">{error}</p>
+            <button 
+              onClick={() => fetchUsers()}
+              className="mt-4 text-primary hover:underline text-sm font-bold"
+            >
+              Try Again
+            </button>
           </div>
         ) : hierarchy.length === 0 ? (
           <div className="glass-card p-12 text-center text-slate-500">

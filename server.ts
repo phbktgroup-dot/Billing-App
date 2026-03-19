@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(cors());
   app.use(express.json());
 
   // Supabase Admin Client
@@ -202,6 +204,43 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error deleting user:", error);
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // AI Scanning Endpoint
+  app.post("/api/scan", async (req, res) => {
+    try {
+      const { base64Data, mimeType, prompt, apiKey: clientApiKey } = req.body;
+      
+      // Use client-provided API key or fallback to server-side key
+      const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        return res.status(400).json({ error: "Gemini API key is missing." });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: mimeType, data: base64Data } }
+            ]
+          }
+        ]
+      });
+
+      if (!response.text) {
+        throw new Error("AI returned an empty response.");
+      }
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("AI Scan failed:", error);
+      res.status(500).json({ error: error.message || "An error occurred while scanning." });
     }
   });
 

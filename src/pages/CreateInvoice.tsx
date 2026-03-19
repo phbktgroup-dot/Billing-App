@@ -21,6 +21,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
 import MessageModal from '../components/MessageModal';
+import { getApiUrl } from '../lib/api';
 
 interface LineItem {
   id: string;
@@ -117,33 +118,57 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }, 500);
 
     try {
-      const apiKey = localStorage.getItem('GEMINI_API_KEY') || profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is missing. Please go to Settings and add your Gemini API Key.");
-      }
+      const apiKey = process.env.GEMINI_API_KEY;
+      
+      const prompt = "Extract invoice details: customer name, items (name, quantity, price, gst). Return as JSON format: { customerName: string, items: [{ name: string, quantity: number, rate: number, gstRate: number }] }";
 
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              { text: "Extract invoice details: customer name, items (name, quantity, price, gst). Return as JSON format: { customerName: string, items: [{ name: string, quantity: number, rate: number, gstRate: number }] }" },
-              { inlineData: { mimeType: mimeType, data: base64Data } }
-            ]
-          }
-        ]
-      });
+      let extractedText = '';
+
+      try {
+        // Try backend scanning first (more robust for Electron/CORS)
+        const response = await fetch(getApiUrl('/api/scan'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64Data, mimeType, prompt, apiKey })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          extractedText = result.text;
+        } else {
+          throw new Error("Backend scan failed");
+        }
+      } catch (backendError) {
+        console.warn("Backend scan failed, falling back to client-side scan:", backendError);
+        
+        // Fallback to client-side scanning
+        if (!apiKey) {
+          throw new Error("Gemini API key is missing. Please contact support.");
+        }
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType: mimeType, data: base64Data } }
+              ]
+            }
+          ]
+        });
+        extractedText = response.text || '';
+      }
 
       setProcessingProgress(100);
       clearInterval(interval);
 
-      if (!response.text) {
+      if (!extractedText) {
         throw new Error("AI returned an empty response.");
       }
 
       try {
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+        const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
           if (data.customerName) setCustomer(prev => ({ ...prev, name: data.customerName }));

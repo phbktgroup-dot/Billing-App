@@ -6,6 +6,7 @@ import { formatCurrency } from '../lib/utils';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { GoogleGenAI } from '@google/genai';
 import MessageModal from '../components/MessageModal';
+import { getApiUrl } from '../lib/api';
 
 export default function Purchases() {
   const { profile } = useAuth();
@@ -195,33 +196,57 @@ export default function Purchases() {
     }, 500);
 
     try {
-      const apiKey = localStorage.getItem('GEMINI_API_KEY') || profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is missing. Please go to Settings and add your Gemini API Key.");
-      }
+      const apiKey = process.env.GEMINI_API_KEY;
+      
+      const prompt = "Extract purchase invoice details: supplier name, invoice number, date, total amount. Return as JSON format: { supplierName: string, invoiceNumber: string, date: string, totalAmount: number }";
 
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              { text: "Extract purchase invoice details: supplier name, invoice number, date, total amount. Return as JSON format: { supplierName: string, invoiceNumber: string, date: string, totalAmount: number }" },
-              { inlineData: { mimeType: mimeType, data: base64Data } }
-            ]
-          }
-        ]
-      });
+      let extractedText = '';
+
+      try {
+        // Try backend scanning first (more robust for Electron/CORS)
+        const response = await fetch(getApiUrl('/api/scan'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64Data, mimeType, prompt, apiKey })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          extractedText = result.text;
+        } else {
+          throw new Error("Backend scan failed");
+        }
+      } catch (backendError) {
+        console.warn("Backend scan failed, falling back to client-side scan:", backendError);
+        
+        // Fallback to client-side scanning
+        if (!apiKey) {
+          throw new Error("Gemini API key is missing. Please contact support.");
+        }
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType: mimeType, data: base64Data } }
+              ]
+            }
+          ]
+        });
+        extractedText = response.text || '';
+      }
 
       setProcessingProgress(100);
       clearInterval(interval);
 
-      if (!response.text) {
+      if (!extractedText) {
         throw new Error("AI returned an empty response.");
       }
 
       try {
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+        const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
           
