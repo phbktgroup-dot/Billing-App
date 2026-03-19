@@ -5,7 +5,6 @@ export const getApiUrl = (path: string) => {
     // This should be the URL of your deployed application
     // We try multiple sources for the base URL
     const baseUrl = 
-      localStorage.getItem('API_BASE_URL') ||
       import.meta.env.VITE_APP_URL || 
       process.env.APP_URL || 
       'https://ais-dev-63egfcyw5xcnj4izhkgqaa-583844668197.asia-east1.run.app'; // Default to dev URL for testing
