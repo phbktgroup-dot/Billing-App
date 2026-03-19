@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import cors from "cors";
 
+console.log("SERVER STARTING...");
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,9 +19,18 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Request logging
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
   // Supabase Admin Client
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  console.log("Supabase URL:", supabaseUrl ? "Present" : "Missing");
+  console.log("Supabase Service Key:", supabaseServiceKey ? "Present" : "Missing");
 
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error("\x1b[31m%s\x1b[0m", "CRITICAL ERROR: Supabase environment variables are missing!");
@@ -38,30 +48,85 @@ async function startServer() {
     }
   });
 
+  // Test connection on startup
+  try {
+    const { data, error } = await supabaseAdmin.from('users').select('count').single();
+    if (error) {
+      console.error("Supabase Admin test query failed:", error.message);
+    } else {
+      console.log("Supabase Admin connected successfully. User count:", data.count);
+    }
+  } catch (err: any) {
+    console.error("Supabase Admin test query crashed:", err.message);
+  }
+
+  // Health check route
+  app.get("/api/health", async (req, res) => {
+    try {
+      const { data, error } = await supabaseAdmin.from('users').select('count').single();
+      if (error) throw error;
+      res.json({ status: "ok", supabase: "connected", userCount: data });
+    } catch (error: any) {
+      console.error("Health check failed:", error);
+      res.status(500).json({ status: "error", message: error.message });
+    }
+  });
+
   // Helper to verify admin token
   async function verifyAdmin(req: express.Request) {
+    console.log("verifyAdmin - Verifying token");
     const authHeader = req.headers.authorization;
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader) {
+      console.error("verifyAdmin - Missing authorization header");
+      throw new Error("Missing authorization header");
+    }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) throw new Error("Invalid token");
+    console.log("verifyAdmin - Token length:", token.length);
 
-    const { data: profile } = await supabaseAdmin.from('users').select('*').eq('id', user.id).single();
-    if (!profile) throw new Error("Profile not found");
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      console.error("verifyAdmin - Invalid token:", authError?.message || "User not found");
+      throw new Error("Invalid token: " + (authError?.message || "User not found"));
+    }
+
+    console.log("verifyAdmin - User authenticated:", user.email, "ID:", user.id);
+    const { data: profile, error: profileError } = await supabaseAdmin.from('users').select('*').eq('id', user.id).single();
+    
+    if (profileError) {
+      console.error("verifyAdmin - Profile fetch error:", profileError.message);
+      // If the user is phbktgroup@gmail.com, we might want to allow them even if profile is missing
+      if (user.email === 'phbktgroup@gmail.com') {
+        console.log("verifyAdmin - Super Admin email detected, bypassing profile check");
+        return { user, profile: { role: 'Super Admin' }, isSuperAdmin: true, isAdmin: false };
+      }
+      throw new Error("Profile not found: " + profileError.message);
+    }
+
+    if (!profile) {
+      console.error("verifyAdmin - Profile not found for user:", user.id);
+      throw new Error("Profile not found");
+    }
+
+    console.log("verifyAdmin - Profile found:", profile.role);
 
     const isSuperAdmin = profile.role === 'Super Admin' || user.email === 'phbktgroup@gmail.com';
     const isAdmin = profile.role === 'Admin';
 
-    if (!isSuperAdmin && !isAdmin) throw new Error("Forbidden: Admins only");
+    if (!isSuperAdmin && !isAdmin) {
+      console.error("verifyAdmin - Forbidden: User role is", profile.role);
+      throw new Error("Forbidden: Admins only");
+    }
 
     return { user, profile, isSuperAdmin, isAdmin };
   }
 
   // API Routes
   app.get("/api/admin/users", async (req, res) => {
+    console.log("GET /api/admin/users - Request received");
     try {
       const { user, profile, isSuperAdmin } = await verifyAdmin(req);
+      console.log(`GET /api/admin/users - Admin verified: ${user.email}, isSuperAdmin: ${isSuperAdmin}`);
 
       let query = supabaseAdmin.from('users').select('*, business_profiles(name)');
 
@@ -242,6 +307,11 @@ async function startServer() {
       console.error("AI Scan failed:", error);
       res.status(500).json({ error: error.message || "An error occurred while scanning." });
     }
+  });
+
+  // API 404 handler
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
   });
 
   // Vite middleware for development
