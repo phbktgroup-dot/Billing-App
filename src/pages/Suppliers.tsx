@@ -103,13 +103,16 @@ export default function Suppliers() {
     
     try {
       const { error } = await supabase.from('suppliers').delete().eq('id', supplierToDelete);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+          throw new Error('Cannot delete this supplier because they have associated purchase records. Please delete those first.');
+        }
+        throw error;
+      }
       fetchSuppliers();
-    } catch (error) {
-      let localSuppliers = JSON.parse(localStorage.getItem(`suppliers_${businessId}`) || '[]');
-      localSuppliers = localSuppliers.filter((s: any) => s.id !== supplierToDelete);
-      localStorage.setItem(`suppliers_${businessId}`, JSON.stringify(localSuppliers));
-      setSuppliers(localSuppliers);
+    } catch (error: any) {
+      console.error('Error deleting supplier:', error);
+      alert(error.message || 'Failed to delete supplier.');
     } finally {
       setSupplierToDelete(null);
     }

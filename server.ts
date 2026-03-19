@@ -150,8 +150,11 @@ async function startServer() {
 
   app.post("/api/admin/create-user", async (req, res) => {
     try {
-      await verifyAdmin(req);
+      const { user: adminUser, profile: adminProfile, isSuperAdmin } = await verifyAdmin(req);
       const { email, password, name, role, business_id, created_by } = req.body;
+
+      // Enforce business_id for non-Super Admins
+      const targetBusinessId = isSuperAdmin ? business_id : adminProfile.business_id;
 
       // 1. Create user in Supabase Auth
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -169,18 +172,22 @@ async function startServer() {
         email,
         name,
         role,
-        created_by
+        created_by: created_by || adminUser.id
       };
 
-      if (business_id) {
-        profileData.business_id = business_id;
+      if (targetBusinessId) {
+        profileData.business_id = targetBusinessId;
       }
 
       const { error: profileError } = await supabaseAdmin
         .from('users')
         .upsert(profileData);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // If profile creation fails, we should ideally delete the auth user to maintain consistency
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        throw profileError;
+      }
 
       res.json({ success: true, user: authData.user });
     } catch (error: any) {
@@ -262,6 +269,9 @@ async function startServer() {
 
       if (profileError) {
         console.error("Profile delete error:", profileError.message);
+        if (profileError.code === '23503' || profileError.message.includes('foreign key constraint')) {
+          throw new Error('Cannot delete this user because they have associated records (customers, invoices, etc.). Please reassign or delete those records first, or deactivate the user instead.');
+        }
         throw profileError;
       }
 

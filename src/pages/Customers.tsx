@@ -117,11 +117,16 @@ export default function Customers() {
         .delete()
         .eq('id', customerToDelete);
       
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+          throw new Error('Cannot delete this customer because they have associated invoices or other records. Please delete those records first.');
+        }
+        throw error;
+      }
       fetchCustomers();
     } catch (error: any) {
       console.error('Error deleting customer:', error);
-      alert('Failed to delete customer: ' + error.message);
+      alert(error.message || 'Failed to delete customer.');
     } finally {
       setCustomerToDelete(null);
     }

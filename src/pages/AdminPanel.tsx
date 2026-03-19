@@ -199,11 +199,13 @@ export default function AdminPanel() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+      
       const response = await fetch(getApiUrl('/api/admin/create-user'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           ...newUser,
@@ -237,11 +239,13 @@ export default function AdminPanel() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+      
       const response = await fetch(getApiUrl('/api/admin/update-user'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           userId: editingUser.id,
@@ -282,30 +286,21 @@ export default function AdminPanel() {
     if (!userToDelete) return;
 
     try {
-      // 1. Delete from public.users table directly using the frontend client.
-      // This works because Super Admins have RLS permission to delete any user.
-      const { error: dbError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userToDelete);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
 
-      if (dbError) {
-        throw new Error(dbError.message || 'Failed to delete user from database');
-      }
+      const response = await fetch(getApiUrl('/api/admin/delete-user'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ userId: userToDelete }),
+      });
 
-      // 2. Call backend to delete from Supabase Auth (best effort)
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await fetch(getApiUrl('/api/admin/delete-user'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({ userId: userToDelete }),
-        });
-      } catch (backendErr) {
-        console.warn("Backend auth deletion failed, but user was removed from database:", backendErr);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete user');
       }
 
       fetchUsers();
@@ -327,11 +322,13 @@ export default function AdminPanel() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+
       const response = await fetch(getApiUrl('/api/admin/toggle-status'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           userId: user.id,

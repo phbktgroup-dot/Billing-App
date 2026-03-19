@@ -157,11 +157,16 @@ export default function Invoices() {
         .from('invoices')
         .delete()
         .eq('id', invoiceToDelete);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+          throw new Error('Cannot delete this invoice because it has associated items or records. Please delete those first.');
+        }
+        throw error;
+      }
       fetchInvoices();
     } catch (error: any) {
       console.error('Error deleting invoice:', error);
-      alert('Failed to delete invoice: ' + error.message);
+      alert(error.message || 'Failed to delete invoice.');
     } finally {
       setInvoiceToDelete(null);
     }

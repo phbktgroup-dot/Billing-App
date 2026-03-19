@@ -135,11 +135,16 @@ export default function Inventory() {
         .delete()
         .eq('id', productToDelete);
       
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+          throw new Error('Cannot delete this product because it has associated invoice items or records. Please delete those first or mark the product as inactive.');
+        }
+        throw error;
+      }
       fetchProducts();
     } catch (error: any) {
       console.error('Error deleting product:', error);
-      alert('Failed to delete product: ' + error.message);
+      alert(error.message || 'Failed to delete product.');
     } finally {
       setProductToDelete(null);
     }
