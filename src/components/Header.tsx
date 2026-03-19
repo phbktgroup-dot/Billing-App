@@ -72,7 +72,7 @@ export default function Header() {
                 <Settings size={16} />
                 <span>Setting</span>
               </button>
-              <button onClick={() => { navigate('/settings'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+              <button onClick={() => { navigate('/settings?tab=security'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                 <Lock size={16} />
                 <span>Change password</span>
               </button>

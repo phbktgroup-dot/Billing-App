@@ -100,6 +100,7 @@ export default function Dashboard() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const businessId = profile?.business_id;
+  console.log('Dashboard businessId:', businessId, 'Profile:', profile);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -185,16 +186,18 @@ export default function Dashboard() {
       if (recent) setRecentInvoices(recent);
 
       // Fetch AI insights after dashboard data is loaded
-      await fetchAIInsights({
-        totalRevenue,
-        activeInvoices: invoices?.length || 0,
-        totalCustomers: customerCount || 0,
-        lowStockItems: lowStockProducts?.length || 0,
-        paidInvoicesCount: paidInvoices.length,
-        unpaidInvoicesCount: unpaidInvoices.length,
-        paidAmount,
-        unpaidAmount
-      }, recent || []);
+      if (businessId) {
+        await fetchAIInsights({
+          totalRevenue,
+          activeInvoices: invoices?.length || 0,
+          totalCustomers: customerCount || 0,
+          lowStockItems: lowStockProducts?.length || 0,
+          paidInvoicesCount: paidInvoices.length,
+          unpaidInvoicesCount: unpaidInvoices.length,
+          paidAmount,
+          unpaidAmount
+        }, recent || [], businessId);
+      }
 
       if (customersData) {
         const customerTotals: Record<string, { name: string, total: number }> = {};
@@ -234,14 +237,14 @@ export default function Dashboard() {
     }
   };
 
-  const fetchAIInsights = async (statsData: any, invoicesData: any) => {
+  const fetchAIInsights = async (statsData: any, invoicesData: any, businessId: string) => {
     setIsAnalyzing(true);
-    console.log('Fetching AI insights...', statsData, invoicesData);
+    console.log('Fetching AI insights...', statsData, invoicesData, businessId);
     try {
       const insights = await generateBusinessInsights({
         stats: statsData,
         recentInvoices: invoicesData?.slice(0, 20).map((inv: any) => ({ total: inv.total, status: inv.status, date: inv.date }))
-      }, businessId!);
+      }, businessId);
       console.log('AI insights received:', insights);
       setAiInsights(insights);
       

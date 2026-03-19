@@ -23,6 +23,7 @@ export interface SimulationResult {
 }
 
 export async function generateBusinessInsights(data: any, businessId: string): Promise<BusinessInsights> {
+  console.log('Generating insights for business:', businessId, 'with data:', data);
   const CACHE_KEY = `ai_business_insights_cache_${businessId}`;
   const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
@@ -179,7 +180,7 @@ export async function generateBusinessInsights(data: any, businessId: string): P
     localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), insights }));
     return insights;
   } catch (error) {
-    console.error("AI Insights Error:", error);
+    console.error("AI Insights Error details:", error);
     // Fallback data
     return {
       summary: "Business is stable with consistent revenue growth.",

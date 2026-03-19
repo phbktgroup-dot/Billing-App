@@ -13,13 +13,19 @@ import {
   Loader2, 
   Save,
   CheckCircle2,
-  Lock
+  Lock,
+  ShieldCheck,
+  Smartphone,
+  History
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Settings() {
   const { user, profile, refreshProfile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -45,8 +51,25 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    if (profile?.business_profiles) {
-      const bp = profile.business_profiles;
+    console.log('Settings profile data:', profile);
+    
+    const fetchBusinessProfile = async () => {
+      if (profile?.business_id && !profile?.business_profiles) {
+        const { data, error } = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('id', profile.business_id)
+          .maybeSingle();
+        
+        if (data) {
+          populateForm(data);
+        }
+      } else if (profile?.business_profiles) {
+        populateForm(profile.business_profiles);
+      }
+    };
+
+    const populateForm = (bp: any) => {
       setFormData({
         businessName: bp.name || '',
         ownerName: bp.owner_name || '',
@@ -65,7 +88,9 @@ export default function Settings() {
       if (bp.logo_url) {
         setLogoPreview(bp.logo_url);
       }
-    }
+    };
+
+    fetchBusinessProfile();
   }, [profile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,6 +194,54 @@ export default function Settings() {
     }
   };
 
+  const activeTab = (searchParams.get('tab') as 'profile' | 'security') || 'profile';
+  
+  const setActiveTab = (tab: 'profile' | 'security') => {
+    setSearchParams({ tab });
+  };
+  
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      // 1. Re-authenticate user to verify old password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: passwordData.oldPassword
+      });
+      
+      if (signInError) {
+        throw new Error('Incorrect old password');
+      }
+
+      // 2. Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+      if (updateError) throw updateError;
+      
+      setSuccess('Password updated successfully!');
+      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err: any) {
+      setError(err.message || 'Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
@@ -192,251 +265,162 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {/* Sidebar Navigation */}
-        <div className="lg:col-span-1 space-y-1.5">
-          <button className="w-full text-left px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium flex items-center space-x-2.5">
+        <div className="col-span-1 space-y-1.5">
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'profile' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
+          >
             <Building2 size={16} />
             <span>Business Profile</span>
           </button>
-          <button className="w-full text-left px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm font-medium flex items-center space-x-2.5 transition-colors">
+          <button 
+            onClick={() => setActiveTab('security')}
+            className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'security' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
+          >
             <Lock size={16} />
             <span>Security</span>
           </button>
         </div>
 
         {/* Main Content */}
-        <div className="lg:col-span-2">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-5"
-          >
+        <div className="col-span-2 p-5 bg-white rounded-xl shadow-sm">
+          {activeTab === 'profile' && (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Logo Section */}
-              <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-3 sm:space-y-0 sm:space-x-4 pb-6 border-b border-slate-100">
-                <div className="relative group">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-slate-200 group-hover:border-primary transition-colors">
-                    {logoPreview ? (
-                      <img src={logoPreview} alt="Business logo" className="w-full h-full object-contain" />
-                    ) : (
-                      <ImageIcon size={28} className="text-slate-400" />
-                    )}
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white rounded-lg shadow-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:text-primary transition-colors"
-                  >
-                    <ImageIcon size={14} />
-                  </button>
-                </div>
-                <div className="flex-1 text-center sm:text-left">
-                  <h3 className="text-sm font-bold text-slate-900">Business Logo</h3>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Update your business logo. Recommended size: 512x512px.</p>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Name</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="text" 
-                      required
-                      className="input-field pl-10 text-xs py-2"
-                      value={formData.businessName}
-                      onChange={e => setFormData({...formData, businessName: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Owner Name</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="text" 
-                      required
-                      className="input-field pl-10 text-xs py-2"
-                      value={formData.ownerName}
-                      onChange={e => setFormData({...formData, ownerName: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Info */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Address</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                  <textarea 
-                    required
-                    rows={2}
-                    className="input-field pl-10 pt-2 text-xs"
-                    value={formData.address}
-                    onChange={e => setFormData({...formData, address: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mobile Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="tel" 
-                      required
-                      className="input-field pl-10 text-xs py-2"
-                      value={formData.mobile}
-                      onChange={e => setFormData({...formData, mobile: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="email" 
-                      required
-                      className="input-field pl-10 text-xs py-2"
-                      value={formData.email}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Tax Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GST Number</label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="text" 
-                      required
-                      className="input-field pl-10 uppercase text-xs py-2"
-                      value={formData.gstNumber}
-                      onChange={e => setFormData({...formData, gstNumber: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">PAN Number</label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="text" 
-                      required
-                      className="input-field pl-10 uppercase text-xs py-2"
-                      value={formData.panNumber}
-                      onChange={e => setFormData({...formData, panNumber: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Bank Info */}
-              <div className="bg-slate-50 p-4 rounded-xl space-y-4">
-                <h3 className="text-sm font-bold text-slate-900">Bank Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bank Name</label>
-                    <input 
-                      type="text" 
-                      className="input-field text-xs py-2"
-                      value={formData.bankName}
-                      onChange={e => setFormData({...formData, bankName: e.target.value})}
-                    />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Name</label>
+                    <input type="text" className="input-field text-xs py-2 border border-slate-300" value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Account Number</label>
-                    <input 
-                      type="text" 
-                      className="input-field text-xs py-2"
-                      value={formData.bankAccountNo}
-                      onChange={e => setFormData({...formData, bankAccountNo: e.target.value})}
-                    />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Owner Name</label>
+                    <input type="text" className="input-field text-xs py-2" value={formData.ownerName} onChange={e => setFormData({...formData, ownerName: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Address</label>
+                    <textarea className="input-field text-xs py-2" rows={2} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">IFSC Code</label>
-                    <input 
-                      type="text" 
-                      className="input-field uppercase text-xs py-2"
-                      value={formData.bankIfsc}
-                      onChange={e => setFormData({...formData, bankIfsc: e.target.value})}
-                    />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mobile</label>
+                    <input type="text" className="input-field text-xs py-2" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Branch Name</label>
-                    <input 
-                      type="text" 
-                      className="input-field text-xs py-2"
-                      value={formData.bankBranch}
-                      onChange={e => setFormData({...formData, bankBranch: e.target.value})}
-                    />
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Email</label>
+                    <input type="email" className="input-field text-xs py-2" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GST Number</label>
+                    <input type="text" className="input-field text-xs py-2" value={formData.gstNumber} onChange={e => setFormData({...formData, gstNumber: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">PAN Number</label>
+                    <input type="text" className="input-field text-xs py-2" value={formData.panNumber} onChange={e => setFormData({...formData, panNumber: e.target.value})} />
                   </div>
                 </div>
-              </div>
 
-              {/* Invoice Settings */}
-              <div className="bg-slate-50 p-4 rounded-xl space-y-4">
-                <h3 className="text-sm font-bold text-slate-900">Invoice Settings</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoice Prefix</label>
-                    <input 
-                      type="text" 
-                      className="input-field text-xs py-2"
-                      value={formData.invoicePrefix}
-                      onChange={e => setFormData({...formData, invoicePrefix: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Number Format</label>
-                    <input 
-                      type="text" 
-                      className="input-field text-xs py-2"
-                      value={formData.invoiceFormat}
-                      onChange={e => setFormData({...formData, invoiceFormat: e.target.value})}
-                    />
+                <div className="pt-6 border-t border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900 mb-4">Invoice Settings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoice Prefix</label>
+                      <input type="text" className="input-field text-xs py-2" value={formData.invoicePrefix} onChange={e => setFormData({...formData, invoicePrefix: e.target.value})} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoice Format</label>
+                      <input type="text" className="input-field text-xs py-2" value={formData.invoiceFormat} onChange={e => setFormData({...formData, invoiceFormat: e.target.value})} />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-2">
-                <button 
-                  type="submit" 
-                  disabled={isLoading || isUploading}
-                  className="btn-primary px-6 py-2 flex items-center space-x-2 text-sm"
-                >
-                  {isLoading || isUploading ? (
-                    <>
-                      <Loader2 className="animate-spin" size={16} />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      <span>Save Changes</span>
-                    </>
-                  )}
+                <div className="pt-6 border-t border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900 mb-4">Bank Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bank Name</label>
+                      <input type="text" className="input-field text-xs py-2" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Account Number</label>
+                      <input type="text" className="input-field text-xs py-2" value={formData.bankAccountNo} onChange={e => setFormData({...formData, bankAccountNo: e.target.value})} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">IFSC Code</label>
+                      <input type="text" className="input-field text-xs py-2" value={formData.bankIfsc} onChange={e => setFormData({...formData, bankIfsc: e.target.value})} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Branch</label>
+                      <input type="text" className="input-field text-xs py-2" value={formData.bankBranch} onChange={e => setFormData({...formData, bankBranch: e.target.value})} />
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" disabled={isLoading} className="btn-primary px-6 py-2 text-sm">
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
+              </form>
+          )}
+          {activeTab === 'security' && (
+              <div className="space-y-8">
+                {/* Change Password */}
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-900">Change Password</h3>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Old Password</label>
+                    <input type="password" required className="input-field text-xs py-2" value={passwordData.oldPassword} onChange={e => setPasswordData({...passwordData, oldPassword: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">New Password</label>
+                    <input type="password" required className="input-field text-xs py-2" value={passwordData.newPassword} onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Confirm New Password</label>
+                    <input type="password" required className="input-field text-xs py-2" value={passwordData.confirmPassword} onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})} />
+                  </div>
+                  <button type="submit" disabled={isLoading} className="btn-primary px-6 py-2 text-sm">{isLoading ? 'Updating...' : 'Update Password'}</button>
+                </form>
+
+                {/* Advanced Security */}
+                <div className="space-y-4 pt-6 border-t border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900">Advanced Security</h3>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">Two-Factor Authentication (2FA)</p>
+                      <p className="text-[10px] text-slate-500">Add an extra layer of security to your account.</p>
+                    </div>
+                    <button className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-600 cursor-not-allowed">Coming Soon</button>
+                  </div>
+                  
+                  {/* API Keys */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-900">API Keys</p>
+                      <button className="text-[10px] font-bold text-primary hover:underline">Generate New Key</button>
+                    </div>
+                    <div className="text-[10px] text-slate-500 p-2 bg-slate-50 rounded-lg">
+                      <p>No API keys generated yet.</p>
+                    </div>
+                  </div>
+
+                  {/* Device Management */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-900">Device Management</p>
+                    <div className="text-[10px] text-slate-500 p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                      <p>Current session: {navigator.userAgent.split(' ').slice(-2).join(' ')}</p>
+                      <button 
+                        onClick={async () => {
+                          await supabase.auth.signOut();
+                          window.location.reload();
+                        }}
+                        className="px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </form>
-          </motion.div>
+          )}
         </div>
       </div>
     </div>
