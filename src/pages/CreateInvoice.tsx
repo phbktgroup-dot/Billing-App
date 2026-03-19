@@ -117,7 +117,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }, 500);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const apiKey = localStorage.getItem('GEMINI_API_KEY') || profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Gemini API key is missing. Please go to Settings and add your Gemini API Key.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [
@@ -133,12 +138,16 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       setProcessingProgress(100);
       clearInterval(interval);
 
+      if (!response.text) {
+        throw new Error("AI returned an empty response.");
+      }
+
       try {
         const jsonMatch = response.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
           if (data.customerName) setCustomer(prev => ({ ...prev, name: data.customerName }));
-          if (data.items) {
+          if (data.items && Array.isArray(data.items)) {
             const currentProducts = [...products];
             const newItems = [];
             
@@ -183,13 +192,20 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             }
             setProducts(currentProducts);
             setItems(newItems);
+            setModal({ isOpen: true, title: 'Success', message: 'Invoice scanned and items extracted successfully!', type: 'success' });
+          } else {
+            throw new Error("No items found in the scanned invoice.");
           }
+        } else {
+          throw new Error("Could not extract structured data from the invoice.");
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to parse AI response", e);
+        throw new Error("Failed to process the AI response: " + e.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Scan failed:", error);
+      setModal({ isOpen: true, title: 'Scan Failed', message: error.message || "An error occurred while scanning the invoice.", type: 'error' });
     } finally {
       clearInterval(interval);
       setTimeout(() => {

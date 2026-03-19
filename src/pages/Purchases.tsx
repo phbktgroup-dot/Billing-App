@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download } from 'lucide-react';
+import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/utils';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { GoogleGenAI } from '@google/genai';
+import MessageModal from '../components/MessageModal';
 
 export default function Purchases() {
   const { profile } = useAuth();
@@ -16,6 +18,14 @@ export default function Purchases() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
 
   const businessId = profile?.business_id;
 
@@ -177,6 +187,99 @@ export default function Purchases() {
     setEditingPurchase(null);
   };
 
+  const processScannedFile = async (base64Data: string, mimeType: string) => {
+    setIsScanning(true);
+    setProcessingProgress(0);
+    const interval = setInterval(() => {
+      setProcessingProgress(p => p < 90 ? p + 10 : p);
+    }, 500);
+
+    try {
+      const apiKey = localStorage.getItem('GEMINI_API_KEY') || profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Gemini API key is missing. Please go to Settings and add your Gemini API Key.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
+          {
+            parts: [
+              { text: "Extract purchase invoice details: supplier name, invoice number, date, total amount. Return as JSON format: { supplierName: string, invoiceNumber: string, date: string, totalAmount: number }" },
+              { inlineData: { mimeType: mimeType, data: base64Data } }
+            ]
+          }
+        ]
+      });
+
+      setProcessingProgress(100);
+      clearInterval(interval);
+
+      if (!response.text) {
+        throw new Error("AI returned an empty response.");
+      }
+
+      try {
+        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const data = JSON.parse(jsonMatch[0]);
+          
+          // Find or create supplier
+          let supplierId = '';
+          if (data.supplierName) {
+            const existingSupplier = suppliers.find(s => s.name.toLowerCase() === data.supplierName.toLowerCase());
+            if (existingSupplier) {
+              supplierId = existingSupplier.id;
+            } else {
+              // Create new supplier
+              const { data: newSup, error: supError } = await supabase
+                .from('suppliers')
+                .insert([{
+                  business_id: businessId,
+                  name: data.supplierName,
+                  created_by: profile?.id
+                }])
+                .select()
+                .single();
+              
+              if (!supError && newSup) {
+                supplierId = newSup.id;
+                setSuppliers(prev => [...prev, newSup]);
+              }
+            }
+          }
+
+          setFormData({
+            supplier_id: supplierId || (suppliers.length > 0 ? suppliers[0].id : ''),
+            invoice_number: data.invoiceNumber || `PUR-${Date.now().toString().slice(-6)}`,
+            date: data.date ? new Date(data.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            total_amount: data.totalAmount || 0,
+            status: 'paid',
+            notes: 'Scanned via AI'
+          });
+          
+          setIsModalOpen(true);
+          setModal({ isOpen: true, title: 'Success', message: 'Bill scanned and details extracted successfully!', type: 'success' });
+        } else {
+          throw new Error("Could not extract structured data from the bill.");
+        }
+      } catch (e: any) {
+        console.error("Failed to parse AI response", e);
+        throw new Error("Failed to process the AI response: " + e.message);
+      }
+    } catch (error: any) {
+      console.error("AI Scan failed:", error);
+      setModal({ isOpen: true, title: 'Scan Failed', message: error.message || "An error occurred while scanning the bill.", type: 'error' });
+    } finally {
+      clearInterval(interval);
+      setTimeout(() => {
+        setIsScanning(false);
+        setProcessingProgress(0);
+      }, 500);
+    }
+  };
+
   const filteredPurchases = purchases.filter(p => 
     p.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.suppliers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -189,10 +292,30 @@ export default function Purchases() {
           <h1 className="text-2xl font-bold text-slate-900">Purchases</h1>
           <p className="text-slate-500">Manage your purchase invoices and expenses.</p>
         </div>
-        <button className="btn-primary flex items-center" onClick={() => openModal()}>
-          <Plus size={18} className="mr-2" />
-          Record Purchase
-        </button>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => document.getElementById('purchase-file-input')?.click()}
+            className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm"
+          >
+            <Scan size={18} className="mr-2 text-primary" />
+            Scan Bill
+          </button>
+          <input id="purchase-file-input" type="file" className="hidden" onChange={(e) => {
+            if (e.target.files?.[0]) {
+              const file = e.target.files[0];
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = async () => {
+                const base64Data = (reader.result as string).split(',')[1];
+                await processScannedFile(base64Data, file.type);
+              };
+            }
+          }} />
+          <button className="btn-primary flex items-center" onClick={() => openModal()}>
+            <Plus size={18} className="mr-2" />
+            Record Purchase
+          </button>
+        </div>
       </div>
 
       <div className="glass-card overflow-hidden">
@@ -396,6 +519,45 @@ export default function Purchases() {
           setPurchaseToDelete(null);
         }}
       />
+
+      <MessageModal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+      />
+
+      {isScanning && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center">
+            <div className="relative w-24 h-24 mb-4">
+              <svg className="w-full h-full" viewBox="0 0 36 36">
+                <path
+                  className="text-slate-200"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                />
+                <path
+                  className="text-primary transition-all duration-300"
+                  strokeDasharray={`${processingProgress}, 100`}
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-lg text-primary">
+                {processingProgress}%
+              </div>
+            </div>
+            <p className="text-slate-600 font-medium">Processing Bill...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

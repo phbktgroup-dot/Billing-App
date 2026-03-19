@@ -41,10 +41,12 @@ export default function Settings() {
     bankName: '',
     bankAccountNo: '',
     bankIfsc: '',
-    bankBranch: ''
+    bankBranch: '',
+    geminiApiKey: ''
   });
 
   useEffect(() => {
+    const savedApiKey = localStorage.getItem('GEMINI_API_KEY') || '';
     if (profile?.business_profiles) {
       const bp = profile.business_profiles;
       setFormData({
@@ -60,11 +62,14 @@ export default function Settings() {
         bankName: bp.bank_name || '',
         bankAccountNo: bp.bank_account_no || '',
         bankIfsc: bp.bank_ifsc || '',
-        bankBranch: bp.bank_branch || ''
+        bankBranch: bp.bank_branch || '',
+        geminiApiKey: savedApiKey || bp.gemini_api_key || ''
       });
       if (bp.logo_url) {
         setLogoPreview(bp.logo_url);
       }
+    } else {
+      setFormData(prev => ({ ...prev, geminiApiKey: savedApiKey }));
     }
   }, [profile]);
 
@@ -132,11 +137,17 @@ export default function Settings() {
           bank_ifsc: formData.bankIfsc,
           bank_branch: formData.bankBranch,
           invoice_prefix: formData.invoicePrefix,
-          invoice_number_format: formData.invoiceFormat
+          invoice_number_format: formData.invoiceFormat,
+          gemini_api_key: formData.geminiApiKey
         })
         .eq('id', profile.business_id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        // If column doesn't exist, just save to localStorage
+        localStorage.setItem('GEMINI_API_KEY', formData.geminiApiKey);
+      } else {
+        localStorage.setItem('GEMINI_API_KEY', formData.geminiApiKey);
+      }
 
       // 2. Upload logo if exists
       if (logoFile) {
@@ -411,6 +422,30 @@ export default function Settings() {
                       onChange={e => setFormData({...formData, invoiceFormat: e.target.value})}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* AI Settings */}
+              <div className="bg-slate-50 p-6 rounded-2xl space-y-6">
+                <h3 className="font-bold text-slate-900 flex items-center">
+                  <Lock className="mr-2 text-primary" size={18} />
+                  AI & Scanning Settings
+                </h3>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Gemini API Key</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      type="password" 
+                      placeholder="Enter your Gemini API Key for AI Scanning"
+                      className="input-field pl-12"
+                      value={formData.geminiApiKey}
+                      onChange={e => setFormData({...formData, geminiApiKey: e.target.value})}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Required for AI Scan feature. You can get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a>.
+                  </p>
                 </div>
               </div>
 

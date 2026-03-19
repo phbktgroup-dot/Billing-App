@@ -53,6 +53,13 @@ export default function Dashboard() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const apiKey = localStorage.getItem('GEMINI_API_KEY') || profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        alert("Gemini API key is missing. Please go to Settings and add your Gemini API Key to enable scanning.");
+        navigate('/settings');
+        return;
+      }
+      
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => {
