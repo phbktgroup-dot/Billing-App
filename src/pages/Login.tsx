@@ -11,6 +11,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(true);
@@ -27,34 +28,31 @@ export default function Login() {
     }
   }, [user, loading, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setSuccessMsg(null);
     
     try {
-      // Increase timeout to 30 seconds for slower connections
+      let result;
+      
       const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
-
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Login timed out. This might be due to a slow connection. Please try again.')), 30000)
       );
-
-      const result = await Promise.race([loginPromise, timeoutPromise]) as any;
-
+      result = await Promise.race([loginPromise, timeoutPromise]) as any;
+      
       if (result.error) throw result.error;
 
       if (result.data?.user) {
-        // Successful login
-        // The AuthContext will handle the profile fetching and loading state
-        // The useEffect in this component will handle the redirect
         console.log('Login successful, waiting for redirect...');
       }
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error('Auth error:', err);
       setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
       if (mounted) setIsLoading(false);
@@ -88,8 +86,15 @@ export default function Login() {
               <p>{error}</p>
             </div>
           )}
+          
+          {successMsg && (
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start space-x-3 text-emerald-600 text-sm">
+              <ShieldCheck size={18} className="shrink-0 mt-0.5" />
+              <p>{successMsg}</p>
+            </div>
+          )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleAuth} className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
               <div className="relative group">
@@ -116,6 +121,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="input-field pl-12 pr-12"
+                  minLength={6}
                 />
                 <button 
                   type="button"
@@ -149,8 +155,8 @@ export default function Login() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-sm text-slate-500">
-              Authorized personnel only. Contact admin for access.
+            <p className="text-xs text-slate-400">
+              Only authorized personnel can access this system.
             </p>
           </div>
         </div>
@@ -160,7 +166,5 @@ export default function Login() {
         </p>
       </motion.div>
     </div>
-  );
-}    </div>
   );
 }
