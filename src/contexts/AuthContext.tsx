@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
@@ -16,6 +16,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   async function getProfile(userId: string) {
     try {
@@ -106,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut();
         setProfile(null);
         setUser(null);
+        userIdRef.current = null;
         alert('Your account has been disabled. Please contact your administrator.');
         return;
       }
@@ -130,9 +132,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
       
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await getProfile(session.user.id);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      userIdRef.current = currentUser?.id ?? null;
+      
+      if (currentUser) {
+        await getProfile(currentUser.id);
       } else {
         setProfile(null);
       }
@@ -147,16 +152,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(newUser);
       
       if (newUser) {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setLoading(true);
+        if (event === 'SIGNED_IN') {
+          // Only show loading screen if we are transitioning from a logged-out state
+          // This prevents unmounting the app if SIGNED_IN fires when the app comes to foreground
+          if (userIdRef.current !== newUser.id) {
+            setLoading(true);
+          }
+          userIdRef.current = newUser.id;
           getProfile(newUser.id).finally(() => {
             if (mounted) setLoading(false);
           });
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Do not set loading to true on token refresh, as it causes the entire app to unmount and remount (refresh)
+          // Just fetch the profile in the background
+          userIdRef.current = newUser.id;
+          getProfile(newUser.id);
         } else {
+          userIdRef.current = newUser.id;
           getProfile(newUser.id);
         }
       } else {
         setProfile(null);
+        userIdRef.current = null;
         setLoading(false);
       }
     });
@@ -170,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    userIdRef.current = null;
   };
 
   return (
