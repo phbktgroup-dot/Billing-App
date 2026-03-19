@@ -6,7 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "tsx server.ts",
-    "dev:electron": "concurrently \"NODE_ENV=development npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "dev:electron": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "build": "vite build",
     "build:electron": "npm run build && electron-builder",
     "preview": "vite preview",
@@ -60,6 +60,7 @@
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
     "tailwindcss": "^4.1.14",
