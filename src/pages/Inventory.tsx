@@ -188,51 +188,51 @@ export default function Inventory() {
   const outOfStockCount = products.filter(p => p.stock === 0).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Inventory Management</h1>
-          <p className="text-slate-500">Track stock levels, movements, and low stock alerts.</p>
+          <h1 className="text-lg font-bold text-slate-900">Inventory Management</h1>
+          <p className="text-[10px] text-slate-500">Track stock levels, movements, and low stock alerts.</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <button 
             onClick={() => setShowStockHistory(true)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center"
+            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 flex items-center text-[10px]"
           >
-            <ArrowUpDown size={18} className="mr-2" />
+            <ArrowUpDown size={14} className="mr-1" />
             Stock History
           </button>
-          <button className="btn-primary flex items-center" onClick={() => openModal()}>
-            <Plus size={18} className="mr-2" />
+          <button className="btn-primary flex items-center text-[10px] px-2.5 py-1.5 rounded-lg" onClick={() => openModal()}>
+            <Plus size={14} className="mr-1" />
             Add Product
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 border-l-4 border-blue-500">
-          <p className="text-sm font-medium text-slate-500">Total Items</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">{products.length}</h3>
-          <div className="flex items-center text-xs text-emerald-600 font-bold mt-2">
-            <ArrowUpRight size={14} className="mr-1" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="glass-card p-2.5 border-l-4 border-blue-500">
+          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Total Items</p>
+          <h3 className="text-sm font-bold text-slate-900 mt-0">{products.length}</h3>
+          <div className="flex items-center text-[8px] text-emerald-600 font-bold mt-0.5">
+            <ArrowUpRight size={8} className="mr-1" />
             Active products
           </div>
         </div>
-        <div className="glass-card p-6 border-l-4 border-orange-500">
-          <p className="text-sm font-medium text-slate-500">Low Stock Alerts</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">{lowStockCount} Items</h3>
-          <div className="flex items-center text-xs text-orange-600 font-bold mt-2">
-            <AlertTriangle size={14} className="mr-1" />
+        <div className="glass-card p-2.5 border-l-4 border-orange-500">
+          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Low Stock Alerts</p>
+          <h3 className="text-sm font-bold text-slate-900 mt-0">{lowStockCount} Items</h3>
+          <div className="flex items-center text-[8px] text-orange-600 font-bold mt-0.5">
+            <AlertTriangle size={8} className="mr-1" />
             Action required
           </div>
         </div>
-        <div className="glass-card p-6 border-l-4 border-red-500">
-          <p className="text-sm font-medium text-slate-500">Out of Stock</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">{outOfStockCount} Items</h3>
-          <div className="flex items-center text-xs text-red-600 font-bold mt-2">
-            <ArrowDownRight size={14} className="mr-1" />
+        <div className="glass-card p-2.5 border-l-4 border-red-500">
+          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Out of Stock</p>
+          <h3 className="text-sm font-bold text-slate-900 mt-0">{outOfStockCount} Items</h3>
+          <div className="flex items-center text-[8px] text-red-600 font-bold mt-0.5">
+            <ArrowDownRight size={8} className="mr-1" />
             Loss of revenue
           </div>
         </div>
@@ -240,72 +240,72 @@ export default function Inventory() {
 
       {/* Inventory Table */}
       <div className="glass-card overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <div className="p-2.5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
             <input 
               type="text" 
               placeholder="Search by SKU or Product Name..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+              className="w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex items-center space-x-3">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
-              <Filter size={20} />
+          <div className="flex items-center space-x-2">
+            <button className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
+              <Filter size={12} />
             </button>
-            <div className="h-6 w-[1px] bg-slate-200"></div>
-            <p className="text-sm text-slate-500">Showing {filteredProducts.length} of {products.length} products</p>
+            <div className="h-3 w-[1px] bg-slate-200"></div>
+            <p className="text-[10px] text-slate-500">Showing {filteredProducts.length} of {products.length} products</p>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4">Product Details</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Stock Level</th>
-                <th className="px-6 py-4">Selling Price</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Actions</th>
+              <tr className="bg-slate-50/50 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
+                <th className="px-2.5 py-1.5">Product Details</th>
+                <th className="px-2.5 py-1.5">Category</th>
+                <th className="px-2.5 py-1.5">Stock Level</th>
+                <th className="px-2.5 py-1.5">Selling Price</th>
+                <th className="px-2.5 py-1.5">Status</th>
+                <th className="px-2.5 py-1.5">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-                    <p className="text-slate-500 text-sm">Loading products...</p>
+                  <td colSpan={6} className="px-3 py-6 text-center">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary mb-1.5" />
+                    <p className="text-slate-500 text-[10px]">Loading products...</p>
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <Package className="w-12 h-12 mx-auto text-slate-200 mb-2" />
-                    <p className="text-slate-500 font-medium">No products found</p>
-                    <button onClick={() => openModal()} className="text-primary text-sm font-bold mt-2 hover:underline">Add your first product</button>
+                  <td colSpan={6} className="px-3 py-6 text-center">
+                    <Package className="w-8 h-8 mx-auto text-slate-200 mb-1.5" />
+                    <p className="text-slate-500 font-medium text-[10px]">No products found</p>
+                    <button onClick={() => openModal()} className="text-primary text-[10px] font-bold mt-0.5 hover:underline">Add your first product</button>
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 mr-3">
-                          <Package size={20} />
+                        <div className="w-6 h-6 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 mr-2">
+                          <Package size={12} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-900">{product.name}</p>
-                          <p className="text-xs text-slate-500">{product.sku}</p>
+                          <p className="text-[10px] font-bold text-slate-900">{product.name}</p>
+                          <p className="text-[8px] text-slate-500">{product.sku}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{product.category}</td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs font-medium">
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600">{product.category}</td>
+                    <td className="px-2.5 py-1.5">
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between text-[8px] font-medium">
                           <span className={cn(
                             product.stock <= product.min_stock ? "text-orange-600" : "text-slate-600"
                           )}>
@@ -313,7 +313,7 @@ export default function Inventory() {
                           </span>
                           <span className="text-slate-400">Min: {product.min_stock}</span>
                         </div>
-                        <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
                           <div 
                             className={cn(
                               "h-full rounded-full transition-all",
@@ -325,10 +325,10 @@ export default function Inventory() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{formatCurrency(product.price)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-2.5 py-1.5 text-[10px] font-bold text-slate-900">{formatCurrency(product.price)}</td>
+                    <td className="px-2.5 py-1.5">
                       <span className={cn(
-                        "px-2 py-1 rounded-lg text-[10px] font-bold uppercase",
+                        "px-1 py-0.5 rounded text-[8px] font-bold uppercase",
                         product.stock > product.min_stock ? "bg-emerald-100 text-emerald-700" : 
                         product.stock > 0 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"
                       )}>
@@ -336,19 +336,19 @@ export default function Inventory() {
                          product.stock > 0 ? 'Low Stock' : 'Out of Stock'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-2.5 py-1.5">
+                      <div className="flex items-center space-x-1">
                         <button 
                           onClick={() => openModal(product)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded transition-all"
                         >
-                          <Edit size={16} />
+                          <Edit size={12} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(product.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -363,42 +363,42 @@ export default function Inventory() {
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={20} className="text-slate-400" />
+              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={16} className="text-slate-400" />
               </button>
             </div>
             
-            <form onSubmit={handleSave} className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Product Name</label>
+            <form onSubmit={handleSave} className="p-3 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">Product Name</label>
                   <input 
                     required
                     type="text" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">SKU / Item Code</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">SKU / Item Code</label>
                   <input 
                     required
                     type="text" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.sku}
                     onChange={e => setFormData({...formData, sku: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Category</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">Category</label>
                   <select 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
                   >
@@ -409,10 +409,10 @@ export default function Inventory() {
                     <option>Services</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">GST Rate (%)</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">GST Rate (%)</label>
                   <select 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.gst_rate}
                     onChange={e => setFormData({...formData, gst_rate: Number(e.target.value)})}
                   >
@@ -423,62 +423,62 @@ export default function Inventory() {
                     <option value={28}>28%</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Purchase Price</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">Purchase Price</label>
                   <input 
                     required
                     type="number" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.purchase_price}
                     onChange={e => setFormData({...formData, purchase_price: Number(e.target.value)})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Selling Price</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">Selling Price</label>
                   <input 
                     required
                     type="number" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.price}
                     onChange={e => setFormData({...formData, price: Number(e.target.value)})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Initial Stock</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">Initial Stock</label>
                   <input 
                     required
                     type="number" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.stock}
                     onChange={e => setFormData({...formData, stock: Number(e.target.value)})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Min Stock Level</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">Min Stock Level</label>
                   <input 
                     required
                     type="number" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.min_stock}
                     onChange={e => setFormData({...formData, min_stock: Number(e.target.value)})}
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                  className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg font-bold hover:bg-slate-200 transition-all text-[10px]"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   disabled={isSaving}
-                  className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50"
+                  className="px-3 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px]"
                 >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Save className="w-3 h-3 mr-1.5" />}
                   {editingProduct ? 'Update Product' : 'Save Product'}
                 </button>
               </div>
@@ -490,46 +490,46 @@ export default function Inventory() {
       {/* Stock History Modal */}
       {showStockHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                <ArrowUpDown className="mr-2 text-primary" />
+          <div className="bg-white w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center">
+                <ArrowUpDown className="mr-2 text-primary" size={16} />
                 Recent Stock Movements
               </h2>
               <button onClick={() => setShowStockHistory(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X size={24} />
+                <X size={18} />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="space-y-4">
+            <div className="p-3 overflow-y-auto flex-1">
+              <div className="space-y-2">
                 {products.length === 0 ? (
-                  <p className="text-center text-slate-500 py-8">No stock history available.</p>
+                  <p className="text-center text-slate-500 py-4 text-[10px]">No stock history available.</p>
                 ) : (
                   // Mocking stock history based on current products for demonstration
                   products.slice(0, 10).map((product, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-primary/30 transition-colors">
-                      <div className="flex items-center space-x-4">
+                    <div key={index} className="flex items-center justify-between p-2 border border-slate-100 rounded-lg hover:border-primary/30 transition-colors">
+                      <div className="flex items-center space-x-2">
                         <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center",
+                          "w-7 h-7 rounded-lg flex items-center justify-center",
                           index % 2 === 0 ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600"
                         )}>
-                          {index % 2 === 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                          {index % 2 === 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">{product.name}</p>
-                          <p className="text-xs text-slate-500">
-                            {index % 2 === 0 ? 'Stock Added (Purchase)' : 'Stock Removed (Sale)'} • {new Date(Date.now() - index * 86400000).toLocaleDateString()}
+                          <p className="font-bold text-slate-900 text-[10px]">{product.name}</p>
+                          <p className="text-[9px] text-slate-500">
+                            {index % 2 === 0 ? 'Stock Added' : 'Stock Removed'} • {new Date(Date.now() - index * 86400000).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={cn(
-                          "font-bold",
+                          "font-bold text-[10px]",
                           index % 2 === 0 ? "text-emerald-600" : "text-orange-600"
                         )}>
-                          {index % 2 === 0 ? '+' : '-'}{Math.floor(Math.random() * 50) + 1} units
+                          {index % 2 === 0 ? '+' : '-'}{Math.floor(Math.random() * 50) + 1}
                         </p>
-                        <p className="text-xs text-slate-500">Current: {product.stock}</p>
+                        <p className="text-[9px] text-slate-500">Stock: {product.stock}</p>
                       </div>
                     </div>
                   ))

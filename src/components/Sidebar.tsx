@@ -101,16 +101,16 @@ export default function Sidebar() {
       >
         {/* Logo Section */}
         <div className="h-20 flex items-center px-6 border-b border-slate-100">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl shrink-0">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
             P
           </div>
           {!isCollapsed && (
             <motion.span 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="ml-3 font-bold text-lg text-primary whitespace-nowrap overflow-hidden"
+              className="ml-3 font-bold text-base text-primary whitespace-nowrap overflow-hidden"
             >
-              PHBKT Group
+              PHBKT Billing Pro+
             </motion.span>
           )}
         </div>
@@ -130,12 +130,12 @@ export default function Sidebar() {
                   : "text-slate-600 hover:bg-slate-50 hover:text-primary"
               )}
             >
-              <item.icon size={22} className={cn("shrink-0", isCollapsed ? "mx-auto" : "mr-3")} />
+              <item.icon size={18} className={cn("shrink-0", isCollapsed ? "mx-auto" : "mr-3")} />
               {!isCollapsed && (
-                <span className="font-medium text-sm">{item.label}</span>
+                <span className="font-medium text-[11px]">{item.label}</span>
               )}
               {isCollapsed && (
-                <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                   {item.label}
                 </div>
               )}

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
   Plus, 
@@ -14,7 +15,10 @@ import {
   Clock,
   AlertCircle,
   X,
-  Trash2
+  Trash2,
+  TrendingUp,
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatCurrency } from '../lib/utils';
@@ -183,6 +187,13 @@ export default function Invoices() {
     return matchesSearch && matchesStatus;
   });
 
+  const totals = useMemo(() => {
+    const paid = invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0);
+    const unpaid = invoices.filter(i => i.status === 'unpaid').reduce((sum, i) => sum + i.total, 0);
+    const overdue = invoices.filter(i => i.status === 'overdue').reduce((sum, i) => sum + i.total, 0);
+    return { paid, unpaid, overdue, total: paid + unpaid + overdue };
+  }, [invoices]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-emerald-100 text-emerald-700';
@@ -204,38 +215,74 @@ export default function Invoices() {
   };
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Invoices</h1>
-          <p className="text-slate-500">View and manage all your generated invoices.</p>
+          <h1 className="text-xl font-bold text-slate-900">Invoices</h1>
+          <p className="text-xs text-slate-500">View and manage all your generated invoices.</p>
         </div>
         <button 
           onClick={() => navigate('/invoices/new')}
-          className="btn-primary flex items-center"
+          className="px-4 py-2 bg-primary text-white rounded-xl text-[11px] font-bold flex items-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
         >
-          <Plus size={18} className="mr-2" />
+          <Plus size={14} className="mr-1.5" />
           Create Invoice
         </button>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="glass-card p-4 flex items-center space-x-4">
+          <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><FileText size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Invoices</p>
+            <p className="text-lg font-bold text-slate-900">{invoices.length}</p>
+          </div>
+        </div>
+        <div className="glass-card p-4 flex items-center space-x-4">
+          <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><CheckCircle2 size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Paid</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.paid)}</p>
+          </div>
+        </div>
+        <div className="glass-card p-4 flex items-center space-x-4">
+          <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><Clock size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Unpaid</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.unpaid)}</p>
+          </div>
+        </div>
+        <div className="glass-card p-4 flex items-center space-x-4">
+          <div className="p-2 bg-red-100 rounded-lg text-red-600"><AlertTriangle size={20} /></div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Overdue</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.overdue)}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Filters & Search */}
-      <div className="glass-card p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+      <div className="glass-card p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
               placeholder="Search by invoice # or customer..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <select 
-              className="px-4 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+              className="px-3 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
@@ -244,8 +291,8 @@ export default function Invoices() {
               <option value="unpaid">Unpaid</option>
               <option value="overdue">Overdue</option>
             </select>
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
-              <Filter size={20} />
+            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              <Filter size={16} />
             </button>
           </div>
         </div>
@@ -256,7 +303,7 @@ export default function Invoices() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
                 <th className="px-6 py-4">Invoice #</th>
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Date</th>
@@ -269,89 +316,97 @@ export default function Invoices() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-                    <p className="text-slate-500 text-sm">Loading invoices...</p>
+                    <p className="text-slate-500 text-xs">Loading invoices...</p>
                   </td>
                 </tr>
               ) : filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <FileText className="w-12 h-12 mx-auto text-slate-200 mb-2" />
-                    <p className="text-slate-500 font-medium">No invoices found</p>
+                    <p className="text-slate-500 font-medium text-xs">No invoices found</p>
                     <button 
                       onClick={() => navigate('/invoices/new')}
-                      className="text-primary text-sm font-bold mt-2 hover:underline"
+                      className="text-primary text-xs font-bold mt-2 hover:underline"
                     >
                       Create your first invoice
                     </button>
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900">{invoice.invoice_number}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <User size={14} className="mr-2 text-slate-400" />
-                        <span className="text-sm text-slate-600">{invoice.customers?.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-slate-600">
-                        <Calendar size={14} className="mr-2 text-slate-400" />
-                        {new Date(invoice.date).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900">{formatCurrency(invoice.total)}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select 
-                        className={cn(
-                          "px-2 py-1 rounded-lg text-xs font-bold uppercase outline-none cursor-pointer",
-                          getStatusColor(invoice.status)
-                        )}
-                        value={invoice.status}
-                        onChange={(e) => updateStatus(invoice.id, e.target.value)}
-                      >
-                        <option value="paid">Paid</option>
-                        <option value="unpaid">Unpaid</option>
-                        <option value="overdue">Overdue</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600">{invoice.payment_mode || 'Cash'}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => handlePreview(invoice)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
-                          title="Preview"
+                <AnimatePresence>
+                  {filteredInvoices.map((invoice) => (
+                    <motion.tr 
+                      key={invoice.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold text-slate-900">{invoice.invoice_number}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <User size={14} className="mr-2 text-slate-400" />
+                          <span className="text-xs text-slate-600">{invoice.customers?.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center text-xs text-slate-600">
+                          <Calendar size={14} className="mr-2 text-slate-400" />
+                          {new Date(invoice.date).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold text-slate-900">{formatCurrency(invoice.total)}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select 
+                          className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase outline-none cursor-pointer",
+                            getStatusColor(invoice.status)
+                          )}
+                          value={invoice.status}
+                          onChange={(e) => updateStatus(invoice.id, e.target.value)}
                         >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleDownloadPDF(invoice)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                          title="Download PDF"
-                        >
-                          <Download size={16} />
-                        </button>
-                        <button 
-                          onClick={() => confirmDelete(invoice.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <option value="paid">Paid</option>
+                          <option value="unpaid">Unpaid</option>
+                          <option value="overdue">Overdue</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs text-slate-600">{invoice.payment_mode || 'Cash'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => handlePreview(invoice)}
+                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                            title="Preview"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDownloadPDF(invoice)}
+                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                            title="Download PDF"
+                          >
+                            <Download size={16} />
+                          </button>
+                          <button 
+                            onClick={() => confirmDelete(invoice.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
@@ -362,7 +417,7 @@ export default function Invoices() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-900">Invoice Preview: {previewInvoice.invoice_number}</h3>
+              <h3 className="font-bold text-base text-slate-900">Invoice Preview: {previewInvoice.invoice_number}</h3>
               <button onClick={() => setPreviewInvoice(null)} className="text-slate-400 hover:text-slate-600">
                 <X size={20} />
               </button>
@@ -370,8 +425,8 @@ export default function Invoices() {
             <div className="p-6">
               <div className="text-center py-12 text-slate-500">
                 <FileText size={48} className="mx-auto mb-4 opacity-20" />
-                <p>PDF Preview for {previewInvoice.invoice_number}</p>
-                <p className="text-sm mt-2">This would show the generated PDF.</p>
+                <p className="text-xs">PDF Preview for {previewInvoice.invoice_number}</p>
+                <p className="text-[11px] mt-2">This would show the generated PDF.</p>
               </div>
             </div>
           </div>
@@ -387,6 +442,6 @@ export default function Invoices() {
           setInvoiceToDelete(null);
         }}
       />
-    </div>
+    </motion.div>
   );
 }

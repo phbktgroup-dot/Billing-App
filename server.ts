@@ -4,10 +4,21 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 import cors from "cors";
 
 console.log("SERVER STARTING...");
 dotenv.config();
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +32,8 @@ async function startServer() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   // Request logging
   app.use((req, res, next) => {
@@ -328,6 +340,135 @@ async function startServer() {
     } catch (error: any) {
       console.error("AI Scan failed:", error);
       res.status(500).json({ error: error.message || "An error occurred while scanning." });
+    }
+  });
+
+  // OTP routes
+  app.post("/api/auth/request-otp", async (req, res) => {
+    try {
+      const email = req.body.email.toLowerCase();
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes
+
+      console.log(`Requesting OTP for ${email}: ${otp}, expires at ${expiresAt.toISOString()}`);
+
+      await supabaseAdmin.from('otps').insert({ email, otp, expires_at: expiresAt.toISOString() });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: email,
+        subject: "Password Reset OTP",
+        text: `Your OTP for password reset is: ${otp}. It expires in 10 minutes.`,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error requesting OTP:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const email = req.body.email.toLowerCase();
+      const otp = req.body.otp.trim();
+      console.log(`Verifying OTP for ${email}: received ${otp}`);
+      
+      // 1. Find the most recent OTP for this email and otp
+      const { data, error } = await supabaseAdmin
+        .from('otps')
+        .select('*')
+        .eq('email', email)
+        .eq('otp', otp)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("Invalid OTP.");
+
+      console.log(`Found OTP record:`, data);
+      console.log(`Current server time:`, new Date().toISOString());
+      console.log(`OTP expires at:`, new Date(data.expires_at).toISOString());
+
+      // 3. Check if expired
+      if (new Date(data.expires_at) < new Date()) throw new Error("OTP has expired.");
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error verifying OTP:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/auth/reset-password-otp", async (req, res) => {
+    try {
+      const email = req.body.email.toLowerCase();
+      const otp = req.body.otp.trim();
+      const { password } = req.body;
+      
+      // 1. Find the most recent OTP for this email
+      const { data, error } = await supabaseAdmin
+        .from('otps')
+        .select('*')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("No OTP found for this email.");
+
+      // 2. Check if OTP matches
+      if (data.otp !== otp) throw new Error("Invalid OTP.");
+
+      // 3. Check if expired
+      if (new Date(data.expires_at) < new Date()) throw new Error("OTP has expired.");
+
+      // Get user ID
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+      
+      if (userError) throw userError;
+
+      // Update password
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userData.id,
+        { password }
+      );
+
+      if (updateError) throw updateError;
+
+      // Delete OTP
+      await supabaseAdmin.from('otps').delete().eq('id', data.id);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Check email existence route
+  app.post("/api/auth/check-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!supabaseAdmin) throw new Error("Supabase Admin client not initialized.");
+      
+      const { data, error } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .ilike('email', email)
+        .maybeSingle();
+        
+      if (error) throw error;
+      res.json({ exists: !!data });
+    } catch (error: any) {
+      console.error("Error checking email:", error);
+      res.status(400).json({ error: error.message });
     }
   });
 

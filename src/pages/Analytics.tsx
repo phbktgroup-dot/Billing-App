@@ -63,93 +63,93 @@ export default function Analytics() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center">
-            <BrainCircuit className="mr-3 text-primary" size={28} />
+          <h1 className="text-xl font-bold text-slate-900 flex items-center">
+            <BrainCircuit className="mr-2 text-primary" size={20} />
             AI Business Analytics
           </h1>
-          <p className="text-slate-500">Next-generation insights powered by Google Gemini AI.</p>
+          <p className="text-xs text-slate-500">Next-generation insights powered by Google Gemini AI.</p>
         </div>
-        <div className="flex items-center space-x-2 bg-primary/5 px-4 py-2 rounded-xl border border-primary/10">
-          <Sparkles className="text-primary" size={18} />
-          <span className="text-sm font-bold text-primary uppercase tracking-wider">AI Powered</span>
+        <div className="flex items-center space-x-1.5 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
+          <Sparkles className="text-primary" size={14} />
+          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Powered</span>
         </div>
       </div>
 
       {/* Prediction Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-card p-6">
-          <div className="flex items-center justify-between mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 glass-card p-4">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-bold text-slate-900">Sales Forecasting</h3>
-              <p className="text-xs text-slate-500">AI-predicted revenue for the next 3 months</p>
+              <h3 className="text-sm font-bold text-slate-900">Sales Forecasting</h3>
+              <p className="text-[10px] text-slate-500">AI-predicted revenue for the next 3 months</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center text-xs">
-                <div className="w-3 h-3 bg-primary rounded-full mr-2"></div>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center text-[10px]">
+                <div className="w-2 h-2 bg-primary rounded-full mr-1.5"></div>
                 Actual
               </div>
-              <div className="flex items-center text-xs">
-                <div className="w-3 h-3 bg-primary/30 rounded-full mr-2"></div>
+              <div className="flex items-center text-[10px]">
+                <div className="w-2 h-2 bg-primary/30 rounded-full mr-1.5"></div>
                 Predicted
               </div>
             </div>
           </div>
-          <div className="h-80 w-full">
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={predictionData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
                 />
-                <Area type="monotone" dataKey="actual" stroke="#1e3a8a" strokeWidth={3} fill="#1e3a8a" fillOpacity={0.1} />
-                <Area type="monotone" dataKey="predicted" stroke="#1e3a8a" strokeWidth={2} strokeDasharray="5 5" fill="transparent" />
+                <Area type="monotone" dataKey="actual" stroke="#1e3a8a" strokeWidth={2} fill="#1e3a8a" fillOpacity={0.1} />
+                <Area type="monotone" dataKey="predicted" stroke="#1e3a8a" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="glass-card p-6 bg-gradient-to-br from-primary to-blue-900 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <Lightbulb size={24} className="text-yellow-400" />
-              <span className="text-[10px] font-bold uppercase bg-white/10 px-2 py-1 rounded">Insight of the Day</span>
+        <div className="space-y-4">
+          <div className="glass-card p-4 bg-gradient-to-br from-primary to-blue-900 text-white">
+            <div className="flex items-center justify-between mb-3">
+              <Lightbulb size={18} className="text-yellow-400" />
+              <span className="text-[8px] font-bold uppercase bg-white/10 px-1.5 py-0.5 rounded">Insight of the Day</span>
             </div>
-            <h4 className="font-bold text-lg mb-2">Inventory Optimization</h4>
-            <p className="text-sm text-blue-100 leading-relaxed">
+            <h4 className="font-bold text-base mb-1.5">Inventory Optimization</h4>
+            <p className="text-xs text-blue-100 leading-relaxed">
               AI suggests reducing stock for "Wireless Mouse" by 15% and increasing "4K Monitors" by 20% based on seasonal demand trends.
             </p>
-            <button className="mt-4 flex items-center text-sm font-bold hover:underline">
-              Apply Suggestion <ArrowRight size={16} className="ml-2" />
+            <button className="mt-3 flex items-center text-xs font-bold hover:underline">
+              Apply Suggestion <ArrowRight size={14} className="ml-1.5" />
             </button>
           </div>
 
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-              <Target size={18} className="mr-2 text-emerald-500" />
+          <div className="glass-card p-4">
+            <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+              <Target size={16} className="mr-1.5 text-emerald-500" />
               Growth Targets
             </h4>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <div className="flex justify-between text-xs mb-1.5">
+                <div className="flex justify-between text-[10px] mb-1">
                   <span className="text-slate-500">Revenue Goal</span>
                   <span className="font-bold text-slate-900">75%</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-500 w-3/4 rounded-full"></div>
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-xs mb-1.5">
+                <div className="flex justify-between text-[10px] mb-1">
                   <span className="text-slate-500">Customer Acquisition</span>
                   <span className="font-bold text-slate-900">42%</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 w-[42%] rounded-full"></div>
                 </div>
               </div>
@@ -160,44 +160,44 @@ export default function Analytics() {
 
       {/* AI Advisor Chat */}
       <div className="glass-card overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-            <MessageSquare size={20} />
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-2.5">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+            <MessageSquare size={16} />
           </div>
           <div>
-            <h3 className="font-bold text-slate-900">AI Business Advisor</h3>
-            <p className="text-xs text-slate-500">Ask anything about your business performance</p>
+            <h3 className="text-sm font-bold text-slate-900">AI Business Advisor</h3>
+            <p className="text-[10px] text-slate-500">Ask anything about your business performance</p>
           </div>
         </div>
         
-        <div className="p-6 space-y-6">
-          <div className="min-h-[200px] bg-slate-50 rounded-2xl p-6 relative">
+        <div className="p-4 space-y-4">
+          <div className="min-h-[160px] bg-slate-50 rounded-xl p-4 relative">
             {isThinking ? (
-              <div className="flex flex-col items-center justify-center h-full space-y-4">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                <p className="text-sm font-medium text-slate-500">Consulting Gemini AI...</p>
+              <div className="flex flex-col items-center justify-center h-full space-y-3">
+                <div className="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                <p className="text-xs font-medium text-slate-500">Consulting Gemini AI...</p>
               </div>
             ) : aiResponse ? (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="prose prose-slate max-w-none text-sm text-slate-700 leading-relaxed"
+                className="prose prose-slate max-w-none text-xs text-slate-700 leading-relaxed"
               >
                 {aiResponse}
               </motion.div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
-                <Sparkles className="text-slate-300" size={48} />
-                <p className="text-slate-400 text-sm">Try asking: "How can I improve my profit margin this month?"</p>
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-2">
+                <Sparkles className="text-slate-300" size={32} />
+                <p className="text-slate-400 text-xs">Try asking: "How can I improve my profit margin this month?"</p>
               </div>
             )}
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <input 
               type="text" 
               placeholder="Type your business query here..."
-              className="flex-1 input-field"
+              className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && askAI()}
@@ -205,10 +205,10 @@ export default function Analytics() {
             <button 
               onClick={askAI}
               disabled={isThinking || !query.trim()}
-              className="btn-primary px-8 py-3 flex items-center"
+              className="px-4 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all disabled:opacity-50"
             >
               Analyze
-              <ArrowRight size={18} className="ml-2" />
+              <ArrowRight size={14} className="ml-1.5" />
             </button>
           </div>
         </div>

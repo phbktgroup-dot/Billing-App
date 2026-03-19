@@ -162,50 +162,50 @@ export default function Customers() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Customer Management</h1>
-          <p className="text-slate-500">Manage your clients, their contact info, and GST details.</p>
+          <h1 className="text-xl font-bold text-slate-900">Customer Management</h1>
+          <p className="text-xs text-slate-500">Manage your clients, their contact info, and GST details.</p>
         </div>
-        <button className="btn-primary flex items-center" onClick={() => openModal()}>
-          <Plus size={18} className="mr-2" />
+        <button className="btn-primary flex items-center px-4 py-2 text-sm" onClick={() => openModal()}>
+          <Plus size={16} className="mr-1.5" />
           Add Customer
         </button>
       </div>
 
       {/* Customers Table */}
       <div className="glass-card overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
               placeholder="Search by name, phone or GSTIN..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex items-center space-x-3">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
-              <Filter size={20} />
+          <div className="flex items-center space-x-2">
+            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
+              <Filter size={16} />
             </button>
-            <div className="h-6 w-[1px] bg-slate-200"></div>
-            <p className="text-sm text-slate-500">Showing {filteredCustomers.length} customers</p>
+            <div className="h-5 w-[1px] bg-slate-200"></div>
+            <p className="text-xs text-slate-500">Showing {filteredCustomers.length} customers</p>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4">Customer Name</th>
-                <th className="px-6 py-4">Contact Info</th>
-                <th className="px-6 py-4">GSTIN</th>
-                <th className="px-6 py-4">Address</th>
-                <th className="px-6 py-4">Actions</th>
+              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-3">Customer Name</th>
+                <th className="px-4 py-3">Contact Info</th>
+                <th className="px-4 py-3">GSTIN</th>
+                <th className="px-4 py-3">Address</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -227,41 +227,41 @@ export default function Customers() {
               ) : (
                 filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 text-xs">
                           {customer.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-900">{customer.name}</p>
-                          <p className="text-xs text-slate-500">ID: {customer.id.split('-')[0]}</p>
+                          <p className="text-xs font-bold text-slate-900">{customer.name}</p>
+                          <p className="text-[10px] text-slate-500">ID: {customer.id.split('-')[0]}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="space-y-1">
-                        <div className="flex items-center text-xs text-slate-600">
-                          <Phone size={12} className="mr-1.5 text-slate-400" />
+                        <div className="flex items-center text-[10px] text-slate-600">
+                          <Phone size={10} className="mr-1.5 text-slate-400" />
                           {customer.phone || 'N/A'}
                         </div>
-                        <div className="flex items-center text-xs text-slate-600">
-                          <Mail size={12} className="mr-1.5 text-slate-400" />
+                        <div className="flex items-center text-[10px] text-slate-600">
+                          <Mail size={10} className="mr-1.5 text-slate-400" />
                           {customer.email || 'N/A'}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
+                    <td className="px-4 py-3">
+                      <span className="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
                         {customer.gstin || 'No GSTIN'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-start text-xs text-slate-600 max-w-[200px]">
-                        <MapPin size={12} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
+                    <td className="px-4 py-3">
+                      <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
+                        <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{customer.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center space-x-2">
                         <button 
                           onClick={() => openModal(customer)}

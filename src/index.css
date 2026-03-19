@@ -8,6 +8,9 @@
 }
 
 @layer base {
+  html {
+    font-size: 13.5px;
+  }
   body {
     @apply bg-background-soft text-slate-900 antialiased;
     font-family: 'Inter', system-ui, sans-serif;

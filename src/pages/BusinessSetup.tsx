@@ -212,59 +212,59 @@ export default function BusinessSetup() {
   };
 
   return (
-    <div className="min-h-screen bg-background-soft py-12 px-6 relative">
-      <div className="absolute top-6 right-6">
+    <div className="min-h-screen bg-background-soft py-6 px-4 relative">
+      <div className="absolute top-4 right-4">
         <button
           onClick={() => signOut()}
-          className="flex items-center space-x-2 text-slate-500 hover:text-red-600 transition-colors font-medium px-4 py-2 rounded-xl hover:bg-red-50"
+          className="flex items-center space-x-1.5 text-slate-500 hover:text-red-600 transition-colors font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 text-xs"
         >
-          <LogOut size={18} />
+          <LogOut size={14} />
           <span>Logout</span>
         </button>
       </div>
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-slate-900">Setup Your Business</h1>
-          <p className="text-slate-500 mt-2">Complete your profile to start managing your business.</p>
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Setup Your Business</h1>
+          <p className="text-xs text-slate-500 mt-1">Complete your profile to start managing your business.</p>
         </div>
 
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-8 shadow-xl"
+          className="glass-card p-6 shadow-lg"
         >
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3 text-red-600 text-sm">
-              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start space-x-2 text-red-600 text-xs">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
               <p>{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Business Name</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Business Name</label>
                 <div className="relative">
-                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input 
                     type="text" 
                     required
-                    className="input-field pl-12"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                     placeholder="PHBKT Group Ltd"
                     value={formData.businessName}
                     onChange={e => setFormData({...formData, businessName: e.target.value})}
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Owner Name</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Owner Name</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input 
                     type="text" 
                     required
-                    className="input-field pl-12"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                     placeholder="John Doe"
                     value={formData.ownerName}
                     onChange={e => setFormData({...formData, ownerName: e.target.value})}
@@ -274,14 +274,14 @@ export default function BusinessSetup() {
             </div>
 
             {/* Contact Info */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Business Address</label>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Business Address</label>
               <div className="relative">
-                <MapPin className="absolute left-4 top-3 text-slate-400" size={18} />
+                <MapPin className="absolute left-3 top-2.5 text-slate-400" size={14} />
                 <textarea 
                   required
-                  rows={3}
-                  className="input-field pl-12 pt-2"
+                  rows={2}
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all resize-none"
                   placeholder="123 Business Park, Sector 5..."
                   value={formData.address}
                   onChange={e => setFormData({...formData, address: e.target.value})}
@@ -289,29 +289,29 @@ export default function BusinessSetup() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Mobile Number</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Mobile Number</label>
                 <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input 
                     type="tel" 
                     required
-                    className="input-field pl-12"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                     placeholder="+91 98765 43210"
                     value={formData.mobile}
                     onChange={e => setFormData({...formData, mobile: e.target.value})}
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Business Email</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Business Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input 
                     type="email" 
                     required
-                    className="input-field pl-12"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                     placeholder="contact@phbkt.com"
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
@@ -321,29 +321,29 @@ export default function BusinessSetup() {
             </div>
 
             {/* Tax Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">GST Number</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">GST Number</label>
                 <div className="relative">
-                  <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input 
                     type="text" 
                     required
-                    className="input-field pl-12 uppercase"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all uppercase"
                     placeholder="27AAAAA0000A1Z5"
                     value={formData.gstNumber}
                     onChange={e => setFormData({...formData, gstNumber: e.target.value})}
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">PAN Number</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">PAN Number</label>
                 <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input 
                     type="text" 
                     required
-                    className="input-field pl-12 uppercase"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all uppercase"
                     placeholder="ABCDE1234F"
                     value={formData.panNumber}
                     onChange={e => setFormData({...formData, panNumber: e.target.value})}
@@ -353,44 +353,44 @@ export default function BusinessSetup() {
             </div>
 
             {/* Bank Info */}
-            <div className="bg-slate-50 p-6 rounded-2xl space-y-6">
-              <h3 className="font-bold text-slate-900">Bank Details (For Invoices)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Bank Name</label>
+            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+              <h3 className="text-sm font-bold text-slate-900">Bank Details (For Invoices)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Bank Name</label>
                   <input 
                     type="text" 
-                    className="input-field"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
                     placeholder="HDFC Bank"
                     value={formData.bankName}
                     onChange={e => setFormData({...formData, bankName: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Account Number</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Account Number</label>
                   <input 
                     type="text" 
-                    className="input-field"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
                     placeholder="50200026615791"
                     value={formData.bankAccountNo}
                     onChange={e => setFormData({...formData, bankAccountNo: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">IFSC Code</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">IFSC Code</label>
                   <input 
                     type="text" 
-                    className="input-field uppercase"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all uppercase"
                     placeholder="HDFC0003800"
                     value={formData.bankIfsc}
                     onChange={e => setFormData({...formData, bankIfsc: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Branch Name</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Branch Name</label>
                   <input 
                     type="text" 
-                    className="input-field"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
                     placeholder="Bahu Jamalpur, Rohtak"
                     value={formData.bankBranch}
                     onChange={e => setFormData({...formData, bankBranch: e.target.value})}
@@ -400,24 +400,24 @@ export default function BusinessSetup() {
             </div>
 
             {/* Invoice Settings */}
-            <div className="bg-slate-50 p-6 rounded-2xl space-y-6">
-              <h3 className="font-bold text-slate-900">Invoice Customization</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Invoice Prefix</label>
+            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+              <h3 className="text-sm font-bold text-slate-900">Invoice Customization</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Invoice Prefix</label>
                   <input 
                     type="text" 
-                    className="input-field"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
                     placeholder="INV"
                     value={formData.invoicePrefix}
                     onChange={e => setFormData({...formData, invoicePrefix: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Number Format</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700">Number Format</label>
                   <input 
                     type="text" 
-                    className="input-field"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
                     placeholder="YYYY-MM-0001"
                     value={formData.invoiceFormat}
                     onChange={e => setFormData({...formData, invoiceFormat: e.target.value})}
@@ -427,8 +427,8 @@ export default function BusinessSetup() {
             </div>
 
             {/* Logo Upload */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Business Logo</label>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Business Logo</label>
               <input 
                 type="file" 
                 ref={fileInputRef}
@@ -438,22 +438,22 @@ export default function BusinessSetup() {
               />
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-primary transition-colors cursor-pointer group relative overflow-hidden"
+                className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-primary transition-colors cursor-pointer group relative overflow-hidden"
               >
                 {logoPreview ? (
                   <div className="relative group">
-                    <img src={logoPreview} alt="Logo preview" className="h-32 mx-auto object-contain rounded-lg" />
+                    <img src={logoPreview} alt="Logo preview" className="h-24 mx-auto object-contain rounded-lg" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                      <p className="text-white text-xs font-bold">Change Logo</p>
+                      <p className="text-white text-[10px] font-bold">Change Logo</p>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-primary group-hover:bg-primary/10 transition-all">
-                      <ImageIcon size={24} />
+                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-2 text-slate-400 group-hover:text-primary group-hover:bg-primary/10 transition-all">
+                      <ImageIcon size={20} />
                     </div>
-                    <p className="text-sm font-medium text-slate-600">Click to upload or drag and drop</p>
-                    <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB</p>
+                    <p className="text-xs font-medium text-slate-600">Click to upload or drag and drop</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG up to 5MB</p>
                   </>
                 )}
               </div>
@@ -462,11 +462,11 @@ export default function BusinessSetup() {
             <button 
               type="submit" 
               disabled={isLoading || isUploading}
-              className="btn-primary w-full py-4 text-lg flex items-center justify-center"
+              className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
             >
               {isLoading || isUploading ? (
                 <>
-                  <Loader2 className="animate-spin mr-2" size={20} />
+                  <Loader2 className="animate-spin mr-2" size={16} />
                   {isUploading ? "Uploading Logo..." : "Saving Profile..."}
                 </>
               ) : "Complete Setup"}

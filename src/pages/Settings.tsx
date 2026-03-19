@@ -170,11 +170,11 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-          <p className="text-slate-500">Manage your business profile and account preferences.</p>
+          <h1 className="text-xl font-bold text-slate-900">Settings</h1>
+          <p className="text-xs text-slate-500">Manage your business profile and account preferences.</p>
         </div>
       </div>
 
@@ -192,15 +192,15 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Sidebar Navigation */}
-        <div className="lg:col-span-1 space-y-2">
-          <button className="w-full text-left px-4 py-3 rounded-xl bg-primary text-white font-medium flex items-center space-x-3">
-            <Building2 size={18} />
+        <div className="lg:col-span-1 space-y-1.5">
+          <button className="w-full text-left px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium flex items-center space-x-2.5">
+            <Building2 size={16} />
             <span>Business Profile</span>
           </button>
-          <button className="w-full text-left px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-medium flex items-center space-x-3 transition-colors">
-            <Lock size={18} />
+          <button className="w-full text-left px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm font-medium flex items-center space-x-2.5 transition-colors">
+            <Lock size={16} />
             <span>Security</span>
           </button>
         </div>
@@ -210,30 +210,30 @@ export default function Settings() {
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-8"
+            className="glass-card p-5"
           >
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Logo Section */}
-              <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 pb-8 border-b border-slate-100">
+              <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-3 sm:space-y-0 sm:space-x-4 pb-6 border-b border-slate-100">
                 <div className="relative group">
-                  <div className="w-24 h-24 rounded-2xl bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-slate-200 group-hover:border-primary transition-colors">
+                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-slate-200 group-hover:border-primary transition-colors">
                     {logoPreview ? (
                       <img src={logoPreview} alt="Business logo" className="w-full h-full object-contain" />
                     ) : (
-                      <ImageIcon size={32} className="text-slate-400" />
+                      <ImageIcon size={28} className="text-slate-400" />
                     )}
                   </div>
                   <button 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-lg shadow-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:text-primary transition-colors"
+                    className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white rounded-lg shadow-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:text-primary transition-colors"
                   >
-                    <ImageIcon size={16} />
+                    <ImageIcon size={14} />
                   </button>
                 </div>
                 <div className="flex-1 text-center sm:text-left">
-                  <h3 className="font-bold text-slate-900">Business Logo</h3>
-                  <p className="text-sm text-slate-500 mt-1">Update your business logo. Recommended size: 512x512px.</p>
+                  <h3 className="text-sm font-bold text-slate-900">Business Logo</h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Update your business logo. Recommended size: 512x512px.</p>
                   <input 
                     type="file" 
                     ref={fileInputRef}
@@ -245,28 +245,28 @@ export default function Settings() {
               </div>
 
               {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Business Name</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Name</label>
                   <div className="relative">
-                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text" 
                       required
-                      className="input-field pl-12"
+                      className="input-field pl-10 text-xs py-2"
                       value={formData.businessName}
                       onChange={e => setFormData({...formData, businessName: e.target.value})}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Owner Name</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Owner Name</label>
                   <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text" 
                       required
-                      className="input-field pl-12"
+                      className="input-field pl-10 text-xs py-2"
                       value={formData.ownerName}
                       onChange={e => setFormData({...formData, ownerName: e.target.value})}
                     />
@@ -275,42 +275,42 @@ export default function Settings() {
               </div>
 
               {/* Contact Info */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Business Address</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Address</label>
                 <div className="relative">
-                  <MapPin className="absolute left-4 top-3 text-slate-400" size={18} />
+                  <MapPin className="absolute left-3 top-2.5 text-slate-400" size={16} />
                   <textarea 
                     required
-                    rows={3}
-                    className="input-field pl-12 pt-2"
+                    rows={2}
+                    className="input-field pl-10 pt-2 text-xs"
                     value={formData.address}
                     onChange={e => setFormData({...formData, address: e.target.value})}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Mobile Number</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mobile Number</label>
                   <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="tel" 
                       required
-                      className="input-field pl-12"
+                      className="input-field pl-10 text-xs py-2"
                       value={formData.mobile}
                       onChange={e => setFormData({...formData, mobile: e.target.value})}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Business Email</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Business Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="email" 
                       required
-                      className="input-field pl-12"
+                      className="input-field pl-10 text-xs py-2"
                       value={formData.email}
                       onChange={e => setFormData({...formData, email: e.target.value})}
                     />
@@ -319,28 +319,28 @@ export default function Settings() {
               </div>
 
               {/* Tax Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">GST Number</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GST Number</label>
                   <div className="relative">
-                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text" 
                       required
-                      className="input-field pl-12 uppercase"
+                      className="input-field pl-10 uppercase text-xs py-2"
                       value={formData.gstNumber}
                       onChange={e => setFormData({...formData, gstNumber: e.target.value})}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">PAN Number</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">PAN Number</label>
                   <div className="relative">
-                    <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text" 
                       required
-                      className="input-field pl-12 uppercase"
+                      className="input-field pl-10 uppercase text-xs py-2"
                       value={formData.panNumber}
                       onChange={e => setFormData({...formData, panNumber: e.target.value})}
                     />
@@ -349,41 +349,41 @@ export default function Settings() {
               </div>
 
               {/* Bank Info */}
-              <div className="bg-slate-50 p-6 rounded-2xl space-y-6">
-                <h3 className="font-bold text-slate-900">Bank Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Bank Name</label>
+              <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">Bank Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bank Name</label>
                     <input 
                       type="text" 
-                      className="input-field"
+                      className="input-field text-xs py-2"
                       value={formData.bankName}
                       onChange={e => setFormData({...formData, bankName: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Account Number</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Account Number</label>
                     <input 
                       type="text" 
-                      className="input-field"
+                      className="input-field text-xs py-2"
                       value={formData.bankAccountNo}
                       onChange={e => setFormData({...formData, bankAccountNo: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">IFSC Code</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">IFSC Code</label>
                     <input 
                       type="text" 
-                      className="input-field uppercase"
+                      className="input-field uppercase text-xs py-2"
                       value={formData.bankIfsc}
                       onChange={e => setFormData({...formData, bankIfsc: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Branch Name</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Branch Name</label>
                     <input 
                       type="text" 
-                      className="input-field"
+                      className="input-field text-xs py-2"
                       value={formData.bankBranch}
                       onChange={e => setFormData({...formData, bankBranch: e.target.value})}
                     />
@@ -392,23 +392,23 @@ export default function Settings() {
               </div>
 
               {/* Invoice Settings */}
-              <div className="bg-slate-50 p-6 rounded-2xl space-y-6">
-                <h3 className="font-bold text-slate-900">Invoice Settings</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Invoice Prefix</label>
+              <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">Invoice Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Invoice Prefix</label>
                     <input 
                       type="text" 
-                      className="input-field"
+                      className="input-field text-xs py-2"
                       value={formData.invoicePrefix}
                       onChange={e => setFormData({...formData, invoicePrefix: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Number Format</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Number Format</label>
                     <input 
                       type="text" 
-                      className="input-field"
+                      className="input-field text-xs py-2"
                       value={formData.invoiceFormat}
                       onChange={e => setFormData({...formData, invoiceFormat: e.target.value})}
                     />
@@ -416,20 +416,20 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end pt-2">
                 <button 
                   type="submit" 
                   disabled={isLoading || isUploading}
-                  className="btn-primary px-8 py-3 flex items-center space-x-2"
+                  className="btn-primary px-6 py-2 flex items-center space-x-2 text-sm"
                 >
                   {isLoading || isUploading ? (
                     <>
-                      <Loader2 className="animate-spin" size={20} />
+                      <Loader2 className="animate-spin" size={16} />
                       <span>Saving...</span>
                     </>
                   ) : (
                     <>
-                      <Save size={20} />
+                      <Save size={16} />
                       <span>Save Changes</span>
                     </>
                   )}

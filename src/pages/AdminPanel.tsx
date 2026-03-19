@@ -45,74 +45,74 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, isSuperAd
   const isActive = user.is_active !== false;
   
   return (
-    <div className={cn("space-y-3", depth > 0 && "pl-6 md:pl-10 border-l-2 border-slate-200 ml-4 md:ml-6 mt-3")}>
+    <div className={cn("space-y-2", depth > 0 && "pl-4 md:pl-6 border-l-2 border-slate-200 ml-3 md:ml-4 mt-2")}>
       <div className={cn(
-        "glass-card p-4 flex items-center justify-between transition-all hover:shadow-md",
+        "glass-card p-2.5 flex items-center justify-between transition-all hover:shadow-md",
         !isActive && "opacity-60 grayscale",
         user.role === 'Super Admin' ? "bg-slate-900 text-white" : 
         user.role === 'Admin' ? "border-l-4 border-primary bg-white" : "bg-slate-50/80"
       )}>
         <div className="flex items-center">
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center font-bold mr-3",
+            "w-8 h-8 rounded-lg flex items-center justify-center font-bold mr-2.5 text-xs",
             user.role === 'Super Admin' ? "bg-white/10" : 
             user.role === 'Admin' ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-600"
           )}>
             {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className={cn("text-sm font-bold", user.role === 'Super Admin' ? "text-white" : "text-slate-900")}>
+            <div className="flex items-center gap-1.5">
+              <p className={cn("text-xs font-bold", user.role === 'Super Admin' ? "text-white" : "text-slate-900")}>
                 {user.name || 'N/A'}
               </p>
               {!isActive && (
-                <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Disabled</span>
+                <span className="text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold uppercase">Disabled</span>
               )}
             </div>
-            <p className={cn("text-xs", user.role === 'Super Admin' ? "text-slate-400" : "text-slate-500")}>
+            <p className={cn("text-[10px]", user.role === 'Super Admin' ? "text-slate-400" : "text-slate-500")}>
               {user.email}
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <span className={cn(
-            "text-[10px] font-bold uppercase px-2 py-1 rounded",
+            "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded",
             user.role === 'Super Admin' ? "bg-white/10 text-white" : 
             user.role === 'Admin' ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-600"
           )}>
             {user.role}
           </span>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-0.5">
             <button 
               onClick={() => onToggleStatus(user)}
               title={isActive ? "Disable User" : "Enable User"}
               className={cn(
-                "p-1.5 rounded-lg transition-all", 
+                "p-1 rounded-lg transition-all", 
                 user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : 
                 isActive ? "text-slate-400 hover:text-amber-500 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-500 hover:bg-emerald-50"
               )}
             >
-              {isActive ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
+              {isActive ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
             </button>
             <button 
               onClick={() => onEdit(user)}
-              className={cn("p-1.5 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-primary hover:bg-primary/5")}
+              className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-primary hover:bg-primary/5")}
             >
-              <Edit2 size={16} />
+              <Edit2 size={14} />
             </button>
             {isSuperAdmin && (
               <button 
                 onClick={() => onDelete(user.id)}
-                className={cn("p-1.5 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-red-400 hover:bg-red-400/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50")}
+                className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-red-400 hover:bg-red-400/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50")}
               >
-                <Trash2 size={16} />
+                <Trash2 size={14} />
               </button>
             )}
           </div>
         </div>
       </div>
       {hasChildren && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {user.children.map((child: any) => (
             <UserNode key={child.id} user={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} onToggleStatus={onToggleStatus} isSuperAdmin={isSuperAdmin} />
           ))}
@@ -373,42 +373,42 @@ export default function AdminPanel() {
   const hierarchy = getHierarchy();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Admin Control Panel</h1>
-          <p className="text-slate-500">Manage users, roles, and system-wide configurations.</p>
+          <h1 className="text-xl font-bold text-slate-900">Admin Control Panel</h1>
+          <p className="text-xs text-slate-500">Manage users, roles, and system-wide configurations.</p>
         </div>
         <button 
           onClick={() => setShowAddUser(true)}
-          className="btn-primary flex items-center"
+          className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all"
         >
-          <UserPlus size={18} className="mr-2" />
+          <UserPlus size={14} className="mr-1.5" />
           Create New User
         </button>
       </div>
 
       {/* User Management Hierarchy */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {loading ? (
-          <div className="glass-card p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-            <p className="text-slate-500 text-sm">Loading hierarchy...</p>
+          <div className="glass-card p-8 text-center">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+            <p className="text-slate-500 text-xs">Loading hierarchy...</p>
           </div>
         ) : error ? (
-          <div className="glass-card p-12 text-center text-red-500">
-            <p className="font-bold mb-2">Error loading users</p>
-            <p className="text-sm">{error}</p>
+          <div className="glass-card p-8 text-center text-red-500">
+            <p className="font-bold text-sm mb-1">Error loading users</p>
+            <p className="text-xs">{error}</p>
             <button 
               onClick={() => fetchUsers()}
-              className="mt-4 text-primary hover:underline text-sm font-bold"
+              className="mt-3 text-primary hover:underline text-xs font-bold"
             >
               Try Again
             </button>
           </div>
         ) : hierarchy.length === 0 ? (
-          <div className="glass-card p-12 text-center text-slate-500">
+          <div className="glass-card p-8 text-center text-slate-500 text-xs">
             No users found.
           </div>
         ) : (
@@ -427,56 +427,56 @@ export default function AdminPanel() {
 
       {/* Add User Modal */}
       {showAddUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Create New User</h2>
-                <p className="text-xs text-slate-500 mt-1">User will be required to set up their business profile on first login.</p>
+                <h2 className="text-lg font-bold text-slate-900">Create New User</h2>
+                <p className="text-[10px] text-slate-500 mt-0.5">User will be required to set up their business profile on first login.</p>
               </div>
-              <button onClick={() => setShowAddUser(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={20} className="text-slate-400" />
+              <button onClick={() => setShowAddUser(false)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={18} className="text-slate-400" />
               </button>
             </div>
-            <form onSubmit={handleCreateUser} className="space-y-4">
+            <form onSubmit={handleCreateUser} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Full Name</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Full Name</label>
                 <input 
                   type="text" 
                   required
-                  className="input-field" 
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
                   placeholder="Jane Smith"
                   value={newUser.name}
                   onChange={e => setNewUser({...newUser, name: e.target.value})}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Email Address</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
                 <input 
                   type="email" 
                   required
-                  className="input-field" 
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
                   placeholder="jane@phbkt.com"
                   value={newUser.email}
                   onChange={e => setNewUser({...newUser, email: e.target.value})}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Password</label>
                 <input 
                   type="password" 
                   required
                   minLength={6}
-                  className="input-field" 
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
                   placeholder="••••••••"
                   value={newUser.password}
                   onChange={e => setNewUser({...newUser, password: e.target.value})}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Role</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Role</label>
                 <select 
-                  className="input-field"
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                   value={newUser.role}
                   onChange={e => setNewUser({...newUser, role: e.target.value})}
                 >
@@ -488,10 +488,10 @@ export default function AdminPanel() {
               <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="btn-primary w-full py-3 mt-4 flex items-center justify-center"
+                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   'Create User'
                 )}
@@ -503,41 +503,41 @@ export default function AdminPanel() {
 
       {/* Edit User Modal */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Edit User</h2>
-                <p className="text-xs text-slate-500 mt-1">Update user details and permissions.</p>
+                <h2 className="text-lg font-bold text-slate-900">Edit User</h2>
+                <p className="text-[10px] text-slate-500 mt-0.5">Update user details and permissions.</p>
               </div>
-              <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={20} className="text-slate-400" />
+              <button onClick={() => setEditingUser(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={18} className="text-slate-400" />
               </button>
             </div>
-            <form onSubmit={handleUpdateUser} className="space-y-4">
+            <form onSubmit={handleUpdateUser} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Full Name</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Full Name</label>
                 <input 
                   type="text" 
                   required
-                  className="input-field" 
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
                   value={editingUser.name}
                   onChange={e => setEditingUser({...editingUser, name: e.target.value})}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Email Address</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
                 <input 
                   type="email" 
                   disabled
-                  className="input-field bg-slate-50 text-slate-500 cursor-not-allowed" 
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all bg-slate-100 text-slate-500 cursor-not-allowed" 
                   value={editingUser.email}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Role</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Role</label>
                 <select 
-                  className="input-field"
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                   value={editingUser.role}
                   onChange={e => setEditingUser({...editingUser, role: e.target.value})}
                 >
@@ -549,10 +549,10 @@ export default function AdminPanel() {
               <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="btn-primary w-full py-3 mt-4 flex items-center justify-center"
+                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   'Save Changes'
                 )}

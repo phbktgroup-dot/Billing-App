@@ -149,6 +149,15 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS gst_rate DECIMAL(5,2) DEFAULT 18;
 ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS total_price DECIMAL(12,2) DEFAULT 0;
 
+-- 7. OTP TABLE
+CREATE TABLE IF NOT EXISTS otps (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    otp TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ==========================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ==========================================
