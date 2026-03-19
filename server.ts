@@ -17,8 +17,18 @@ async function startServer() {
   app.use(express.json());
 
   // Supabase Admin Client
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("\x1b[31m%s\x1b[0m", "CRITICAL ERROR: Supabase environment variables are missing!");
+    console.error("\x1b[33m%s\x1b[0m", "Please ensure you have a .env file with:");
+    console.error("VITE_SUPABASE_URL=your_url");
+    console.error("SUPABASE_SERVICE_ROLE_KEY=your_service_role_key");
+    console.error("\x1b[36m%s\x1b[0m", "Check .env.example for the required format.");
+    process.exit(1);
+  }
+
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
