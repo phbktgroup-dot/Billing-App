@@ -32,36 +32,41 @@ async function startServer() {
   console.log("Supabase URL:", supabaseUrl ? "Present" : "Missing");
   console.log("Supabase Service Key:", supabaseServiceKey ? "Present" : "Missing");
 
+  let supabaseAdmin: any = null;
+
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error("\x1b[31m%s\x1b[0m", "CRITICAL ERROR: Supabase environment variables are missing!");
-    console.error("\x1b[33m%s\x1b[0m", "Please ensure you have a .env file with:");
+    console.error("\x1b[33m%s\x1b[0m", "Please ensure you have added them to AI Studio Secrets:");
     console.error("VITE_SUPABASE_URL=your_url");
     console.error("SUPABASE_SERVICE_ROLE_KEY=your_service_role_key");
-    console.error("\x1b[36m%s\x1b[0m", "Check .env.example for the required format.");
-    process.exit(1);
-  }
+    console.error("\x1b[36m%s\x1b[0m", "The server will start, but API routes requiring Supabase will fail.");
+  } else {
+    try {
+      supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
 
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+      // Test connection on startup
+      const { data, error } = await supabaseAdmin.from('users').select('count').single();
+      if (error) {
+        console.error("Supabase Admin test query failed:", error.message);
+      } else {
+        console.log("Supabase Admin connected successfully. User count:", data.count);
+      }
+    } catch (err: any) {
+      console.error("Supabase Admin initialization crashed:", err.message);
+      supabaseAdmin = null;
     }
-  });
-
-  // Test connection on startup
-  try {
-    const { data, error } = await supabaseAdmin.from('users').select('count').single();
-    if (error) {
-      console.error("Supabase Admin test query failed:", error.message);
-    } else {
-      console.log("Supabase Admin connected successfully. User count:", data.count);
-    }
-  } catch (err: any) {
-    console.error("Supabase Admin test query crashed:", err.message);
   }
 
   // Health check route
   app.get("/api/health", async (req, res) => {
+    if (!supabaseAdmin) {
+      return res.status(500).json({ status: "error", message: "Supabase Admin client not initialized. Check environment variables." });
+    }
     try {
       const { data, error } = await supabaseAdmin.from('users').select('count').single();
       if (error) throw error;
@@ -74,6 +79,9 @@ async function startServer() {
 
   // Helper to verify admin token
   async function verifyAdmin(req: express.Request) {
+    if (!supabaseAdmin) {
+      throw new Error("Supabase Admin client not initialized. Check environment variables.");
+    }
     console.log("verifyAdmin - Verifying token");
     const authHeader = req.headers.authorization;
     if (!authHeader) {
