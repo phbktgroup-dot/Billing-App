@@ -1,0 +1,8 @@
+{
+  "appId": "com.phbkt.enterprise",
+  "appName": "PHBKT Group Suite",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
