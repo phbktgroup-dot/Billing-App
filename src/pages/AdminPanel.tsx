@@ -168,22 +168,23 @@ export default function AdminPanel() {
     setError(null);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No active session");
+      let query = supabase.from('users').select('*, business_profiles(name)');
 
-      const response = await fetch(getApiUrl('/api/admin/users'), {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
+      if (!isSuperAdmin) {
+        if (businessId) {
+          query = query.or(`id.eq.${currentUser.id},created_by.eq.${currentUser.id},business_id.eq.${businessId}`);
+        } else {
+          query = query.or(`id.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
         }
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch users');
       }
 
-      setUsers(result.users || []);
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setUsers(data || []);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       setError(error.message || 'Failed to fetch users');
