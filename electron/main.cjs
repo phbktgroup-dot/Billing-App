@@ -11,8 +11,11 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    title: "PHBKT Group - Enterprise Suite",
+    title: "PHBKT Billing App",
+    autoHideMenuBar: true,
   });
+
+  win.setMenu(null);
 
   // In development, load from the dev server
   if (isDev) {
