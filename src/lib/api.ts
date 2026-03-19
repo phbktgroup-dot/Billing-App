@@ -12,10 +12,8 @@ export const getApiUrl = (path: string) => {
       return `http://localhost:3000${path.startsWith('/') ? '' : '/'}${path}`;
     }
 
-    // In production desktop/mobile app, use the deployed backend URL
-    const baseUrl = 
-      import.meta.env.VITE_APP_URL || 
-      'https://ais-pre-63egfcyw5xcnj4izhkgqaa-583844668197.asia-east1.run.app'; // Use the shared URL as fallback
+    // In production desktop/mobile app, always use the deployed backend URL
+    const baseUrl = 'https://ais-pre-63egfcyw5xcnj4izhkgqaa-583844668197.asia-east1.run.app';
     
     // Ensure no trailing slash on baseUrl
     const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
