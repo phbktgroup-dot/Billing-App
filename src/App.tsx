@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -22,6 +22,7 @@ import { useState, useEffect } from 'react';
 // Auth Guard
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -42,7 +43,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     (Array.isArray(profile?.business_profiles) && profile.business_profiles.length > 0) ||
     (profile?.business_profiles && !Array.isArray(profile.business_profiles))
   );
-  const isSetupPage = window.location.pathname === '/setup';
+  const isSetupPage = location.pathname === '/setup';
 
   // If user has no business, they need to set up their business
   if (!hasBusiness && !isSetupPage) {
@@ -70,7 +71,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/setup" element={<ProtectedRoute><BusinessSetup /></ProtectedRoute>} />
@@ -94,6 +95,6 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
