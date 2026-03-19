@@ -2,6 +2,21 @@ import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Helper for exponential backoff
+async function retry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    const isRateLimit = error?.status === 429 || error?.message?.includes('RESOURCE_EXHAUSTED');
+    if (retries <= 0 || !isRateLimit) {
+      throw error;
+    }
+    console.warn(`Rate limit exceeded, retrying in ${delay}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retry(fn, retries - 1, delay * 2);
+  }
+}
+
 export interface BusinessInsights {
   summary: string;
   healthScore: number;
@@ -20,6 +35,59 @@ export interface SimulationResult {
   projectedRevenue: number;
   confidence: number;
   risks: string[];
+}
+
+export interface ProactiveAction {
+  title: string;
+  description: string;
+  impact: 'High' | 'Medium' | 'Low';
+  effort: 'Easy' | 'Moderate' | 'Hard';
+  actionType: 'Inventory' | 'Marketing' | 'Financial' | 'Customer';
+}
+
+export async function getProactiveActions(data: any, businessId: string): Promise<ProactiveAction[]> {
+  const prompt = `
+    Analyze the following business data and identify 3 high-impact proactive actions.
+    Data: ${JSON.stringify(data)}
+    
+    Provide the response in JSON format as an array of objects:
+    [
+      {
+        "title": "Short title",
+        "description": "Clear explanation of the action",
+        "impact": "High" | "Medium" | "Low",
+        "effort": "Easy" | "Moderate" | "Hard",
+        "actionType": "Inventory" | "Marketing" | "Financial" | "Customer"
+      }
+    ]
+  `;
+
+  try {
+    const response = await retry(() => ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              impact: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] },
+              effort: { type: Type.STRING, enum: ['Easy', 'Moderate', 'Hard'] },
+              actionType: { type: Type.STRING, enum: ['Inventory', 'Marketing', 'Financial', 'Customer'] }
+            }
+          }
+        }
+      }
+    }));
+    return JSON.parse((response as any).text);
+  } catch (error) {
+    console.error("AI Proactive Actions Error:", error);
+    return [];
+  }
 }
 
 export async function generateBusinessInsights(data: any, businessId: string): Promise<BusinessInsights> {
@@ -69,106 +137,93 @@ export async function generateBusinessInsights(data: any, businessId: string): P
   `;
 
   try {
-    let response;
-    let attempts = 0;
-    const maxAttempts = 2;
-
-    while (attempts < maxAttempts) {
-      try {
-        response = await Promise.race([
-          ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-            config: {
-              responseMimeType: "application/json",
-              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  summary: { type: Type.STRING },
-                  healthScore: { type: Type.NUMBER },
-                  anomalies: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  forecast: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        month: { type: Type.STRING },
-                        revenue: { type: Type.NUMBER }
-                      }
-                    }
-                  },
-                  radarData: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        subject: { type: Type.STRING },
-                        A: { type: Type.NUMBER },
-                        fullMark: { type: Type.NUMBER }
-                      }
-                    }
-                  },
-                  strategyRoadmap: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        phase: { type: Type.STRING },
-                        goal: { type: Type.STRING },
-                        timeline: { type: Type.STRING },
-                        priority: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] }
-                      }
-                    }
-                  },
-                  productMatrix: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        name: { type: Type.STRING },
-                        sales: { type: Type.NUMBER },
-                        growth: { type: Type.NUMBER },
-                        category: { type: Type.STRING, enum: ['Star', 'Cash Cow', 'Question Mark', 'Dog'] }
-                      }
-                    }
-                  },
-                  taxEstimate: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        amount: { type: Type.NUMBER },
-                        dueDate: { type: Type.STRING },
-                        category: { type: Type.STRING }
-                      }
-                    }
-                  },
-                  clvInsights: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        segment: { type: Type.STRING },
-                        value: { type: Type.NUMBER },
-                        count: { type: Type.NUMBER }
-                      }
-                    }
+    const response = await retry(() => Promise.race([
+      ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              healthScore: { type: Type.NUMBER },
+              anomalies: { type: Type.ARRAY, items: { type: Type.STRING } },
+              recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+              forecast: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    month: { type: Type.STRING },
+                    revenue: { type: Type.NUMBER }
+                  }
+                }
+              },
+              radarData: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    subject: { type: Type.STRING },
+                    A: { type: Type.NUMBER },
+                    fullMark: { type: Type.NUMBER }
+                  }
+                }
+              },
+              strategyRoadmap: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    phase: { type: Type.STRING },
+                    goal: { type: Type.STRING },
+                    timeline: { type: Type.STRING },
+                    priority: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] }
+                  }
+                }
+              },
+              productMatrix: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    sales: { type: Type.NUMBER },
+                    growth: { type: Type.NUMBER },
+                    category: { type: Type.STRING, enum: ['Star', 'Cash Cow', 'Question Mark', 'Dog'] }
+                  }
+                }
+              },
+              taxEstimate: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    amount: { type: Type.NUMBER },
+                    dueDate: { type: Type.STRING },
+                    category: { type: Type.STRING }
+                  }
+                }
+              },
+              clvInsights: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    segment: { type: Type.STRING },
+                    value: { type: Type.NUMBER },
+                    count: { type: Type.NUMBER }
                   }
                 }
               }
             }
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
-        ]);
-        break; // Success
-      } catch (error) {
-        attempts++;
-        if (attempts >= maxAttempts) throw error;
-        console.warn(`AI request attempt ${attempts} failed, retrying...`);
-      }
-    }
+          }
+        }
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
+    ]));
 
     if (!response || !(response as any).text) {
       console.error('AI response:', response);
@@ -229,26 +284,13 @@ export async function askBusinessQuestion(question: string, context: any): Promi
   `;
 
   try {
-    let response;
-    let attempts = 0;
-    const maxAttempts = 2;
-
-    while (attempts < maxAttempts) {
-      try {
-        response = await Promise.race([
-          ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
-        ]);
-        break; // Success
-      } catch (error) {
-        attempts++;
-        if (attempts >= maxAttempts) throw error;
-        console.warn(`AI request attempt ${attempts} failed, retrying...`);
-      }
-    }
+    const response = await retry(() => Promise.race([
+      ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
+    ]));
     return (response as any).text || "I'm sorry, I couldn't generate an answer at this time.";
   } catch (error) {
     console.error("AI Chat Error:", error);
@@ -272,38 +314,25 @@ export async function simulateScenario(scenario: string, context: any): Promise<
   `;
 
   try {
-    let response;
-    let attempts = 0;
-    const maxAttempts = 2;
-
-    while (attempts < maxAttempts) {
-      try {
-        response = await Promise.race([
-          ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  impact: { type: Type.STRING },
-                  projectedRevenue: { type: Type.NUMBER },
-                  confidence: { type: Type.NUMBER },
-                  risks: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
-              }
+    const response = await retry(() => Promise.race([
+      ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              impact: { type: Type.STRING },
+              projectedRevenue: { type: Type.NUMBER },
+              confidence: { type: Type.NUMBER },
+              risks: { type: Type.ARRAY, items: { type: Type.STRING } }
             }
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
-        ]);
-        break; // Success
-      } catch (error) {
-        attempts++;
-        if (attempts >= maxAttempts) throw error;
-        console.warn(`AI request attempt ${attempts} failed, retrying...`);
-      }
-    }
+          }
+        }
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
+    ]));
     return JSON.parse((response as any).text);
   } catch (error) {
     console.error("AI Simulation Error:", error);

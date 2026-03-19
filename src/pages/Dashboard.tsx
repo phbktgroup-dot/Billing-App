@@ -64,7 +64,9 @@ import {
   BusinessInsights, 
   askBusinessQuestion, 
   simulateScenario, 
-  SimulationResult 
+  SimulationResult,
+  getProactiveActions,
+  ProactiveAction
 } from '../services/aiService';
 
 export default function Dashboard() {
@@ -86,6 +88,7 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [showScanOptions, setShowScanOptions] = useState(false);
   const [aiInsights, setAiInsights] = useState<BusinessInsights | null>(null);
+  const [proactiveActions, setProactiveActions] = useState<ProactiveAction[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiQuestion, setAiQuestion] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
@@ -241,12 +244,20 @@ export default function Dashboard() {
     setIsAnalyzing(true);
     console.log('Fetching AI insights...', statsData, invoicesData, businessId);
     try {
-      const insights = await generateBusinessInsights({
-        stats: statsData,
-        recentInvoices: invoicesData?.slice(0, 20).map((inv: any) => ({ total: inv.total, status: inv.status, date: inv.date }))
-      }, businessId);
+      const [insights, actions] = await Promise.all([
+        generateBusinessInsights({
+          stats: statsData,
+          recentInvoices: invoicesData?.slice(0, 20).map((inv: any) => ({ total: inv.total, status: inv.status, date: inv.date }))
+        }, businessId),
+        getProactiveActions({
+          stats: statsData,
+          recentInvoices: invoicesData?.slice(0, 20).map((inv: any) => ({ total: inv.total, status: inv.status, date: inv.date }))
+        }, businessId)
+      ]);
       console.log('AI insights received:', insights);
+      console.log('AI proactive actions received:', actions);
       setAiInsights(insights);
+      setProactiveActions(actions);
       
       // Update chart with forecast
       if (insights.forecast && insights.forecast.length > 0) {
@@ -370,118 +381,28 @@ export default function Dashboard() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4 relative"
     >
-      {/* AI Command Center & Ask AI */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 glass-card p-4 bg-slate-900 text-white border-none shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
-            <Sparkles size={120} />
-          </div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="p-1.5 bg-primary/20 rounded-lg">
-                <MessageSquare size={16} className="text-primary-foreground" />
-              </div>
-              <h2 className="text-sm font-bold uppercase tracking-widest">AI Command Center</h2>
-            </div>
-            
-            <form onSubmit={handleAskAI} className="relative">
-              <input 
-                type="text"
-                value={aiQuestion}
-                onChange={(e) => setAiQuestion(e.target.value)}
-                placeholder="Ask anything about your business... (e.g., 'How can I reduce expenses?')"
-                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-500"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-              <button 
-                type="submit"
-                disabled={isAsking || !aiQuestion.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all"
-              >
-                {isAsking ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
-              </button>
-            </form>
-
-            {aiAnswer && (
-              <div className="mt-4 p-3 bg-slate-800/80 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex items-start space-x-3">
-                  <div className="mt-1 p-1 bg-primary/20 rounded text-primary">
-                    <Sparkles size={12} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[11px] leading-relaxed text-slate-300 italic">"{aiAnswer}"</p>
-                    <div className="mt-2 flex items-center space-x-2">
-                      <button className="text-[9px] text-primary hover:underline font-bold uppercase tracking-tighter">Save Insight</button>
-                      <button className="text-[9px] text-slate-500 hover:underline font-bold uppercase tracking-tighter" onClick={() => setAiAnswer(null)}>Clear</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!aiAnswer && !isAsking && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {['Growth strategy?', 'Top products?', 'Cash flow help?'].map((q) => (
-                  <button 
-                    key={q}
-                    onClick={() => { setAiQuestion(q); }}
-                    className="text-[9px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-full border border-slate-700 text-slate-400 transition-colors"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Scenario Simulator Trigger */}
-        <div 
-          onClick={() => setShowSimulator(true)}
-          className="glass-card p-4 bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-none shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden"
-        >
-          <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
-            <TrendingUp size={100} />
-          </div>
-          <div className="relative z-10 flex flex-col h-full justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Play size={16} className="text-white fill-white" />
-                <h2 className="text-sm font-bold uppercase tracking-widest">Scenario Simulator</h2>
-              </div>
-              <p className="text-[10px] text-purple-100 opacity-80 leading-relaxed">
-                Predict the future of your business by simulating market changes, price adjustments, and expansion plans.
-              </p>
-            </div>
-            <div className="flex items-center text-[10px] font-bold mt-4 group-hover:translate-x-1 transition-transform">
-              Launch Simulator <ArrowUpRight size={14} className="ml-1" />
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-800 p-6 rounded-2xl text-white shadow-xl border border-slate-700">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Business Co-pilot Dashboard</h1>
-          <p className="text-[11px] text-slate-500">AI-powered insights and predictive analytics for your enterprise.</p>
+          <h1 className="text-lg font-bold text-white">Business Co-pilot Dashboard</h1>
+          <p className="text-[11px] text-slate-400">AI-powered insights and predictive analytics for your enterprise.</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex items-center text-[10px] font-medium text-slate-600 shadow-sm hidden sm:flex">
-            <Calendar size={14} className="mr-2" />
+        <div className="flex items-center space-x-2 justify-end">
+          <div className="bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600 flex items-center text-[10px] font-medium text-slate-300 shadow-sm hidden sm:flex">
+            <Calendar size={14} className="mr-2 text-primary" />
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
           <button 
             onClick={() => navigate('/invoices/new')}
-            className="btn-primary flex items-center text-[10px] px-3 py-1.5 rounded-lg"
+            className="bg-white text-slate-900 hover:bg-slate-50 flex items-center text-[10px] font-bold px-3 py-2.5 rounded-lg shadow-sm transition-all"
           >
-            <Plus size={16} className="mr-1.5" />
+            <Plus size={16} className="mr-1.5 text-primary" />
             Create Invoice
           </button>
           <button 
             onClick={() => setShowScanOptions(true)}
-            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm text-[10px]"
+            className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg font-bold text-slate-900 hover:bg-slate-50 flex items-center shadow-sm text-[10px] transition-colors"
           >
             <Scan size={16} className="mr-1.5 text-primary" />
             Scan Invoice
@@ -544,6 +465,38 @@ export default function Dashboard() {
                     {aiInsights.healthScore}%
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Proactive Actions Section */}
+          {proactiveActions.length > 0 && (
+            <div className="glass-card p-4">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Proactive Actions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {proactiveActions.map((action, i) => (
+                  <div key={i} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={cn(
+                        "text-[9px] font-bold uppercase px-2 py-1 rounded-full",
+                        action.actionType === 'Inventory' ? "bg-orange-100 text-orange-700" :
+                        action.actionType === 'Marketing' ? "bg-blue-100 text-blue-700" :
+                        action.actionType === 'Financial' ? "bg-emerald-100 text-emerald-700" :
+                        "bg-purple-100 text-purple-700"
+                      )}>{action.actionType}</span>
+                      <span className={cn(
+                        "text-[9px] font-bold uppercase",
+                        action.impact === 'High' ? "text-red-600" : "text-slate-500"
+                      )}>{action.impact} Impact</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-900 mb-1">{action.title}</h4>
+                    <p className="text-[10px] text-slate-600 mb-3">{action.description}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] text-slate-400 font-medium">Effort: {action.effort}</span>
+                      <button className="text-[10px] font-bold text-primary hover:underline">Execute</button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1099,9 +1052,9 @@ export default function Dashboard() {
 
       {/* Scenario Simulator Modal */}
       {showSimulator && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-800/60 backdrop-blur-md p-4">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-            <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-6 bg-slate-800 text-white flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-primary/20 rounded-xl">
                   <TrendingUp size={20} className="text-primary" />
@@ -1208,7 +1161,7 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <button className="w-full py-2 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors mt-auto">
+                    <button className="w-full py-2 bg-slate-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-700 transition-colors mt-auto">
                       Generate Detailed Report
                     </button>
                   </div>
@@ -1231,6 +1184,97 @@ export default function Dashboard() {
           onFileSelect={handleFileSelect} 
         />
       )}
+
+      {/* AI Command Center & Ask AI */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 glass-card p-4 bg-slate-800 text-white border-none shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+            <Sparkles size={120} />
+          </div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="p-1.5 bg-primary/20 rounded-lg">
+                <MessageSquare size={16} className="text-primary-foreground" />
+              </div>
+              <h2 className="text-sm font-bold uppercase tracking-widest">AI Command Center</h2>
+            </div>
+            
+            <form onSubmit={handleAskAI} className="relative">
+              <input 
+                type="text"
+                value={aiQuestion}
+                onChange={(e) => setAiQuestion(e.target.value)}
+                placeholder="Ask anything about your business... (e.g., 'How can I reduce expenses?')"
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-500"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+              <button 
+                type="submit"
+                disabled={isAsking || !aiQuestion.trim()}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all"
+              >
+                {isAsking ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
+              </button>
+            </form>
+
+            {aiAnswer && (
+              <div className="mt-4 p-3 bg-slate-800/80 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-start space-x-3">
+                  <div className="mt-1 p-1 bg-primary/20 rounded text-primary">
+                    <Sparkles size={12} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[11px] leading-relaxed text-slate-300 italic">"{aiAnswer}"</p>
+                    <div className="mt-2 flex items-center space-x-2">
+                      <button className="text-[9px] text-primary hover:underline font-bold uppercase tracking-tighter">Save Insight</button>
+                      <button className="text-[9px] text-slate-500 hover:underline font-bold uppercase tracking-tighter" onClick={() => setAiAnswer(null)}>Clear</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!aiAnswer && !isAsking && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {['Growth strategy?', 'Top products?', 'Cash flow help?'].map((q) => (
+                  <button 
+                    key={q}
+                    onClick={() => { setAiQuestion(q); }}
+                    className="text-[9px] px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-full border border-slate-700 text-slate-400 transition-colors"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Scenario Simulator Trigger */}
+        <div 
+          onClick={() => setShowSimulator(true)}
+          className="glass-card p-4 bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-none shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden"
+        >
+          <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+            <TrendingUp size={100} />
+          </div>
+          <div className="relative z-10 flex flex-col h-full justify-between">
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <Play size={16} className="text-white fill-white" />
+                <h2 className="text-sm font-bold uppercase tracking-widest">Scenario Simulator</h2>
+              </div>
+              <p className="text-[10px] text-purple-100 opacity-80 leading-relaxed">
+                Predict the future of your business by simulating market changes, price adjustments, and expansion plans.
+              </p>
+            </div>
+            <div className="flex items-center text-[10px] font-bold mt-4 group-hover:translate-x-1 transition-transform">
+              Launch Simulator <ArrowUpRight size={14} className="ml-1" />
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }
