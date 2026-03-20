@@ -90,6 +90,7 @@ export default function Dashboard() {
   const [aiInsights, setAiInsights] = useState<BusinessInsights | null>(null);
   const [proactiveActions, setProactiveActions] = useState<ProactiveAction[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [aiQuestion, setAiQuestion] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [isAsking, setIsAsking] = useState(false);
@@ -97,7 +98,6 @@ export default function Dashboard() {
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'strategy' | 'products'>('overview');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -122,7 +122,7 @@ export default function Dashboard() {
     if (businessId) {
       fetchDashboardData();
     }
-  }, [businessId]);
+  }, [businessId, profile?.business_profiles?.gemini_api_key]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -188,20 +188,6 @@ export default function Dashboard() {
       
       if (recent) setRecentInvoices(recent);
 
-      // Fetch AI insights after dashboard data is loaded
-      if (businessId) {
-        await fetchAIInsights({
-          totalRevenue,
-          activeInvoices: invoices?.length || 0,
-          totalCustomers: customerCount || 0,
-          lowStockItems: lowStockProducts?.length || 0,
-          paidInvoicesCount: paidInvoices.length,
-          unpaidInvoicesCount: unpaidInvoices.length,
-          paidAmount,
-          unpaidAmount
-        }, recent || [], businessId);
-      }
-
       if (customersData) {
         const customerTotals: Record<string, { name: string, total: number }> = {};
         (customersData as any[]).forEach(inv => {
@@ -234,6 +220,18 @@ export default function Dashboard() {
       ];
       setChartData(baseChartData);
       setLoading(false);
+      
+      // Call AI insights after basic data is loaded
+      fetchAIInsights(
+        {
+          totalRevenue,
+          activeInvoices: invoices?.length || 0,
+          totalCustomers: customerCount || 0,
+          lowStockItems: lowStockProducts?.length || 0
+        },
+        invoices,
+        businessId
+      );
     } catch (error) {
       console.error("Dashboard fetch error:", error);
       setLoading(false);
@@ -242,39 +240,65 @@ export default function Dashboard() {
 
   const fetchAIInsights = async (statsData: any, invoicesData: any, businessId: string) => {
     setIsAnalyzing(true);
-    console.log('Fetching AI insights...', statsData, invoicesData, businessId);
+    setAiError(null);
+    // Clear previous insights to show loading state
+    setAiInsights(null);
+    setProactiveActions([]);
+    
+    const apiKey = profile?.business_profiles?.gemini_api_key;
+    console.log('Fetching AI insights...', 'Using API Key:', apiKey ? `Provided (${apiKey.substring(0, 4)}...)` : 'Default');
+    
     try {
-      const [insights, actions] = await Promise.all([
+      // We use Promise.allSettled to handle partial failures gracefully
+      const results = await Promise.allSettled([
         generateBusinessInsights({
           stats: statsData,
           recentInvoices: invoicesData?.slice(0, 20).map((inv: any) => ({ total: inv.total, status: inv.status, date: inv.date }))
-        }, businessId),
+        }, businessId, apiKey),
         getProactiveActions({
           stats: statsData,
           recentInvoices: invoicesData?.slice(0, 20).map((inv: any) => ({ total: inv.total, status: inv.status, date: inv.date }))
-        }, businessId)
+        }, businessId, apiKey)
       ]);
-      console.log('AI insights received:', insights);
-      console.log('AI proactive actions received:', actions);
-      setAiInsights(insights);
-      setProactiveActions(actions);
-      
-      // Update chart with forecast
-      if (insights.forecast && insights.forecast.length > 0) {
-        const baseChartData = chartData.filter(d => d.revenue !== null);
-        const lastActual = baseChartData[baseChartData.length - 1];
-        const forecastData = insights.forecast.map((f: any) => ({
-          name: f.month,
-          revenue: null,
-          forecast: f.revenue
-        }));
-        
-        // Connect the actual to the forecast
-        const connectionPoint = { ...lastActual, forecast: lastActual.revenue };
-        setChartData([...baseChartData.slice(0, -1), connectionPoint, ...forecastData]);
+
+      const insightsResult = results[0];
+      const actionsResult = results[1];
+
+      if (insightsResult.status === 'fulfilled') {
+        setAiInsights(insightsResult.value);
+        // Update chart with forecast
+        if (insightsResult.value.forecast && insightsResult.value.forecast.length > 0) {
+          const baseChartData = chartData.filter(d => d.revenue !== null);
+          const lastActual = baseChartData[baseChartData.length - 1];
+          const forecastData = insightsResult.value.forecast.map((f: any) => ({
+            name: f.month,
+            revenue: null,
+            forecast: f.revenue
+          }));
+          
+          // Connect the actual to the forecast
+          const connectionPoint = { ...lastActual, forecast: lastActual.revenue };
+          setChartData([...baseChartData.slice(0, -1), connectionPoint, ...forecastData]);
+        }
+      } else {
+        console.error("AI Insights failed:", insightsResult.reason);
+        if (insightsResult.reason.message?.includes('quota')) {
+          setAiError(insightsResult.reason.message);
+        }
       }
-    } catch (aiError) {
-      console.error("AI Insights generation failed:", aiError);
+
+      if (actionsResult.status === 'fulfilled') {
+        setProactiveActions(actionsResult.value);
+      } else {
+        console.error("AI Proactive Actions failed:", actionsResult.reason);
+        if (actionsResult.reason.message?.includes('quota') && !aiError) {
+          setAiError(actionsResult.reason.message);
+        }
+      }
+
+    } catch (unexpectedError: any) {
+      console.error("Unexpected AI error:", unexpectedError);
+      setAiError("An unexpected error occurred while generating AI insights.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -286,11 +310,18 @@ export default function Dashboard() {
     
     setIsAsking(true);
     setAiAnswer(null);
+    const apiKey = profile?.business_profiles?.gemini_api_key;
+    console.log('AI Command Center: Asking question...', aiQuestion, 'Using API Key:', apiKey ? 'Provided' : 'Default');
     try {
-      const answer = await askBusinessQuestion(aiQuestion, { stats, recentInvoices, aiInsights });
+      const answer = await askBusinessQuestion(aiQuestion, { stats, recentInvoices, aiInsights }, apiKey);
       setAiAnswer(answer);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Ask AI Error:", error);
+      if (error.message?.includes('quota')) {
+        setAiError(error.message);
+      } else {
+        setAiAnswer("The AI consultant is currently unavailable. Please try again later.");
+      }
     } finally {
       setIsAsking(false);
     }
@@ -299,11 +330,17 @@ export default function Dashboard() {
   const handleSimulate = async (scenario: string) => {
     setIsSimulating(true);
     setSimulationResult(null);
+    const apiKey = profile?.business_profiles?.gemini_api_key;
+    console.log('AI Simulator: Running scenario...', scenario, 'Using API Key:', apiKey ? 'Provided' : 'Default');
     try {
-      const result = await simulateScenario(scenario, { stats, aiInsights });
+      const result = await simulateScenario(scenario, { stats, aiInsights }, apiKey);
       setSimulationResult(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Simulation Error:", error);
+      if (error.message?.includes('quota')) {
+        setAiError(error.message);
+        setShowSimulator(false);
+      }
     } finally {
       setIsSimulating(false);
     }
@@ -410,645 +447,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-fit">
-        {[
-          { id: 'overview', label: 'Overview', icon: Activity },
-          { id: 'strategy', label: 'Strategic Roadmap', icon: Target },
-          { id: 'products', label: 'Product Matrix', icon: Package },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={cn(
-              "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all",
-              activeTab === tab.id 
-                ? "bg-white text-primary shadow-sm" 
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
-            )}
-          >
-            <tab.icon size={14} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'overview' && (
-        <>
-          {/* AI Insights Bar */}
-          {aiInsights && (
-            <div className="glass-card p-3 bg-gradient-to-r from-primary/5 to-purple-500/5 border-l-4 border-primary animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Sparkles className="text-primary" size={14} />
-                    <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">AI Business Insights</h3>
-                    <button 
-                      onClick={fetchDashboardData}
-                      disabled={isAnalyzing}
-                      className="p-1 hover:bg-primary/10 rounded-md transition-colors disabled:opacity-50"
-                      title="Refresh Insights"
-                    >
-                      <Loader2 size={12} className={cn("text-primary", isAnalyzing && "animate-spin")} />
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
-                    {aiInsights.summary}
-                  </p>
-                </div>
-                <div className="hidden md:flex flex-col items-center justify-center px-4 border-l border-slate-200">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Health Score</div>
-                  <div className={cn(
-                    "text-lg font-black",
-                    aiInsights.healthScore > 80 ? "text-emerald-600" : aiInsights.healthScore > 60 ? "text-orange-600" : "text-red-600"
-                  )}>
-                    {aiInsights.healthScore}%
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Proactive Actions Section */}
-          {proactiveActions.length > 0 && (
-            <div className="glass-card p-4">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Proactive Actions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {proactiveActions.map((action, i) => (
-                  <div key={i} className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={cn(
-                        "text-[9px] font-bold uppercase px-2 py-1 rounded-full",
-                        action.actionType === 'Inventory' ? "bg-orange-100 text-orange-700" :
-                        action.actionType === 'Marketing' ? "bg-blue-100 text-blue-700" :
-                        action.actionType === 'Financial' ? "bg-emerald-100 text-emerald-700" :
-                        "bg-purple-100 text-purple-700"
-                      )}>{action.actionType}</span>
-                      <span className={cn(
-                        "text-[9px] font-bold uppercase",
-                        action.impact === 'High' ? "text-red-600" : "text-slate-500"
-                      )}>{action.impact} Impact</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-900 mb-1">{action.title}</h4>
-                    <p className="text-[10px] text-slate-600 mb-3">{action.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] text-slate-400 font-medium">Effort: {action.effort}</span>
-                      <button className="text-[10px] font-bold text-primary hover:underline">Execute</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Advanced Features Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Business Health Radar */}
-            <div className="glass-card p-3 flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-1.5">
-                  <Activity size={14} className="text-primary" />
-                  <h3 className="text-[11px] font-bold text-slate-900 uppercase">Business Balance</h3>
-                </div>
-                <div className="text-[9px] text-slate-400">Real-time Analysis</div>
-              </div>
-              <div className="h-48 w-full">
-                {console.log('Rendering radar chart with aiInsights:', aiInsights)}
-                {aiInsights ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={Array.isArray(aiInsights.radarData) ? aiInsights.radarData : []}>
-                      <PolarGrid stroke="#f1f5f9" />
-                      <PolarAngleAxis dataKey="subject" tick={{fontSize: 8, fill: '#64748b'}} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar
-                        name="Business"
-                        dataKey="A"
-                        stroke="#1e3a8a"
-                        fill="#1e3a8a"
-                        fillOpacity={0.6}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400 text-[10px]">
-                    {isAnalyzing ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <div className="text-center">
-                        <p>No data available</p>
-                        <button onClick={fetchDashboardData} className="text-primary underline mt-1">Retry</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Smart Recommendations */}
-            <div className="glass-card p-3 flex flex-col">
-              <div className="flex items-center space-x-1.5 mb-3">
-                <Zap size={14} className="text-orange-500" />
-                <h3 className="text-[11px] font-bold text-slate-900 uppercase">AI Recommendations</h3>
-              </div>
-              <div className="space-y-2 flex-1 overflow-y-auto max-h-48 pr-1 custom-scrollbar">
-                {aiInsights?.recommendations?.map((rec, i) => (
-                  <div key={i} className="flex items-start space-x-2 p-2 bg-slate-50 rounded-lg border border-slate-100 hover:border-primary/20 transition-all cursor-default group">
-                    <div className="mt-0.5 p-1 bg-white rounded-md shadow-sm text-primary group-hover:scale-110 transition-transform">
-                      <Target size={10} />
-                    </div>
-                    <p className="text-[10px] text-slate-600 leading-tight">{rec}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Anomaly Detection Feed */}
-            <div className="glass-card p-3 flex flex-col">
-              <div className="flex items-center space-x-1.5 mb-3">
-                <ShieldAlert size={14} className="text-red-500" />
-                <h3 className="text-[11px] font-bold text-slate-900 uppercase">Smart Alerts & Anomalies</h3>
-              </div>
-              <div className="space-y-2 flex-1 overflow-y-auto max-h-48 pr-1 custom-scrollbar">
-                {aiInsights?.anomalies?.map((anomaly, i) => (
-                  <div key={i} className="flex items-center space-x-2 p-2 bg-red-50/50 rounded-lg border border-red-100">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                    <p className="text-[10px] text-red-700 font-medium">{anomaly}</p>
-                  </div>
-                ))}
-                {(!aiInsights?.anomalies || aiInsights.anomalies?.length === 0) && (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-400 py-8">
-                    <ShieldAlert size={24} className="opacity-20 mb-2" />
-                    <p className="text-[10px]">No anomalies detected</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {statCards.map((stat, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                className="glass-card p-4 flex flex-col justify-between hover:shadow-lg transition-all cursor-default group"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className={cn("p-1.5 rounded-lg group-hover:scale-110 transition-transform", stat.bg, stat.color)}>
-                    <stat.icon size={16} />
-                  </div>
-                  <div className={cn(
-                    "flex items-center text-[8px] font-bold px-1 py-0.5 rounded-md",
-                    stat.trend === 'up' ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                  )}>
-                    {stat.trend === 'up' ? <ArrowUpRight size={10} className="mr-1" /> : <ArrowDownRight size={10} className="mr-1" />}
-                    {stat.change}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium text-slate-500">{stat.label}</p>
-                  <h3 className="text-sm font-bold text-slate-900 mt-0.5">
-                    {formatCurrency(stat.value)}
-                  </h3>
-                  {stat.subValue && (
-                    <p className="text-[9px] text-slate-400 mt-0.5">{stat.subValue}</p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* New Section: Cash Flow, Top Customers, and Tax */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="glass-card p-4 lg:col-span-2"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                    <TrendingUp size={16} />
-                  </div>
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Cash Flow Summary</h3>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[9px] text-slate-500">Inflow</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-[9px] text-slate-500">Outflow</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Total Inflow</p>
-                  <div className="text-lg font-black text-emerald-600">{formatCurrency(stats.paidAmount)}</div>
-                  <p className="text-[8px] text-slate-500 mt-1">From {stats.paidInvoicesCount} paid invoices</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Pending Inflow</p>
-                  <div className="text-lg font-black text-orange-600">{formatCurrency(stats.unpaidAmount)}</div>
-                  <p className="text-[8px] text-slate-500 mt-1">From {stats.unpaidInvoicesCount} unpaid invoices</p>
-                </div>
-                <div className="p-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20">
-                  <p className="text-[9px] font-bold text-white/60 uppercase mb-1">Net Position</p>
-                  <div className="text-lg font-black">{formatCurrency(stats.paidAmount - stats.unpaidAmount)}</div>
-                  <div className="mt-2 h-1 bg-white/20 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-white transition-all duration-1000" 
-                      style={{ width: `${(stats.paidAmount / (stats.paidAmount + stats.unpaidAmount || 1)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-4"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
-                    <Users size={16} />
-                  </div>
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Top Customers</h3>
-                </div>
-                <button className="text-[9px] font-bold text-primary hover:underline">View All</button>
-              </div>
-              
-              <div className="space-y-3">
-                {topCustomers.length > 0 ? topCustomers.map((customer, i) => (
-                  <div key={customer.id} className="flex items-center justify-between group">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        {customer.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-900">{customer.name}</p>
-                        <p className="text-[8px] text-slate-400">Premium Client</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-slate-900">{formatCurrency(customer.total)}</p>
-                      <div className="w-16 h-1 bg-slate-100 rounded-full mt-1 overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-1000" 
-                          style={{ width: `${(customer.total / (topCustomers[0]?.total || 1)) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                    <Users size={24} className="opacity-20 mb-2" />
-                    <p className="text-[10px]">No customer data yet</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="glass-card p-4"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-orange-50 text-orange-600 rounded-lg">
-                    <IndianRupee size={16} />
-                  </div>
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Tax Estimates</h3>
-                </div>
-                <div className="p-1 bg-orange-100 text-orange-700 rounded text-[8px] font-bold uppercase">AI Forecast</div>
-              </div>
-              
-              <div className="space-y-3">
-                {aiInsights?.taxEstimate?.map((tax, i) => (
-                  <div key={i} className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase">{tax.category}</span>
-                      <span className="text-[9px] font-medium text-slate-400">{new Date(tax.dueDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="text-sm font-bold text-slate-900">{formatCurrency(tax.amount)}</div>
-                  </div>
-                ))}
-                {!aiInsights?.taxEstimate && (
-                  <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                    <Activity size={24} className="opacity-20 mb-2" />
-                    <p className="text-[10px]">Calculating tax...</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass-card p-3 lg:col-span-2"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                    <TrendingUp size={16} />
-                  </div>
-                  <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Revenue & AI Forecast</h3>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="text-[9px] text-slate-500">Actual</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 rounded-full bg-purple-500" />
-                    <span className="text-[9px] text-slate-500">Forecast</span>
-                  </div>
-                </div>
-              </div>
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} tickFormatter={(val) => `₹${val/1000}k`} />
-                    <Tooltip 
-                      contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px'}}
-                      formatter={(val: number) => [formatCurrency(val), 'Revenue']}
-                    />
-                    <Area type="monotone" dataKey="revenue" stroke="#1e3a8a" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
-                    <Area type="monotone" dataKey="forecast" stroke="#7c3aed" strokeWidth={2} strokeDasharray="5 5" fill="transparent" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass-card p-4"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
-                    <Users size={16} />
-                  </div>
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Customer Segments</h3>
-                </div>
-                <div className="p-1 bg-purple-100 text-purple-700 rounded text-[8px] font-bold uppercase">AI Analysis</div>
-              </div>
-              
-              <div className="space-y-4">
-                {aiInsights?.clvInsights?.map((clv, i) => (
-                  <div key={i} className="group">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center space-x-2">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : "bg-slate-400"
-                        )} />
-                        <span className="text-[10px] font-bold text-slate-700">{clv.segment}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-900">{formatCurrency(clv.value)}</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(clv.value / (aiInsights.clvInsights[0]?.value || 1)) * 100}%` }}
-                        transition={{ duration: 1, delay: i * 0.1 }}
-                        className={cn(
-                          "h-full transition-all",
-                          i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : "bg-slate-400"
-                        )}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span className="text-[8px] text-slate-400">{clv.count} Customers</span>
-                      <span className="text-[8px] font-bold text-slate-500">Avg. {formatCurrency(clv.value / clv.count)}</span>
-                    </div>
-                  </div>
-                ))}
-                {!aiInsights?.clvInsights && (
-                  <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                    <Users size={24} className="opacity-20 mb-2" />
-                    <p className="text-[10px]">Analyzing segments...</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Recent Activity / Invoices */}
-          <div className="glass-card overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 text-[11px] uppercase tracking-wider">Recent Invoices</h3>
-              <button className="text-[10px] font-bold text-primary hover:underline">View All</button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-slate-50/50 text-slate-500 text-[9px] font-bold uppercase tracking-wider">
-                    <th className="px-4 py-3">Invoice #</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentInvoices.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center text-slate-500 text-[10px]">
-                        No invoices found. Start by creating one!
-                      </td>
-                    </tr>
-                  ) : (
-                    recentInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-4 py-3 text-[10px] font-medium text-slate-900">{invoice.invoice_number}</td>
-                        <td className="px-4 py-3 text-[10px] text-slate-600">{invoice.customers?.name || 'N/A'}</td>
-                        <td className="px-4 py-3 text-[10px] text-slate-500">{new Date(invoice.date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 text-[10px] font-bold text-slate-900">{formatCurrency(invoice.total)}</td>
-                        <td className="px-4 py-3">
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded text-[8px] font-bold uppercase",
-                            invoice.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
-                          )}>
-                            {invoice.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <button className="text-slate-400 hover:text-primary transition-colors">
-                            <ArrowUpRight size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-
-      {activeTab === 'strategy' && (
-        <div className="grid grid-cols-1 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">AI Strategic Roadmap</h2>
-                <p className="text-xs text-slate-500">Long-term business planning and milestone tracking.</p>
-              </div>
-              <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                <Target size={24} />
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-100" />
-              <div className="space-y-8">
-                {aiInsights?.strategyRoadmap?.map((item, i) => (
-                  <div key={i} className="relative pl-10">
-                    <div className={cn(
-                      "absolute left-0 w-8 h-8 rounded-full border-4 border-white shadow-sm flex items-center justify-center z-10",
-                      item.priority === 'High' ? "bg-red-500" : item.priority === 'Medium' ? "bg-orange-500" : "bg-emerald-500"
-                    )}>
-                      <span className="text-[10px] font-bold text-white">{i + 1}</span>
-                    </div>
-                    <div className="glass-card p-4 hover:shadow-md transition-all">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{item.phase}</span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase",
-                          item.priority === 'High' ? "bg-red-100 text-red-700" : item.priority === 'Medium' ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"
-                        )}>
-                          {item.priority} Priority
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-900 mb-1">{item.goal}</h4>
-                      <div className="flex items-center text-[10px] text-slate-500">
-                        <Calendar size={12} className="mr-1.5" />
-                        {item.timeline}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'products' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Product Performance Matrix</h2>
-                <p className="text-xs text-slate-500">BCG Matrix analysis of your product portfolio.</p>
-              </div>
-              <div className="p-2 bg-purple-100 rounded-xl text-purple-600">
-                <Package size={24} />
-              </div>
-            </div>
-
-            <div className="h-80 w-full relative">
-              {/* Matrix Background Labels */}
-              <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 pointer-events-none border border-slate-100">
-                <div className="flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Question Marks</div>
-                <div className="flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Stars</div>
-                <div className="flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Dogs</div>
-                <div className="flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Cash Cows</div>
-              </div>
-
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis 
-                    type="number" 
-                    dataKey="growth" 
-                    name="Growth" 
-                    unit="%" 
-                    label={{ value: 'Market Growth', position: 'bottom', fontSize: 10 }}
-                    tick={{fontSize: 10}}
-                  />
-                  <YAxis 
-                    type="number" 
-                    dataKey="sales" 
-                    name="Sales" 
-                    unit="$" 
-                    label={{ value: 'Relative Market Share', angle: -90, position: 'left', fontSize: 10 }}
-                    tick={{fontSize: 10}}
-                  />
-                  <ZAxis type="number" dataKey="sales" range={[100, 1000]} name="Volume" />
-                  <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{fontSize: 10, borderRadius: 12}} />
-                  <Scatter name="Products" data={aiInsights?.productMatrix || []}>
-                    {aiInsights?.productMatrix?.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={
-                          entry.category === 'Star' ? '#10b981' : 
-                          entry.category === 'Cash Cow' ? '#1e3a8a' : 
-                          entry.category === 'Question Mark' ? '#f59e0b' : '#ef4444'
-                        } 
-                      />
-                    ))}
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="glass-card p-6">
-            <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider">Portfolio Breakdown</h3>
-            <div className="space-y-4">
-              {aiInsights?.productMatrix?.map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="flex items-center space-x-3">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      item.category === 'Star' ? "bg-emerald-500" : 
-                      item.category === 'Cash Cow' ? "bg-blue-500" : 
-                      item.category === 'Question Mark' ? "bg-orange-500" : "bg-red-500"
-                    )} />
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-900">{item.name}</div>
-                      <div className="text-[9px] text-slate-500">{item.category}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[11px] font-bold text-slate-900">{formatCurrency(item.sales)}</div>
-                    <div className={cn(
-                      "text-[9px] font-bold",
-                      item.growth > 0 ? "text-emerald-600" : "text-red-600"
-                    )}>
-                      {item.growth > 0 ? '+' : ''}{item.growth}% Growth
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Scenario Simulator Modal */}
 
       {/* Scenario Simulator Modal */}
       {showSimulator && (
@@ -1198,6 +597,12 @@ export default function Dashboard() {
                 <MessageSquare size={16} className="text-primary-foreground" />
               </div>
               <h2 className="text-sm font-bold uppercase tracking-widest">AI Command Center</h2>
+              {isAnalyzing && (
+                <div className="flex items-center space-x-2 ml-auto">
+                  <Loader2 size={12} className="animate-spin text-primary" />
+                  <span className="text-[9px] font-bold text-slate-400 animate-pulse uppercase tracking-widest">Analyzing...</span>
+                </div>
+              )}
             </div>
             
             <form onSubmit={handleAskAI} className="relative">
@@ -1217,6 +622,32 @@ export default function Dashboard() {
                 {isAsking ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
               </button>
             </form>
+
+            {aiError && (
+              <div className="mt-4 p-3 bg-red-900/20 rounded-xl border border-red-900/30 flex flex-col space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle size={14} className="text-red-400" />
+                    <p className="text-[10px] text-red-200">{aiError}</p>
+                  </div>
+                  <button 
+                    onClick={() => fetchDashboardData()}
+                    className="text-[9px] font-bold text-white bg-red-600 hover:bg-red-500 px-2 py-1 rounded transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+                {aiError.toLowerCase().includes('quota') && (
+                  <div className="pt-2 border-t border-red-900/20">
+                    <p className="text-[9px] text-red-300">
+                      {profile?.business_profiles?.gemini_api_key 
+                        ? "Tip: Your personal key has reached its limit. Check your Google AI Studio billing or try again later."
+                        : <>Tip: You can add your own Gemini API key in <button onClick={() => navigate('/settings?tab=security')} className="underline font-bold hover:text-white">Settings</button> to avoid shared quota limits.</>}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {aiAnswer && (
               <div className="mt-4 p-3 bg-slate-800/80 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -1248,13 +679,143 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
+            
+            {/* AI Insights Summary */}
+            {aiInsights && (
+              <div className="mt-6 pt-6 border-t border-slate-700/50 animate-in fade-in duration-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Business Health</h3>
+                      <span className={cn(
+                        "text-[10px] font-black",
+                        aiInsights.healthScore > 80 ? "text-emerald-400" : aiInsights.healthScore > 60 ? "text-orange-400" : "text-red-400"
+                      )}>
+                        {aiInsights.healthScore}/100
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${aiInsights.healthScore}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={cn(
+                          "h-full rounded-full",
+                          aiInsights.healthScore > 80 ? "bg-emerald-500" : aiInsights.healthScore > 60 ? "bg-orange-500" : "bg-red-500"
+                        )}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed font-medium italic">
+                      "{aiInsights.summary}"
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Key Recommendations</h3>
+                    <div className="space-y-1.5">
+                      {aiInsights.recommendations.slice(0, 2).map((rec, i) => (
+                        <div key={i} className="flex items-start space-x-2">
+                          <div className="mt-1 w-1 h-1 rounded-full bg-primary shrink-0" />
+                          <p className="text-[10px] text-slate-400 leading-snug">{rec}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Proactive Actions */}
+        <div className="glass-card p-4 bg-white border border-slate-100 shadow-xl flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 bg-orange-50 rounded-lg">
+                <Zap size={16} className="text-orange-600" />
+              </div>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Proactive Actions</h2>
+            </div>
+            {proactiveActions.length > 0 && (
+              <span className="text-[9px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full uppercase">
+                {proactiveActions.length} New
+              </span>
+            )}
+          </div>
+          
+          <div className="flex-1 space-y-3">
+            {isAnalyzing && proactiveActions.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2">
+                <Loader2 size={24} className="animate-spin opacity-20" />
+                <p className="text-[9px] font-bold uppercase tracking-widest">Identifying opportunities...</p>
+              </div>
+            ) : proactiveActions.length > 0 ? (
+              proactiveActions.map((action, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-primary/30 transition-all group cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="text-[11px] font-bold text-slate-900 group-hover:text-primary transition-colors">{action.title}</h3>
+                    <span className={cn(
+                      "text-[8px] font-bold px-1.5 py-0.5 rounded uppercase",
+                      action.impact === 'High' ? "bg-red-50 text-red-600" : 
+                      action.impact === 'Medium' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
+                    )}>
+                      {action.impact}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-snug mb-2">{action.description}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">{action.actionType}</span>
+                      <span className="w-1 h-1 rounded-full bg-slate-300" />
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">{action.effort} Effort</span>
+                    </div>
+                    <ArrowRight size={12} className="text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                </motion.div>
+              ))
+            ) : aiError?.toLowerCase().includes('quota') ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center px-4 space-y-3">
+                <AlertCircle size={32} className="text-orange-400 opacity-50" />
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-slate-600 uppercase">
+                    {profile?.business_profiles?.gemini_api_key ? 'Personal Quota Reached' : 'Quota Limit Reached'}
+                  </p>
+                  <p className="text-[9px] leading-relaxed">
+                    {profile?.business_profiles?.gemini_api_key 
+                      ? 'Your personal Gemini API key has reached its quota limit. Please check your Google AI Studio billing.'
+                      : 'AI features are temporarily limited. Add your own API key in settings to avoid shared limits.'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => navigate('/settings?tab=security')}
+                  className="text-[9px] font-bold text-primary hover:underline uppercase tracking-widest"
+                >
+                  {profile?.business_profiles?.gemini_api_key ? 'Manage API Key' : 'Go to Settings'}
+                </button>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center px-4">
+                <Target size={32} className="opacity-10 mb-2" />
+                <p className="text-[10px]">No proactive actions identified yet.</p>
+              </div>
+            )}
+          </div>
+          
+          <button className="w-full mt-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors">
+            View All Actions
+          </button>
         </div>
 
         {/* Scenario Simulator Trigger */}
         <div 
           onClick={() => setShowSimulator(true)}
-          className="glass-card p-4 bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-none shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden"
+          className="glass-card p-4 bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-none shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden flex flex-col"
         >
           <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
             <TrendingUp size={100} />
@@ -1275,6 +836,254 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Core Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {statCards.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={cn("p-2 rounded-xl", stat.bg)}>
+                <stat.icon size={16} className={stat.color} />
+              </div>
+              <div className={cn(
+                "text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center",
+                stat.trend === 'up' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+              )}>
+                {stat.trend === 'up' ? <ArrowUpRight size={10} className="mr-1" /> : <ArrowDownRight size={10} className="mr-1" />}
+                {stat.change}
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{stat.label}</p>
+              <h3 className="text-lg font-black text-slate-900">
+                {typeof stat.value === 'number' && stat.label.includes('Revenue') || stat.label.includes('Amount') 
+                  ? formatCurrency(stat.value) 
+                  : stat.value}
+              </h3>
+              {stat.subValue && (
+                <p className="text-[9px] font-bold text-slate-400">{stat.subValue}</p>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue & AI Forecast */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
+                <TrendingUp size={16} className="mr-2 text-primary" />
+                Revenue & AI Forecast
+              </h3>
+              <p className="text-[10px] text-slate-500">Actual revenue vs AI-predicted growth</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-1.5">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase">Actual</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <div className="w-2 h-2 rounded-full bg-slate-200" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase">Forecast</span>
+              </div>
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                  tickFormatter={(value) => `₹${value/1000}k`}
+                />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
+                  formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="#4F46E5" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorRev)" 
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="forecast" 
+                  stroke="#cbd5e1" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  fill="transparent" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Top Customers */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
+            <Users size={16} className="mr-2 text-primary" />
+            Top Customers
+          </h3>
+          <div className="space-y-4">
+            {topCustomers.map((customer, i) => (
+              <div key={customer.id} className="flex items-center justify-between group cursor-pointer">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 group-hover:bg-primary group-hover:text-white transition-colors">
+                    {customer.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-900">{customer.name}</div>
+                    <div className="text-[9px] text-slate-500">Premium Tier</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] font-black text-slate-900">{formatCurrency(customer.total)}</div>
+                  <div className="text-[9px] text-emerald-600 font-bold flex items-center justify-end">
+                    <ArrowUpRight size={10} className="mr-0.5" />
+                    12%
+                  </div>
+                </div>
+              </div>
+            ))}
+            {topCustomers.length === 0 && (
+              <div className="text-center py-8 text-slate-400">
+                <Users size={24} className="mx-auto mb-2 opacity-20" />
+                <p className="text-[10px]">No customer data yet</p>
+              </div>
+            )}
+          </div>
+          <button className="w-full mt-6 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-100 transition-colors">
+            View All Customers
+          </button>
+        </div>
+
+        {/* Recent Invoices */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
+              <FileText size={16} className="mr-2 text-primary" />
+              Recent Invoices
+            </h3>
+            <button 
+              onClick={() => navigate('/invoices')}
+              className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest"
+            >
+              View All
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left border-b border-slate-50">
+                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Invoice</th>
+                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Customer</th>
+                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
+                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {recentInvoices.map((invoice) => (
+                  <tr key={invoice.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3">
+                      <div className="text-[11px] font-bold text-slate-900">#{invoice.invoice_number || invoice.id.slice(0, 8)}</div>
+                    </td>
+                    <td className="py-3">
+                      <div className="text-[11px] font-medium text-slate-600">
+                        {Array.isArray(invoice.customers) ? invoice.customers[0]?.name : invoice.customers?.name || 'Unknown'}
+                      </div>
+                    </td>
+                    <td className="py-3 text-[10px] text-slate-500">
+                      {new Date(invoice.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="py-3">
+                      <div className="text-[11px] font-black text-slate-900">{formatCurrency(invoice.total)}</div>
+                    </td>
+                    <td className="py-3">
+                      <span className={cn(
+                        "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter",
+                        invoice.status === 'paid' ? "bg-emerald-50 text-emerald-600" : 
+                        invoice.status === 'overdue' ? "bg-red-50 text-red-600" : "bg-orange-50 text-orange-600"
+                      )}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {recentInvoices.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400">
+                      <p className="text-[10px]">No invoices found</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Customer Segments */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
+            <Target size={16} className="mr-2 text-primary" />
+            Customer Segments
+          </h3>
+          <div className="h-[200px] w-full mb-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                { subject: 'Loyalty', A: 120, fullMark: 150 },
+                { subject: 'Frequency', A: 98, fullMark: 150 },
+                { subject: 'Value', A: 86, fullMark: 150 },
+                { subject: 'Recency', A: 99, fullMark: 150 },
+                { subject: 'Growth', A: 85, fullMark: 150 },
+              ]}>
+                <PolarGrid stroke="#f1f5f9" />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }} />
+                <Radar name="Segments" dataKey="A" stroke="#4F46E5" fill="#4F46E5" fillOpacity={0.2} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-emerald-50 rounded-xl border border-emerald-100">
+              <span className="text-[10px] font-bold text-emerald-700">High Value</span>
+              <span className="text-[10px] font-black text-emerald-700">42%</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-blue-50 rounded-xl border border-blue-100">
+              <span className="text-[10px] font-bold text-blue-700">At Risk</span>
+              <span className="text-[10px] font-black text-blue-700">12%</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
+
   );
 }

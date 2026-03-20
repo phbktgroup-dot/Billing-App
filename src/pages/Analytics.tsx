@@ -49,14 +49,35 @@ export default function Analytics() {
     setAiResponse(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const response = await ai.models.generateContent({
+      const apiKey = profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY || '';
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const retry = async (fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> => {
+        try {
+          return await fn();
+        } catch (error: any) {
+          const errorMsg = error.message || "";
+          const isRateLimit = error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429');
+          if (retries <= 0 || !isRateLimit) throw error;
+          console.warn(`AI Analytics rate limit exceeded, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return retry(fn, retries - 1, delay * 2);
+        }
+      };
+
+      const response = await retry(() => ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `As a business advisor for ${businessName}, answer this query based on current business trends: ${query}`
-      });
+      }));
       setAiResponse(response.text);
-    } catch (error) {
-      setAiResponse("I'm sorry, I couldn't process that right now. Please try again.");
+    } catch (error: any) {
+      console.error("AI Analytics Error:", error);
+      const errorMsg = error.message || "";
+      if (error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429')) {
+        setAiResponse("The AI advisor is currently busy due to high demand. Please try again in a minute.");
+      } else {
+        setAiResponse("I'm sorry, I couldn't process that right now. Please try again.");
+      }
     } finally {
       setIsThinking(false);
     }

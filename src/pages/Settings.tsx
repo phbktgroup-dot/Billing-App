@@ -23,11 +23,14 @@ import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 
+import { testGeminiConnection } from '../services/aiService';
+
 export default function Settings() {
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestingKey, setIsTestingKey] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -47,8 +50,27 @@ export default function Settings() {
     bankName: '',
     bankAccountNo: '',
     bankIfsc: '',
-    bankBranch: ''
+    bankBranch: '',
+    geminiApiKey: ''
   });
+
+  const handleTestKey = async () => {
+    if (!formData.geminiApiKey) {
+      setError('Please enter an API key first');
+      return;
+    }
+    setIsTestingKey(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await testGeminiConnection(formData.geminiApiKey);
+      setSuccess('Gemini API Key is valid and working!');
+    } catch (err: any) {
+      setError(`Gemini API Key Test Failed: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
 
   useEffect(() => {
     console.log('Settings profile data:', profile);
@@ -83,7 +105,8 @@ export default function Settings() {
         bankName: bp.bank_name || '',
         bankAccountNo: bp.bank_account_no || '',
         bankIfsc: bp.bank_ifsc || '',
-        bankBranch: bp.bank_branch || ''
+        bankBranch: bp.bank_branch || '',
+        geminiApiKey: bp.gemini_api_key || ''
       });
       if (bp.logo_url) {
         setLogoPreview(bp.logo_url);
@@ -142,7 +165,7 @@ export default function Settings() {
     
     try {
       // 1. Update business profile
-      const { error: updateError } = await supabase
+          const { error: updateError } = await supabase
         .from('business_profiles')
         .update({
           name: formData.businessName,
@@ -157,7 +180,8 @@ export default function Settings() {
           bank_ifsc: formData.bankIfsc,
           bank_branch: formData.bankBranch,
           invoice_prefix: formData.invoicePrefix,
-          invoice_number_format: formData.invoiceFormat
+          invoice_number_format: formData.invoiceFormat,
+          gemini_api_key: formData.geminiApiKey
         })
         .eq('id', profile.business_id);
 
@@ -392,13 +416,47 @@ export default function Settings() {
                   </div>
                   
                   {/* API Keys */}
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-900">API Keys</p>
-                      <button className="text-[10px] font-bold text-primary hover:underline">Generate New Key</button>
+                      <p className="text-xs font-bold text-slate-900">Gemini AI API Key</p>
+                      <a 
+                        href="https://aistudio.google.com/app/apikey" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold text-primary hover:underline"
+                      >
+                        Get API Key
+                      </a>
                     </div>
-                    <div className="text-[10px] text-slate-500 p-2 bg-slate-50 rounded-lg">
-                      <p>No API keys generated yet.</p>
+                    <div className="space-y-2">
+                      <input 
+                        type="password" 
+                        placeholder="Paste your Gemini API Key here"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-primary outline-none"
+                        value={formData.geminiApiKey}
+                        onChange={e => setFormData({...formData, geminiApiKey: e.target.value})}
+                      />
+                      <p className="text-[9px] text-slate-500">
+                        This key will be used for AI features like invoice scanning and business insights. 
+                        If left empty, the system default key will be used (subject to shared quotas).
+                      </p>
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={handleSubmit}
+                          disabled={isLoading}
+                          className="btn-primary px-4 py-1.5 text-[10px]"
+                        >
+                          {isLoading ? 'Saving...' : 'Save API Key'}
+                        </button>
+                        <button 
+                          onClick={handleTestKey}
+                          disabled={isTestingKey || !formData.geminiApiKey}
+                          className="px-4 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center"
+                        >
+                          {isTestingKey ? <Loader2 size={12} className="animate-spin mr-1.5" /> : <ShieldCheck size={12} className="mr-1.5" />}
+                          Test Connection
+                        </button>
+                      </div>
                     </div>
                   </div>
 

@@ -1,13 +1,34 @@
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const DEFAULT_API_KEY = process.env.GEMINI_API_KEY || '';
+
+function getAI(apiKey?: string) {
+  const key = apiKey || DEFAULT_API_KEY;
+  if (!key) {
+    throw new Error("Gemini API key is missing. Please set it in Settings or environment variables.");
+  }
+  return new GoogleGenAI({ apiKey: key });
+}
 
 // Helper for exponential backoff
 async function retry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
   try {
     return await fn();
   } catch (error: any) {
-    const isRateLimit = error?.status === 429 || error?.message?.includes('RESOURCE_EXHAUSTED');
+    const errorMessage = error?.message || String(error);
+    const isRateLimit = error?.status === 429 || 
+                       errorMessage.includes('RESOURCE_EXHAUSTED') || 
+                       errorMessage.includes('429') ||
+                       errorMessage.includes('quota') ||
+                       errorMessage.includes('limit exceeded') ||
+                       errorMessage.includes('capacity');
+    
+    if (isRateLimit && (errorMessage.includes('quota') || errorMessage.includes('limit exceeded') || errorMessage.includes('RESOURCE_EXHAUSTED'))) {
+      const quotaError = new Error("Gemini API quota exceeded. Please check your billing or try again later.");
+      (quotaError as any).isQuotaError = true;
+      throw quotaError;
+    }
+
     if (retries <= 0 || !isRateLimit) {
       throw error;
     }
@@ -15,6 +36,17 @@ async function retry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promis
     await new Promise(resolve => setTimeout(resolve, delay));
     return retry(fn, retries - 1, delay * 2);
   }
+}
+
+export async function testGeminiConnection(apiKey: string): Promise<boolean> {
+  const ai = new GoogleGenAI({ apiKey });
+  // Just a simple check if the model is accessible
+  await retry(() => ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: "Hi",
+    config: { maxOutputTokens: 1 }
+  }));
+  return true;
 }
 
 export interface BusinessInsights {
@@ -45,7 +77,22 @@ export interface ProactiveAction {
   actionType: 'Inventory' | 'Marketing' | 'Financial' | 'Customer';
 }
 
-export async function getProactiveActions(data: any, businessId: string): Promise<ProactiveAction[]> {
+export async function getProactiveActions(data: any, businessId: string, apiKey?: string): Promise<ProactiveAction[]> {
+  const ai = getAI(apiKey);
+  const keyHash = apiKey ? apiKey.substring(0, 8) : 'default';
+  const CACHE_KEY = `ai_proactive_actions_cache_${businessId}_${keyHash}`;
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+  console.log(`[AI] Fetching proactive actions for ${businessId} using ${apiKey ? 'custom' : 'default'} key`);
+
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    const { timestamp, actions } = JSON.parse(cached);
+    if (Date.now() - timestamp < CACHE_DURATION) {
+      return actions;
+    }
+  }
+
   const prompt = `
     Analyze the following business data and identify 3 high-impact proactive actions.
     Data: ${JSON.stringify(data)}
@@ -83,16 +130,24 @@ export async function getProactiveActions(data: any, businessId: string): Promis
         }
       }
     }));
-    return JSON.parse((response as any).text);
-  } catch (error) {
+    const actions = JSON.parse((response as any).text);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), actions }));
+    return actions;
+  } catch (error: any) {
+    if (error.isQuotaError) {
+      console.warn("AI Proactive Actions: Quota exceeded. Using empty fallback.");
+      throw error;
+    }
     console.error("AI Proactive Actions Error:", error);
     return [];
   }
 }
 
-export async function generateBusinessInsights(data: any, businessId: string): Promise<BusinessInsights> {
-  console.log('Generating insights for business:', businessId, 'with data:', data);
-  const CACHE_KEY = `ai_business_insights_cache_${businessId}`;
+export async function generateBusinessInsights(data: any, businessId: string, apiKey?: string): Promise<BusinessInsights> {
+  const ai = getAI(apiKey);
+  const keyHash = apiKey ? apiKey.substring(0, 8) : 'default';
+  console.log(`[AI] Generating insights for ${businessId} using ${apiKey ? 'custom' : 'default'} key`);
+  const CACHE_KEY = `ai_business_insights_cache_${businessId}_${keyHash}`;
   const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
   const cached = localStorage.getItem(CACHE_KEY);
@@ -234,7 +289,11 @@ export async function generateBusinessInsights(data: any, businessId: string): P
     console.log('Parsed AI insights:', insights);
     localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), insights }));
     return insights;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.isQuotaError) {
+      console.warn("AI Insights: Quota exceeded. Using fallback data.");
+      throw error;
+    }
     console.error("AI Insights Error details:", error);
     // Fallback data
     return {
@@ -274,7 +333,8 @@ export async function generateBusinessInsights(data: any, businessId: string): P
   }
 }
 
-export async function askBusinessQuestion(question: string, context: any): Promise<string> {
+export async function askBusinessQuestion(question: string, context: any, apiKey?: string): Promise<string> {
+  const ai = getAI(apiKey);
   const prompt = `
     You are a world-class business consultant. Answer the following question based on the provided business context.
     Question: ${question}
@@ -292,13 +352,18 @@ export async function askBusinessQuestion(question: string, context: any): Promi
       new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
     ]));
     return (response as any).text || "I'm sorry, I couldn't generate an answer at this time.";
-  } catch (error) {
+  } catch (error: any) {
+    if (error.isQuotaError) {
+      console.warn("AI Chat: Quota exceeded.");
+      throw error;
+    }
     console.error("AI Chat Error:", error);
     return "The AI consultant is currently unavailable. Please try again later.";
   }
 }
 
-export async function simulateScenario(scenario: string, context: any): Promise<SimulationResult> {
+export async function simulateScenario(scenario: string, context: any, apiKey?: string): Promise<SimulationResult> {
+  const ai = getAI(apiKey);
   const prompt = `
     Simulate the following business scenario and predict the outcome.
     Scenario: ${scenario}
@@ -334,7 +399,11 @@ export async function simulateScenario(scenario: string, context: any): Promise<
       new Promise((_, reject) => setTimeout(() => reject(new Error("AI request timed out")), 180000))
     ]));
     return JSON.parse((response as any).text);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.isQuotaError) {
+      console.warn("AI Simulation: Quota exceeded.");
+      throw error;
+    }
     console.error("AI Simulation Error:", error);
     return {
       impact: "Unable to simulate scenario due to an error.",

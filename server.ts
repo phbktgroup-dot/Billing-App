@@ -320,7 +320,26 @@ async function startServer() {
 
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
+
+      // Helper for exponential backoff
+      const retry = async (fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> => {
+        try {
+          return await fn();
+        } catch (error: any) {
+          const errorMsg = error.message || "";
+          const isRateLimit = error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429');
+          
+          if (retries <= 0 || !isRateLimit) {
+            throw error;
+          }
+          
+          console.warn(`AI Scan rate limit exceeded, retrying in ${delay}ms... (${retries} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return retry(fn, retries - 1, delay * 2);
+        }
+      };
+
+      const response = await retry(() => ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [
           {
@@ -330,7 +349,7 @@ async function startServer() {
             ]
           }
         ]
-      });
+      }));
 
       if (!response.text) {
         throw new Error("AI returned an empty response.");
@@ -339,7 +358,16 @@ async function startServer() {
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("AI Scan failed:", error);
-      res.status(500).json({ error: error.message || "An error occurred while scanning." });
+      
+      const errorMsg = error.message || "";
+      if (error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429')) {
+        return res.status(429).json({ 
+          error: "AI scanning is currently at capacity. Please wait a moment and try again.",
+          details: "Rate limit exceeded (429)"
+        });
+      }
+      
+      res.status(500).json({ error: errorMsg || "An error occurred while scanning." });
     }
   });
 

@@ -166,7 +166,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }, 500);
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
+      console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');
       
       const prompt = "Extract invoice details: customer name, items (name, quantity, price, gst). Return as JSON format: { customerName: string, items: [{ name: string, quantity: number, rate: number, gstRate: number }] }";
 
@@ -184,9 +185,18 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           const result = await response.json();
           extractedText = result.text;
         } else {
-          throw new Error("Backend scan failed");
+          const errorData = await response.json().catch(() => ({}));
+          if (response.status === 429) {
+            throw new Error(errorData.error || "AI scanning is currently busy. Please try again in a minute.");
+          }
+          throw new Error(errorData.error || "Backend scan failed");
         }
-      } catch (backendError) {
+      } catch (backendError: any) {
+        // If it's a 429 from backend, don't fallback to client-side (it will likely fail too)
+        if (backendError.message.includes('capacity') || backendError.message.includes('limit')) {
+          throw backendError;
+        }
+
         console.warn("Backend scan failed, falling back to client-side scan:", backendError);
         
         // Fallback to client-side scanning
@@ -194,7 +204,21 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           throw new Error("Gemini API key is missing. Please contact support.");
         }
         const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
+
+        const retry = async (fn: () => Promise<any>, retries = 2, delay = 2000): Promise<any> => {
+          try {
+            return await fn();
+          } catch (error: any) {
+            const errorMsg = error.message || "";
+            const isRateLimit = error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429');
+            if (retries <= 0 || !isRateLimit) throw error;
+            console.warn(`Client-side AI Scan rate limit exceeded, retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return retry(fn, retries - 1, delay * 2);
+          }
+        };
+
+        const response = await retry(() => ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: [
             {
@@ -204,7 +228,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               ]
             }
           ]
-        });
+        }));
         extractedText = response.text || '';
       }
 
@@ -278,7 +302,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       }
     } catch (error: any) {
       console.error("AI Scan failed:", error);
-      setModal({ isOpen: true, title: 'Scan Failed', message: error.message || "An error occurred while scanning the invoice.", type: 'error' });
+      setModal({ 
+        isOpen: true, 
+        title: 'Scan Failed', 
+        message: error.message.includes('quota') 
+          ? "AI scanning quota exceeded. Please try again later or add your own Gemini API key in Settings to avoid shared limits."
+          : (error.message || "An error occurred while scanning the invoice."), 
+        type: 'error' 
+      });
     } finally {
       clearInterval(interval);
       setTimeout(() => {

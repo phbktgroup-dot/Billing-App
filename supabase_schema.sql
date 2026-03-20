@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS business_profiles (
     bank_ifsc TEXT,
     bank_branch TEXT,
     logo_url TEXT,
+    gemini_api_key TEXT,
     invoice_prefix TEXT DEFAULT 'INV',
     invoice_number_format TEXT DEFAULT 'YYYY-MM-0001',
     created_at TIMESTAMPTZ DEFAULT now()
@@ -59,11 +60,18 @@ EXCEPTION
 END $$;
 
 -- Ensure columns exist if table was created earlier
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS owner_name TEXT;
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS mobile TEXT;
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS gst_number TEXT;
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS pan_number TEXT;
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS bank_name TEXT;
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS bank_account_no TEXT;
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS bank_ifsc TEXT;
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS bank_branch TEXT;
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS gemini_api_key TEXT;
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS invoice_prefix TEXT DEFAULT 'INV';
 ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS invoice_number_format TEXT DEFAULT 'YYYY-MM-0001';
 
