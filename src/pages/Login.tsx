@@ -75,29 +75,40 @@ export default function Login() {
     try {
       if (forgotPasswordStep === 'email') {
         // 1. Check if email exists
-        const response = await fetch(getApiUrl('/api/auth/check-email'), {
+        const apiUrl = getApiUrl('/api/auth/check-email');
+        console.log(`Checking email existence at: ${apiUrl}`);
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: forgotPasswordEmail.toLowerCase() }),
         });
 
-        if (!response.ok) throw new Error('Failed to check email.');
-        const { exists } = await response.json();
-
-        if (!exists) {
+        console.log(`Email check response status: ${response.status}`);
+        const checkData = await response.json();
+        console.log(`Email check response data:`, checkData);
+        
+        if (!response.ok) throw new Error(checkData.error || 'Failed to check email.');
+        
+        if (!checkData.exists) {
           setError('Email ID not found in database.');
           setIsLoading(false);
           return;
         }
 
         // 2. Request OTP
-        const otpResponse = await fetch(getApiUrl('/api/auth/request-otp'), {
+        const otpApiUrl = getApiUrl('/api/auth/request-otp');
+        console.log(`Requesting OTP at: ${otpApiUrl}`);
+        const otpResponse = await fetch(otpApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: forgotPasswordEmail.toLowerCase() }),
         });
 
-        if (!otpResponse.ok) throw new Error('Failed to request OTP.');
+        console.log(`OTP request response status: ${otpResponse.status}`);
+        const otpData = await otpResponse.json();
+        console.log(`OTP request response data:`, otpData);
+        
+        if (!otpResponse.ok) throw new Error(otpData.error || 'Failed to request OTP.');
         
         setSuccessMsg('OTP sent to your email.');
         setForgotPasswordStep('otp');

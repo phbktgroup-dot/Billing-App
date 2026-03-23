@@ -63,11 +63,11 @@ async function startServer() {
       supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
       // Test connection on startup
-      const { data, error } = await supabaseAdmin.from('users').select('count').single();
+      const { count, error } = await supabaseAdmin.from('users').select('*', { count: 'exact', head: true });
       if (error) {
         console.error("Supabase Admin test query failed:", error.message);
       } else {
-        console.log("Supabase Admin connected successfully. User count:", data.count);
+        console.log("Supabase Admin connected successfully. User count:", count);
       }
     } catch (err: any) {
       console.error("Supabase Admin initialization crashed:", err.message);
@@ -81,9 +81,9 @@ async function startServer() {
       return res.status(500).json({ status: "error", message: "Supabase Admin client not initialized. Check environment variables." });
     }
     try {
-      const { data, error } = await supabaseAdmin.from('users').select('count').single();
+      const { count, error } = await supabaseAdmin.from('users').select('*', { count: 'exact', head: true });
       if (error) throw error;
-      res.json({ status: "ok", supabase: "connected", userCount: data });
+      res.json({ status: "ok", supabase: "connected", userCount: count });
     } catch (error: any) {
       console.error("Health check failed:", error);
       res.status(500).json({ status: "error", message: error.message });
@@ -636,7 +636,11 @@ async function startServer() {
   app.post("/api/auth/check-email", async (req, res) => {
     try {
       const { email } = req.body;
-      if (!supabaseAdmin) throw new Error("Supabase Admin client not initialized.");
+      console.log(`Checking email existence for: ${email}`);
+      if (!supabaseAdmin) {
+        console.error("Supabase Admin client not initialized.");
+        throw new Error("Supabase Admin client not initialized.");
+      }
       
       const { data, error } = await supabaseAdmin
         .from('users')
@@ -644,7 +648,11 @@ async function startServer() {
         .ilike('email', email)
         .maybeSingle();
         
-      if (error) throw error;
+      if (error) {
+        console.error(`Supabase query error for ${email}:`, error);
+        throw error;
+      }
+      console.log(`Email check result for ${email}: exists = ${!!data}`);
       res.json({ exists: !!data });
     } catch (error: any) {
       console.error("Error checking email:", error);
