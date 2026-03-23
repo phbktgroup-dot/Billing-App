@@ -11,10 +11,13 @@ import Customers from './pages/Customers';
 import Suppliers from './pages/Suppliers';
 import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
+import GSTReports from './pages/GSTReports';
 import AdminPanel from './pages/AdminPanel';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import TaxTools from './pages/TaxTools';
+import Expenses from './pages/Expenses';
+// import Grow from './pages/Grow';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
 import { useState, useEffect } from 'react';
@@ -60,10 +63,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Admin Guard
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { profile, loading } = useAuth();
+  const { profile, loading, originalProfile } = useAuth();
 
   if (loading) return null;
-  const hasAdminAccess = profile?.role === 'Admin' || profile?.role === 'Super Admin' || profile?.is_super_admin;
+  const effectiveProfile = originalProfile || profile;
+  const hasAdminAccess = effectiveProfile?.role === 'Admin' || effectiveProfile?.role === 'Super Admin' || effectiveProfile?.is_super_admin;
   if (!hasAdminAccess) return <Navigate to="/" />;
 
   return <>{children}</>;
@@ -84,11 +88,14 @@ export default function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="suppliers" element={<Suppliers />} />
           <Route path="purchases" element={<Purchases />} />
+          <Route path="expenses" element={<Expenses />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="gst-reports" element={<GSTReports />} />
           <Route path="gst" element={<TaxTools type="gst" />} />
           <Route path="itr" element={<TaxTools type="itr" />} />
           <Route path="eway-bill" element={<TaxTools type="eway" />} />
           <Route path="analytics" element={<Analytics />} />
+          {/* <Route path="grow" element={<Grow />} /> */}
           <Route path="settings" element={<Settings />} />
           <Route path="admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
         </Route>

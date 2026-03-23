@@ -21,11 +21,13 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
 import { ConfirmModal } from '../components/ConfirmModal';
+import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
 
 interface Invoice {
   id: string;
@@ -38,6 +40,7 @@ interface Invoice {
   customers: {
     name: string;
   };
+  created_at: string;
 }
 
 export default function Invoices() {
@@ -49,6 +52,18 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
+
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
 
   const businessId = profile?.business_id;
 
@@ -56,11 +71,27 @@ export default function Invoices() {
     if (businessId) {
       fetchInvoices();
     }
-  }, [businessId]);
+  }, [businessId, filterType, customRange, day, year]);
+
+  const toggleSelectAll = () => {
+    if (selectedInvoices.length === filteredInvoices.length) {
+      setSelectedInvoices([]);
+    } else {
+      setSelectedInvoices(filteredInvoices.map(inv => inv.id));
+    }
+  };
+
+  const toggleSelectInvoice = (id: string) => {
+    setSelectedInvoices(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
 
   const fetchInvoices = async () => {
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+
       const { data, error } = await supabase
         .from('invoices')
         .select(`
@@ -68,6 +99,8 @@ export default function Invoices() {
           customers (name)
         `)
         .eq('business_id', businessId)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -98,6 +131,12 @@ export default function Invoices() {
 
   const confirmDelete = (id: string) => {
     setInvoiceToDelete(id);
+    setIsBulkDelete(false);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    setIsBulkDelete(true);
     setDeleteModalOpen(true);
   };
 
@@ -143,8 +182,13 @@ export default function Invoices() {
           amount: item.total_price || item.amount || 0
         })),
         subtotal: invoiceData.subtotal,
+        raw_subtotal: invoiceData.subtotal + (invoiceData.discount || 0),
+        discount: invoiceData.discount,
+        discount_percentage: invoiceData.discount_percentage,
         tax_amount: invoiceData.tax_amount,
-        total: invoiceData.total
+        total: invoiceData.total,
+        notes: invoiceData.notes,
+        terms: invoiceData.terms
       };
 
       await generateInvoicePDF(pdfData, businessProfile);
@@ -155,17 +199,32 @@ export default function Invoices() {
   };
 
   const deleteInvoice = async () => {
-    if (!invoiceToDelete) return;
     try {
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoiceToDelete);
-      if (error) {
-        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
-          throw new Error('Cannot delete this invoice because it has associated items or records. Please delete those first.');
+      if (isBulkDelete) {
+        const { error } = await supabase
+          .from('invoices')
+          .delete()
+          .in('id', selectedInvoices);
+        
+        if (error) {
+          if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+            throw new Error('Some selected invoices cannot be deleted because they have associated items or records. Please delete those first.');
+          }
+          throw error;
         }
-        throw error;
+        setSelectedInvoices([]);
+      } else {
+        if (!invoiceToDelete) return;
+        const { error } = await supabase
+          .from('invoices')
+          .delete()
+          .eq('id', invoiceToDelete);
+        if (error) {
+          if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+            throw new Error('Cannot delete this invoice because it has associated items or records. Please delete those first.');
+          }
+          throw error;
+        }
       }
       fetchInvoices();
     } catch (error: any) {
@@ -173,6 +232,8 @@ export default function Invoices() {
       alert(error.message || 'Failed to delete invoice.');
     } finally {
       setInvoiceToDelete(null);
+      setIsBulkDelete(false);
+      setDeleteModalOpen(false);
     }
   };
 
@@ -220,20 +281,30 @@ export default function Invoices() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Invoices</h1>
-          <p className="text-xs text-slate-500">View and manage all your generated invoices.</p>
+      <PageHeader 
+        title="Invoices" 
+        description="View and manage all your generated invoices."
+      >
+        <div className="flex items-center space-x-2">
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+          />
+          <button 
+            onClick={() => navigate('/invoices/new')}
+            className="px-4 py-2 bg-primary text-white rounded-xl text-[11px] font-bold flex items-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus size={14} className="mr-1.5" />
+            Create Invoice
+          </button>
         </div>
-        <button 
-          onClick={() => navigate('/invoices/new')}
-          className="px-4 py-2 bg-primary text-white rounded-xl text-[11px] font-bold flex items-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-        >
-          <Plus size={14} className="mr-1.5" />
-          Create Invoice
-        </button>
-      </div>
+      </PageHeader>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -270,17 +341,28 @@ export default function Invoices() {
       {/* Filters & Search */}
       <div className="glass-card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search by invoice # or customer..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center gap-3 w-full md:w-auto flex-1">
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search by invoice # or customer..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {selectedInvoices.length > 0 && (
+              <button 
+                onClick={confirmBulkDelete}
+                className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 shadow-sm"
+              >
+                <Trash2 size={14} />
+                Bulk Delete ({selectedInvoices.length})
+              </button>
+            )}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
             <select 
               className="px-3 py-2 bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
               value={statusFilter}
@@ -291,9 +373,13 @@ export default function Invoices() {
               <option value="unpaid">Unpaid</option>
               <option value="overdue">Overdue</option>
             </select>
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
-              <Filter size={16} />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+                <Filter size={16} />
+              </button>
+              <div className="h-4 w-[1px] bg-slate-200 mx-2"></div>
+              <p className="text-[11px] font-medium text-slate-500">Showing {filteredInvoices.length} of {invoices.length} invoices</p>
+            </div>
           </div>
         </div>
       </div>
@@ -304,26 +390,34 @@ export default function Invoices() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-6 py-4 w-10">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                    checked={filteredInvoices.length > 0 && selectedInvoices.length === filteredInvoices.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4">Invoice #</th>
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Payment Mode</th>
-                <th className="px-6 py-4">Actions</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
                     <p className="text-slate-500 text-xs">Loading invoices...</p>
                   </td>
                 </tr>
               ) : filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <FileText className="w-12 h-12 mx-auto text-slate-200 mb-2" />
                     <p className="text-slate-500 font-medium text-xs">No invoices found</p>
                     <button 
@@ -342,8 +436,19 @@ export default function Invoices() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="hover:bg-slate-50/50 transition-colors"
+                      className={cn(
+                        "hover:bg-slate-50/50 transition-colors",
+                        selectedInvoices.includes(invoice.id) && "bg-primary/5"
+                      )}
                     >
+                      <td className="px-6 py-4">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                          checked={selectedInvoices.includes(invoice.id)}
+                          onChange={() => toggleSelectInvoice(invoice.id)}
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <span className="text-xs font-bold text-slate-900">{invoice.invoice_number}</span>
                       </td>
@@ -379,8 +484,8 @@ export default function Invoices() {
                       <td className="px-6 py-4">
                         <span className="text-xs text-slate-600">{invoice.payment_mode || 'Cash'}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
                           <button 
                             onClick={() => handlePreview(invoice)}
                             className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
@@ -401,6 +506,9 @@ export default function Invoices() {
                             title="Delete"
                           >
                             <Trash2 size={16} />
+                          </button>
+                          <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+                            <MoreVertical size={16} />
                           </button>
                         </div>
                       </td>
@@ -434,12 +542,15 @@ export default function Invoices() {
       )}
       <ConfirmModal
         isOpen={deleteModalOpen}
-        title="Delete Invoice"
-        message="Are you sure you want to delete this invoice? This action cannot be undone."
+        title={isBulkDelete ? "Bulk Delete Invoices" : "Delete Invoice"}
+        message={isBulkDelete 
+          ? `Are you sure you want to delete ${selectedInvoices.length} selected invoices? This action cannot be undone.`
+          : "Are you sure you want to delete this invoice? This action cannot be undone."}
         onConfirm={deleteInvoice}
         onCancel={() => {
           setDeleteModalOpen(false);
           setInvoiceToDelete(null);
+          setIsBulkDelete(false);
         }}
       />
     </motion.div>

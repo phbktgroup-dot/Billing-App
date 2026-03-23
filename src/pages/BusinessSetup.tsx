@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Building2, User, MapPin, Phone, Mail, FileText, Hash, Image as ImageIcon, AlertCircle, Loader2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import PageHeader from '../components/PageHeader';
 
 export default function BusinessSetup() {
   const navigate = useNavigate();
@@ -18,6 +19,9 @@ export default function BusinessSetup() {
     businessName: '',
     ownerName: '',
     address: '',
+    city: '',
+    state: '',
+    pincode: '',
     mobile: '',
     email: '',
     gstNumber: '',
@@ -144,6 +148,9 @@ export default function BusinessSetup() {
           name: formData.businessName,
           owner_name: formData.ownerName,
           address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
           mobile: formData.mobile,
           email: formData.email,
           gst_number: formData.gstNumber,
@@ -166,6 +173,16 @@ export default function BusinessSetup() {
           .from('users')
           .update({ business_id: business.id })
           .eq('id', user.id);
+          
+        // Create default invoice series
+        await supabase
+          .from('invoice_series')
+          .insert([{
+            business_id: business.id,
+            name: 'INV-000001',
+            prefix: 'INV-',
+            current_number: 1
+          }]);
       }
 
       // 3. Upload logo if exists
@@ -223,10 +240,10 @@ export default function BusinessSetup() {
         </button>
       </div>
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Setup Your Business</h1>
-          <p className="text-xs text-slate-500 mt-1">Complete your profile to start managing your business.</p>
-        </div>
+        <PageHeader 
+          title="Setup Your Business" 
+          description="Complete your profile to start managing your business."
+        />
 
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -285,6 +302,42 @@ export default function BusinessSetup() {
                   placeholder="123 Business Park, Sector 5..."
                   value={formData.address}
                   onChange={e => setFormData({...formData, address: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">City</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  placeholder="e.g. Mumbai"
+                  value={formData.city}
+                  onChange={e => setFormData({...formData, city: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">State</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  placeholder="e.g. Maharashtra"
+                  value={formData.state}
+                  onChange={e => setFormData({...formData, state: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Pincode</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  placeholder="400001"
+                  value={formData.pincode}
+                  onChange={e => setFormData({...formData, pincode: e.target.value})}
                 />
               </div>
             </div>
@@ -394,33 +447,6 @@ export default function BusinessSetup() {
                     placeholder="Bahu Jamalpur, Rohtak"
                     value={formData.bankBranch}
                     onChange={e => setFormData({...formData, bankBranch: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Invoice Settings */}
-            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
-              <h3 className="text-sm font-bold text-slate-900">Invoice Customization</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Invoice Prefix</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
-                    placeholder="INV"
-                    value={formData.invoicePrefix}
-                    onChange={e => setFormData({...formData, invoicePrefix: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700">Number Format</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all"
-                    placeholder="YYYY-MM-0001"
-                    value={formData.invoiceFormat}
-                    onChange={e => setFormData({...formData, invoiceFormat: e.target.value})}
                   />
                 </div>
               </div>

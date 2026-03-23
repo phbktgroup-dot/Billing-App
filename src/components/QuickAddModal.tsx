@@ -44,6 +44,7 @@ export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAdd
             ) : (
               <>
                 <input type="text" placeholder="Product Name" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, name: e.target.value})} />
+                <input type="text" placeholder="Product Code (SKU)" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, sku: e.target.value})} />
                 <input type="number" placeholder="Price" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, price: e.target.value})} />
               </>
             )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
   LayoutDashboard, 
   PlusCircle, 
@@ -19,8 +19,8 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  Menu,
-  X
+  X,
+  Receipt
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -28,14 +28,15 @@ import { useAuth } from '../contexts/AuthContext';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: PlusCircle, label: 'Create Invoice', path: '/invoices/new' },
-  { icon: FileText, label: 'Invoices', path: '/invoices' },
-  { icon: Package, label: 'Inventory', path: '/inventory' },
-  { icon: Users, label: 'Customers', path: '/customers' },
+  { icon: PlusCircle, label: 'Sales Create Invoice', path: '/invoices/new' },
+  { icon: FileText, label: 'Sales Invoice', path: '/invoices' },
+  { icon: Package, label: 'Sales Inventory', path: '/inventory' },
+  { icon: Users, label: 'Sales Customer', path: '/customers' },
   { icon: Truck, label: 'Suppliers', path: '/suppliers' },
   { icon: ShoppingCart, label: 'Purchases', path: '/purchases' },
+  { icon: Receipt, label: 'Expenses', path: '/expenses' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
-  { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst' },
+  { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst-reports' },
   { icon: Calculator, label: 'ITR Tools', path: '/itr' },
   { icon: FileCheck, label: 'E-Way Bill', path: '/eway-bill' },
   { icon: PieChart, label: 'Analytics', path: '/analytics' },
@@ -43,49 +44,40 @@ const menuItems = [
   { icon: ShieldCheck, label: 'Admin Panel', path: '/admin', adminOnly: true },
 ];
 
-export default function Sidebar() {
-  const { profile } = useAuth();
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { profile, originalProfile } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
-  const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
 
   const filteredMenuItems = menuItems.filter(item => {
     if (!item.adminOnly) return true;
-    const hasAdminAccess = profile?.role === 'Admin' || profile?.role === 'Super Admin' || profile?.is_super_admin;
+    const effectiveProfile = originalProfile || profile;
+    const hasAdminAccess = effectiveProfile?.role === 'Admin' || effectiveProfile?.role === 'Super Admin' || effectiveProfile?.is_super_admin;
     return hasAdminAccess;
   });
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button 
-        onClick={toggleMobile}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-      >
-        {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
       {/* Mobile Overlay */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={toggleMobile}
-            className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-          />
-        )}
-      </AnimatePresence>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
       {/* Sidebar Container */}
       <motion.aside
@@ -95,24 +87,34 @@ export default function Sidebar() {
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-50 flex flex-col",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-[70] flex flex-col shadow-2xl lg:shadow-none transition-transform duration-300",
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Logo Section */}
-        <div className="h-20 flex items-center px-6 border-b border-slate-100">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
-            P
+        <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
+              P
+            </div>
+            {(!isCollapsed || isOpen) && (
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="ml-3 font-bold text-base text-primary whitespace-nowrap overflow-hidden"
+              >
+                PHBKT Billing Pro+
+              </motion.span>
+            )}
           </div>
-          {!isCollapsed && (
-            <motion.span 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="ml-3 font-bold text-base text-primary whitespace-nowrap overflow-hidden"
-            >
-              PHBKT Billing Pro+
-            </motion.span>
-          )}
+          
+          {/* Mobile Close Button */}
+          <button 
+            onClick={onClose}
+            className="lg:hidden p-2 text-slate-400 hover:text-primary transition-colors"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Menu Items */}
@@ -121,8 +123,10 @@ export default function Sidebar() {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose?.();
+              }}
               end={item.path === '/invoices' || item.path === '/'}
-              onClick={() => setIsMobileOpen(false)}
               className={({ isActive }) => cn(
                 "flex items-center px-3 py-3 rounded-xl transition-all group relative",
                 isActive 
@@ -130,11 +134,11 @@ export default function Sidebar() {
                   : "text-slate-600 hover:bg-slate-50 hover:text-primary"
               )}
             >
-              <item.icon size={18} className={cn("shrink-0", isCollapsed ? "mx-auto" : "mr-3")} />
-              {!isCollapsed && (
+              <item.icon size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "mx-auto" : "mr-3")} />
+              {(!isCollapsed || isOpen) && (
                 <span className="font-medium text-[11px]">{item.label}</span>
               )}
-              {isCollapsed && (
+              {(isCollapsed && !isOpen) && (
                 <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                   {item.label}
                 </div>

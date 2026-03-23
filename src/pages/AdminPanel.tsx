@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   UserPlus, 
@@ -12,12 +13,17 @@ import {
   Trash2,
   Edit2,
   Loader2,
-  X
+  Bell,
+  Send,
+  X,
+  LogIn,
+  Key
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
+import PageHeader from '../components/PageHeader';
 import { getApiUrl } from '../lib/api';
 
 interface AppUser {
@@ -31,13 +37,16 @@ interface AppUser {
   business_profiles?: { name: string };
 }
 
-const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, isSuperAdmin }: { 
+const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImpersonate, onEditApiKey, isSuperAdmin, isAdmin }: { 
   user: any, 
   depth?: number, 
   onEdit: (user: any) => void, 
   onDelete: (id: string) => void,
   onToggleStatus: (user: any) => void,
+  onImpersonate: (user: any) => void,
+  onEditApiKey?: (user: any) => void,
   isSuperAdmin?: boolean,
+  isAdmin?: boolean,
   key?: any
 }) => {
   const hasChildren = user.children && user.children.length > 0;
@@ -83,6 +92,15 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, isSuperAd
             {user.role}
           </span>
           <div className="flex items-center space-x-0.5">
+            {(isSuperAdmin || isAdmin) && user.role !== 'Super Admin' && (
+              <button 
+                onClick={() => onImpersonate(user)}
+                title="Load User Profile"
+                className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-emerald-500 hover:bg-emerald-50")}
+              >
+                <LogIn size={14} />
+              </button>
+            )}
             <button 
               onClick={() => onToggleStatus(user)}
               title={isActive ? "Disable User" : "Enable User"}
@@ -97,13 +115,24 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, isSuperAd
             <button 
               onClick={() => onEdit(user)}
               className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-primary hover:bg-primary/5")}
+              title="Edit User"
             >
               <Edit2 size={14} />
             </button>
+            {isSuperAdmin && onEditApiKey && (
+              <button 
+                onClick={() => onEditApiKey(user)}
+                className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-amber-500 hover:bg-amber-50")}
+                title="Edit API Key"
+              >
+                <Key size={14} />
+              </button>
+            )}
             {isSuperAdmin && (
               <button 
                 onClick={() => onDelete(user.id)}
                 className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-red-400 hover:bg-red-400/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50")}
+                title="Delete User"
               >
                 <Trash2 size={14} />
               </button>
@@ -114,7 +143,18 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, isSuperAd
       {hasChildren && (
         <div className="space-y-2">
           {user.children.map((child: any) => (
-            <UserNode key={child.id} user={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} onToggleStatus={onToggleStatus} isSuperAdmin={isSuperAdmin} />
+            <UserNode 
+              key={child.id} 
+              user={child} 
+              depth={depth + 1} 
+              onEdit={onEdit} 
+              onDelete={onDelete} 
+              onToggleStatus={onToggleStatus} 
+              onImpersonate={onImpersonate}
+              onEditApiKey={onEditApiKey}
+              isSuperAdmin={isSuperAdmin} 
+              isAdmin={isAdmin}
+            />
           ))}
         </div>
       )}
@@ -123,27 +163,60 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, isSuperAd
 };
 
 export default function AdminPanel() {
-  const { user: currentUser, profile: currentProfile } = useAuth();
+  const navigate = useNavigate();
+  const { user: currentUser, profile: currentProfile, impersonate, originalProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'users' | 'notifications' | 'user-notifications'>('users');
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [userNotifications, setUserNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showAddNotification, setShowAddNotification] = useState(false);
+  const [showAddUserNotification, setShowAddUserNotification] = useState(false);
+  const [selectedUserForNotification, setSelectedUserForNotification] = useState('all');
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [impersonateModalOpen, setImpersonateModalOpen] = useState(false);
+  const [userToImpersonate, setUserToImpersonate] = useState<any | null>(null);
+  const [editingApiKeyUser, setEditingApiKeyUser] = useState<any>(null);
+  const [newApiKey, setNewApiKey] = useState('');
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     password: '',
     role: 'Business User'
   });
+  const [newNotification, setNewNotification] = useState({
+    title: '',
+    message: ''
+  });
+  const [notificationStatus, setNotificationStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const [apiHealth, setApiHealth] = useState<{ status: string, message?: string } | null>(null);
+
+  const checkApiHealth = async () => {
+    try {
+      const response = await fetch(getApiUrl('/api/health'));
+      const data = await response.json();
+      setApiHealth(data);
+    } catch (err: any) {
+      console.error('API Health Check failed:', err);
+      setApiHealth({ status: 'error', message: err.message || 'Failed to fetch health check' });
+    }
+  };
 
   const businessId = currentProfile?.business_id;
 
-  const isSuperAdmin = currentProfile?.role === 'Super Admin' || currentProfile?.is_super_admin;
-  const isAdmin = currentProfile?.role === 'Admin';
+  const effectiveProfile = originalProfile || currentProfile;
+  const isSuperAdmin = effectiveProfile?.role === 'Super Admin' || effectiveProfile?.is_super_admin;
+  const isAdmin = effectiveProfile?.role === 'Admin';
 
   // Role options based on current user's role
   const getRoleOptions = () => {
@@ -158,9 +231,155 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (currentUser) {
-      fetchUsers();
+      if (activeTab === 'users') {
+        fetchUsers();
+      } else if (activeTab === 'notifications') {
+        fetchNotifications();
+      } else if (activeTab === 'user-notifications') {
+        fetchUserNotifications();
+      }
     }
-  }, [currentUser?.id, businessId, isSuperAdmin]);
+  }, [currentUser?.id, businessId, isSuperAdmin, activeTab]);
+
+  const fetchUserNotifications = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_notifications')
+        .select('*, notifications(*)')
+        .order('created_at', { foreignTable: 'notifications', ascending: false });
+      if (error) throw error;
+      console.log('Fetched user notifications:', data);
+      setUserNotifications(data || []);
+    } catch (error: any) {
+      console.error('Error fetching user notifications:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Attempting to send notification via API:', newNotification);
+    
+    if (!isSuperAdmin) {
+      console.error('Permission denied: User is not a Super Admin');
+      setNotificationStatus({ type: 'error', message: 'Only Super Admins can send notifications.' });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setNotificationStatus(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+
+      const response = await fetch(getApiUrl('/api/admin/send-notification'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          title: newNotification.title,
+          message: newNotification.message
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('API error sending notification:', result.error);
+        throw new Error(result.error || 'Failed to send notification');
+      }
+
+      console.log('Notification sent successfully via API');
+      setNotificationStatus({ type: 'success', message: 'Notification sent successfully!' });
+      
+      // Reset form after a short delay
+      setTimeout(() => {
+        setShowAddNotification(false);
+        setNewNotification({ title: '', message: '' });
+        setNotificationStatus(null);
+        fetchNotifications();
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Catch error sending notification:', err);
+      setNotificationStatus({ 
+        type: 'error', 
+        message: err.message || 'Failed to send notification. Please check your internet connection or server status.' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    console.log("handleDeleteNotification called with id:", id);
+    if (!confirm('Are you sure you want to delete this notification?')) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+
+      const response = await fetch(getApiUrl('/api/admin/delete-notification'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete notification');
+
+      fetchNotifications();
+    } catch (err: any) {
+      console.error("Error in handleDeleteNotification:", err);
+      alert(err.message || 'Failed to delete notification');
+    }
+  };
+
+  const handleSendUserNotification = async () => {
+    if (!notificationTitle || !notificationMessage) return;
+    setIsSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+      
+      const response = await fetch(getApiUrl('/api/admin/send-user-notification'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ 
+          title: notificationTitle, 
+          message: notificationMessage, 
+          userId: selectedUserForNotification 
+        }),
+      });
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to send notification');
+      }
+      
+      setNotificationTitle('');
+      setNotificationMessage('');
+      setShowAddUserNotification(false);
+      await fetchUserNotifications();
+      alert('Notification sent successfully!');
+    } catch (err: any) {
+      alert(err.message || 'Failed to send notification');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const fetchUsers = async () => {
     if (!currentUser?.id) return;
@@ -169,14 +388,6 @@ export default function AdminPanel() {
     
     try {
       let query = supabase.from('users').select('*, business_profiles(name)');
-
-      if (!isSuperAdmin) {
-        if (businessId) {
-          query = query.or(`id.eq.${currentUser.id},created_by.eq.${currentUser.id},business_id.eq.${businessId}`);
-        } else {
-          query = query.or(`id.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
-        }
-      }
 
       const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
@@ -190,6 +401,63 @@ export default function AdminPanel() {
       setError(error.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditApiKey = async (user: any) => {
+    setEditingApiKeyUser(user);
+    setNewApiKey('');
+    // Fetch current API key
+    try {
+      const { data, error } = await supabase
+        .from('business_profiles')
+        .select('gemini_api_key')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data && data.gemini_api_key) {
+        setNewApiKey(data.gemini_api_key);
+      }
+    } catch (err) {
+      console.error('Error fetching API key:', err);
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!editingApiKeyUser) return;
+    setIsSavingApiKey(true);
+    try {
+      // Check if business profile exists
+      const { data: existingProfile } = await supabase
+        .from('business_profiles')
+        .select('id')
+        .eq('user_id', editingApiKeyUser.id)
+        .maybeSingle();
+
+      if (existingProfile) {
+        const { error } = await supabase
+          .from('business_profiles')
+          .update({ gemini_api_key: newApiKey })
+          .eq('user_id', editingApiKeyUser.id);
+        if (error) throw error;
+      } else {
+        // Create a basic business profile if it doesn't exist
+        const { error } = await supabase
+          .from('business_profiles')
+          .insert({
+            user_id: editingApiKeyUser.id,
+            name: `${editingApiKeyUser.name || 'User'}'s Business`,
+            gemini_api_key: newApiKey
+          });
+        if (error) throw error;
+      }
+      
+      alert('API Key updated successfully!');
+      setEditingApiKeyUser(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update API key');
+    } finally {
+      setIsSavingApiKey(false);
     }
   };
 
@@ -347,6 +615,17 @@ export default function AdminPanel() {
     }
   };
 
+  const handleImpersonate = async (user: any) => {
+    setUserToImpersonate(user);
+    setImpersonateModalOpen(true);
+  };
+
+  const confirmImpersonate = async () => {
+    if (!userToImpersonate) return;
+    await impersonate(userToImpersonate);
+    navigate('/');
+  };
+
   // Group users by hierarchy
   const getHierarchy = () => {
     const buildTree = (parentId: string | null): any[] => {
@@ -374,56 +653,175 @@ export default function AdminPanel() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Admin Control Panel</h1>
-          <p className="text-xs text-slate-500">Manage users, roles, and system-wide configurations.</p>
+      <PageHeader 
+        title="Admin Control Panel" 
+        description="Manage users, roles, and system-wide configurations."
+      >
+        <div className="flex items-center space-x-2">
+          {isSuperAdmin && activeTab === 'notifications' && (
+            <button 
+              onClick={() => setShowAddNotification(true)}
+              className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all"
+            >
+              <Bell size={14} className="mr-1.5" />
+              Send Notification
+            </button>
+          )}
+          {activeTab === 'users' && (
+            <button 
+              onClick={() => setShowAddUser(true)}
+              className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all"
+            >
+              <UserPlus size={14} className="mr-1.5" />
+              Create New User
+            </button>
+          )}
         </div>
+      </PageHeader>
+
+      {/* API Health Check (Debug) */}
+      {isSuperAdmin && (
+        <div className="glass-card p-4 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center space-x-2">
+            <Shield size={16} className="text-slate-400" />
+            <span className="text-xs font-bold text-slate-700">Backend API Status:</span>
+            {apiHealth ? (
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
+                apiHealth.status === 'ok' ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"
+              )}>
+                {apiHealth.status === 'ok' ? 'Connected' : 'Error'}
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 italic">Not checked</span>
+            )}
+          </div>
+          <button 
+            onClick={checkApiHealth}
+            className="text-[10px] font-bold text-primary hover:underline"
+          >
+            Check Connection
+          </button>
+        </div>
+      )}
+
+      {/* Tabs Navigation */}
+      <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-fit">
         <button 
-          onClick={() => setShowAddUser(true)}
-          className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all"
+          onClick={() => setActiveTab('users')}
+          className={cn(
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+            activeTab === 'users' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+          )}
         >
-          <UserPlus size={14} className="mr-1.5" />
-          Create New User
+          <Users size={14} />
+          <span>Users</span>
+        </button>
+        {isSuperAdmin && (
+          <button 
+            onClick={() => setActiveTab('notifications')}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+              activeTab === 'notifications' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Bell size={14} />
+            <span>Notifications</span>
+          </button>
+        )}
+        <button 
+          onClick={() => setActiveTab('user-notifications')}
+          className={cn(
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+            activeTab === 'user-notifications' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+          )}
+        >
+          <Bell size={14} />
+          <span>User Notifications</span>
         </button>
       </div>
 
       {/* User Management Hierarchy */}
-      <div className="space-y-4">
-        {loading ? (
-          <div className="glass-card p-8 text-center">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
-            <p className="text-slate-500 text-xs">Loading hierarchy...</p>
-          </div>
-        ) : error ? (
-          <div className="glass-card p-8 text-center text-red-500">
-            <p className="font-bold text-sm mb-1">Error loading users</p>
-            <p className="text-xs">{error}</p>
-            <button 
-              onClick={() => fetchUsers()}
-              className="mt-3 text-primary hover:underline text-xs font-bold"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : hierarchy.length === 0 ? (
-          <div className="glass-card p-8 text-center text-slate-500 text-xs">
-            No users found.
-          </div>
-        ) : (
-          hierarchy.map((node: any) => (
-            <UserNode 
-              key={node.id} 
-              user={node} 
-              onEdit={(u) => setEditingUser(u)}
-              onDelete={(id) => confirmDelete(id)}
-              onToggleStatus={(u) => handleToggleUserStatus(u)}
-              isSuperAdmin={isSuperAdmin}
-            />
-          ))
-        )}
-      </div>
+      {activeTab === 'users' && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="glass-card p-8 text-center">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading hierarchy...</p>
+            </div>
+          ) : error ? (
+            <div className="glass-card p-8 text-center text-red-500">
+              <p className="font-bold text-sm mb-1">Error loading users</p>
+              <p className="text-xs">{error}</p>
+              <button 
+                onClick={() => fetchUsers()}
+                className="mt-3 text-primary hover:underline text-xs font-bold"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : hierarchy.length === 0 ? (
+            <div className="glass-card p-8 text-center text-slate-500 text-xs">
+              No users found.
+            </div>
+          ) : (
+            hierarchy.map((node: any) => (
+              <UserNode 
+                key={node.id} 
+                user={node} 
+                onEdit={(u) => setEditingUser(u)}
+                onDelete={(id) => confirmDelete(id)}
+                onToggleStatus={(u) => handleToggleUserStatus(u)}
+                onImpersonate={(u) => handleImpersonate(u)}
+                onEditApiKey={handleEditApiKey}
+                isSuperAdmin={isSuperAdmin}
+                isAdmin={isAdmin}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Notifications Management */}
+      {activeTab === 'notifications' && isSuperAdmin && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="glass-card p-8 text-center">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading notifications...</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="glass-card p-8 text-center text-slate-500 text-xs">
+              No notifications sent yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {notifications.map((notif) => (
+                <div key={notif.id} className="glass-card p-4 flex items-start justify-between">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center shrink-0">
+                      <Bell size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">{notif.title}</h4>
+                      <p className="text-[11px] text-slate-600 mt-0.5">{notif.message}</p>
+                      <p className="text-[9px] text-slate-400 mt-2">
+                        {new Date(notif.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteNotification(notif.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add User Modal */}
       {showAddUser && (
@@ -562,6 +960,139 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* User Notifications Management */}
+      {activeTab === 'user-notifications' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">User Notifications</h3>
+            <button 
+              onClick={() => setShowAddUserNotification(true)}
+              className="btn-primary px-4 py-2 text-xs"
+            >
+              Send New Notification
+            </button>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            {loading ? (
+              <p className="text-slate-500 text-xs">Loading notifications...</p>
+            ) : userNotifications.length === 0 ? (
+              <p className="text-slate-500 text-xs">No user notifications sent yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {userNotifications.map((notif) => (
+                  <div key={notif.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-900">{notif.notifications?.title}</h4>
+                    <p className="text-xs text-slate-600 mt-1">{notif.notifications?.message}</p>
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      {new Date(notif.notifications?.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add User Notification Modal */}
+      {showAddUserNotification && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Send User Notification</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Select User</label>
+                <select 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  onChange={(e) => setSelectedUserForNotification(e.target.value)}
+                >
+                  <option value="all">All Users</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Title</label>
+                <input 
+                  type="text" 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  value={notificationTitle}
+                  onChange={e => setNotificationTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Message</label>
+                <textarea 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  value={notificationMessage}
+                  onChange={e => setNotificationMessage(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button 
+                  onClick={() => setShowAddUserNotification(false)}
+                  className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSendUserNotification}
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'Send'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit API Key Modal */}
+      {editingApiKeyUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Edit API Key</h2>
+                <p className="text-[10px] text-slate-500 mt-0.5">Update API Integration Key for {editingApiKeyUser.name || editingApiKeyUser.email}</p>
+              </div>
+              <button onClick={() => setEditingApiKeyUser(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={18} className="text-slate-400" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">API Integration Key</label>
+                <input 
+                  type="password" 
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
+                  value={newApiKey}
+                  onChange={e => setNewApiKey(e.target.value)}
+                  placeholder="Paste Gemini API Key here"
+                />
+              </div>
+              <button 
+                onClick={handleSaveApiKey}
+                disabled={isSavingApiKey}
+                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSavingApiKey ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Save API Key'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModalOpen}
@@ -573,6 +1104,83 @@ export default function AdminPanel() {
           setUserToDelete(null);
         }}
       />
+
+      {/* Impersonation Confirmation Modal */}
+      <ConfirmModal
+        isOpen={impersonateModalOpen}
+        title="Load User Profile"
+        message={`Are you sure you want to load the profile of ${userToImpersonate?.name || userToImpersonate?.email}? You will see the app exactly as they do.`}
+        confirmText="Load Profile"
+        confirmVariant="success"
+        onConfirm={confirmImpersonate}
+        onCancel={() => {
+          setImpersonateModalOpen(false);
+          setUserToImpersonate(null);
+        }}
+      />
+
+      {/* Add Notification Modal */}
+      {showAddNotification && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Send Global Notification</h2>
+                <p className="text-[10px] text-slate-500 mt-0.5">This notification will be visible to all users in the system.</p>
+              </div>
+              <button onClick={() => setShowAddNotification(false)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={18} className="text-slate-400" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateNotification} className="space-y-4">
+              {notificationStatus && (
+                <div className={cn(
+                  "p-3 rounded-lg text-xs font-medium mb-4",
+                  notificationStatus.type === 'success' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
+                )}>
+                  {notificationStatus.message}
+                </div>
+              )}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Title</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
+                  placeholder="System Update"
+                  value={newNotification.title}
+                  onChange={e => setNewNotification({...newNotification, title: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Message</label>
+                <textarea 
+                  required
+                  rows={4}
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all resize-none" 
+                  placeholder="Enter your message here..."
+                  value={newNotification.message}
+                  onChange={e => setNewNotification({...newNotification, message: e.target.value})}
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Send size={14} className="mr-2" />
+                    Send Notification
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

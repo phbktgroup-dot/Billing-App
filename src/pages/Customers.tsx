@@ -15,10 +15,12 @@ import {
   MapPin,
   FileText
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
+import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
 
 interface Customer {
   id: string;
@@ -26,8 +28,10 @@ interface Customer {
   email: string;
   phone: string;
   gstin: string;
+  state: string;
   address: string;
   business_id: string;
+  created_at?: string;
 }
 
 export default function Customers() {
@@ -40,14 +44,27 @@ export default function Customers() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
+
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
 
   const businessId = profile?.business_id;
+
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     gstin: '',
+    state: '',
     address: ''
   });
 
@@ -55,14 +72,32 @@ export default function Customers() {
     if (businessId) {
       fetchCustomers();
     }
-  }, [businessId]);
+  }, [businessId, filterType, customRange, day, year]);
+
+  const toggleSelectAll = () => {
+    if (selectedCustomers.length === filteredCustomers.length) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(filteredCustomers.map(c => c.id));
+    }
+  };
+
+  const toggleSelectCustomer = (id: string) => {
+    setSelectedCustomers(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
+    const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+
     const { data, error } = await supabase
       .from('customers')
       .select('*')
       .eq('business_id', businessId)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
       .order('name', { ascending: true });
 
     if (data) setCustomers(data);
@@ -106,22 +141,56 @@ export default function Customers() {
 
   const confirmDelete = (id: string) => {
     setCustomerToDelete(id);
+    setIsBulkDelete(false);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    setIsBulkDelete(true);
     setDeleteModalOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!customerToDelete) return;
     try {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', customerToDelete);
-      
-      if (error) {
-        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
-          throw new Error('Cannot delete this customer because they have associated invoices or other records. Please delete those records first.');
+      if (isBulkDelete) {
+        const { error } = await supabase
+          .from('customers')
+          .delete()
+          .in('id', selectedCustomers);
+        
+        if (error) {
+          if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+            throw new Error('Some customers cannot be deleted because they have associated records. Please delete those records first.');
+          }
+          throw error;
         }
-        throw error;
+        setSelectedCustomers([]);
+      } else {
+        if (!customerToDelete) return;
+        const { error } = await supabase
+          .from('customers')
+          .delete()
+          .eq('id', customerToDelete);
+        
+        if (error) {
+          if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+            // Fetch associated invoices to show in the error message
+            const { data: invoices } = await supabase
+              .from('invoices')
+              .select('invoice_number')
+              .eq('customer_id', customerToDelete)
+              .limit(5);
+
+            let message = 'Cannot delete this customer because they have associated invoices or other records.';
+            if (invoices && invoices.length > 0) {
+              const numbers = invoices.map(inv => inv.invoice_number).join(', ');
+              message += `\n\nAssociated Invoices: ${numbers}${invoices.length >= 5 ? '...' : ''}`;
+            }
+            message += '\n\nPlease delete those records first.';
+            throw new Error(message);
+          }
+          throw error;
+        }
       }
       fetchCustomers();
     } catch (error: any) {
@@ -129,6 +198,7 @@ export default function Customers() {
       alert(error.message || 'Failed to delete customer.');
     } finally {
       setCustomerToDelete(null);
+      setIsBulkDelete(false);
     }
   };
 
@@ -140,6 +210,7 @@ export default function Customers() {
         email: customer.email || '',
         phone: customer.phone || '',
         gstin: customer.gstin || '',
+        state: customer.state || '',
         address: customer.address || ''
       });
     } else {
@@ -149,6 +220,7 @@ export default function Customers() {
         email: '',
         phone: '',
         gstin: '',
+        state: '',
         address: ''
       });
     }
@@ -163,37 +235,58 @@ export default function Customers() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Customer Management</h1>
-          <p className="text-xs text-slate-500">Manage your clients, their contact info, and GST details.</p>
+      <PageHeader 
+        title="Customer Management" 
+        description="Manage your clients, their contact info, and GST details."
+      >
+        <div className="flex items-center space-x-2">
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+          />
+          <button className="btn-primary flex items-center px-4 py-2 text-sm" onClick={() => openModal()}>
+            <Plus size={16} className="mr-1.5" />
+            Add Customer
+          </button>
         </div>
-        <button className="btn-primary flex items-center px-4 py-2 text-sm" onClick={() => openModal()}>
-          <Plus size={16} className="mr-1.5" />
-          Add Customer
-        </button>
-      </div>
+      </PageHeader>
 
       {/* Customers Table */}
       <div className="glass-card overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search by name, phone or GSTIN..."
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search by name, phone or GSTIN..."
+                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {selectedCustomers.length > 0 && (
+              <button 
+                onClick={confirmBulkDelete}
+                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all"
+              >
+                <Trash2 size={14} />
+                Bulk Delete ({selectedCustomers.length})
+              </button>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
               <Filter size={16} />
             </button>
             <div className="h-5 w-[1px] bg-slate-200"></div>
-            <p className="text-xs text-slate-500">Showing {filteredCustomers.length} customers</p>
+            <p className="text-xs text-slate-500">Showing {filteredCustomers.length} of {customers.length} customers</p>
           </div>
         </div>
 
@@ -201,24 +294,32 @@ export default function Customers() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-3 w-10">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                    checked={filteredCustomers.length > 0 && selectedCustomers.length === filteredCustomers.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-3">Customer Name</th>
                 <th className="px-4 py-3">Contact Info</th>
                 <th className="px-4 py-3">GSTIN</th>
                 <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3">Actions</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
                     <p className="text-slate-500 text-sm">Loading customers...</p>
                   </td>
                 </tr>
               ) : filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <Users className="w-12 h-12 mx-auto text-slate-200 mb-2" />
                     <p className="text-slate-500 font-medium">No customers found</p>
                     <button onClick={() => openModal()} className="text-primary text-sm font-bold mt-2 hover:underline">Add your first customer</button>
@@ -226,7 +327,21 @@ export default function Customers() {
                 </tr>
               ) : (
                 filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr 
+                    key={customer.id} 
+                    className={cn(
+                      "hover:bg-slate-50/50 transition-colors",
+                      selectedCustomers.includes(customer.id) && "bg-primary/5"
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                        checked={selectedCustomers.includes(customer.id)}
+                        onChange={() => toggleSelectCustomer(customer.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 text-xs">
@@ -261,19 +376,24 @@ export default function Customers() {
                         <span className="truncate">{customer.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(customer)}
                           className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                          title="Edit"
                         >
                           <Edit size={16} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(customer.id)}
                           className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          title="Delete"
                         >
                           <Trash2 size={16} />
+                        </button>
+                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                          <MoreVertical size={16} />
                         </button>
                       </div>
                     </td>
@@ -331,14 +451,26 @@ export default function Customers() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">GSTIN (Optional)</label>
-                <input 
-                  type="text" 
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all uppercase"
-                  value={formData.gstin}
-                  onChange={e => setFormData({...formData, gstin: e.target.value})}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">GSTIN (Optional)</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all uppercase"
+                    value={formData.gstin}
+                    onChange={e => setFormData({...formData, gstin: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">State</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    value={formData.state}
+                    onChange={e => setFormData({...formData, state: e.target.value})}
+                    placeholder="e.g. Maharashtra"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -375,12 +507,15 @@ export default function Customers() {
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModalOpen}
-        title="Delete Customer"
-        message="Are you sure you want to delete this customer? This action cannot be undone."
+        title={isBulkDelete ? "Bulk Delete Customers" : "Delete Customer"}
+        message={isBulkDelete 
+          ? `Are you sure you want to delete ${selectedCustomers.length} selected customers? This action cannot be undone.`
+          : "Are you sure you want to delete this customer? This action cannot be undone."}
         onConfirm={handleDelete}
         onCancel={() => {
           setDeleteModalOpen(false);
           setCustomerToDelete(null);
+          setIsBulkDelete(false);
         }}
       />
     </div>

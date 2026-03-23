@@ -8,16 +8,23 @@ export interface InvoiceData {
   customer_name: string;
   customer_gstin?: string;
   payment_mode?: string;
+  discount?: number;
+  discount_percentage?: number;
+  due_date?: string;
   items: {
     name: string;
+    sku?: string;
     quantity: number;
     rate: number;
     gstRate?: number;
     amount: number;
   }[];
   subtotal: number;
+  raw_subtotal: number;
   tax_amount: number;
   total: number;
+  notes?: string;
+  terms?: string;
 }
 
 export interface BusinessProfile {
@@ -35,7 +42,7 @@ export interface BusinessProfile {
   invoice_prefix?: string;
 }
 
-export const generateInvoicePDF = async (invoice: InvoiceData, business: BusinessProfile) => {
+export const generateInvoicePDF = async (invoice: InvoiceData, business: BusinessProfile, returnBlob: boolean = false) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
@@ -43,33 +50,35 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setLineWidth(0.5);
   
   // Outer border
-  doc.rect(10, 10, 190, 277);
+  doc.rect(10, 10, 190, 282);
   
   // Horizontal lines
   doc.line(10, 45, 200, 45);
   doc.line(10, 75, 200, 75);
   doc.line(10, 85, 200, 85);
   doc.line(10, 95, 200, 95);
+  doc.line(10, 222, 200, 222);
   doc.line(10, 230, 200, 230);
   doc.line(10, 240, 200, 240);
-  doc.line(10, 250, 200, 250);
-  doc.line(10, 265, 200, 265);
+  doc.line(10, 262, 200, 262);
   
   // Vertical lines
   doc.line(105, 45, 105, 85); // Header middle
   
-  // Table columns (from 85 to 240)
-  doc.line(20, 85, 20, 240);
-  doc.line(95, 85, 95, 240);
-  doc.line(115, 85, 115, 240);
-  doc.line(130, 85, 130, 240);
-  doc.line(140, 85, 140, 240);
-  doc.line(155, 85, 155, 240);
-  doc.line(165, 85, 165, 240);
-  doc.line(180, 85, 180, 240);
+  // Table columns (from 85 to 222)
+  doc.line(20, 85, 20, 222); // S.N.
+  doc.line(100, 85, 100, 222); // Description end
+  doc.line(140, 85, 140, 222); // SKU end
+  doc.line(160, 85, 160, 222); // Qty end
+  doc.line(180, 85, 180, 222); // Price end
+  doc.line(200, 85, 200, 240); // Table end (Keep right border)
+  
+  // Vertical line for Total row (Qty column)
+  doc.line(160, 230, 160, 240);
+  doc.line(180, 230, 180, 240);
   
   // Footer middle
-  doc.line(120, 265, 120, 287);
+  doc.line(120, 262, 120, 292);
 
   // 1. Header & Logo Area
   if (business?.logo_url) {
@@ -99,34 +108,24 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setTextColor(0);
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("PHBKT", 42, 18);
-  doc.text("Group", 42, 24);
-  doc.text("Limited", 42, 30);
   
-  // Red underline
-  doc.setDrawColor(200, 0, 0);
-  doc.setLineWidth(0.8);
-  doc.line(15, 36, 65, 36);
-  doc.setDrawColor(0); // reset
-  doc.setLineWidth(0.5);
-
   // Center Header
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("TAX INVOICE", 105, 15, { align: 'center' });
   
   doc.setFontSize(12);
-  doc.text(business?.name || "Ambade Associate", 105, 21, { align: 'center' });
+  doc.text(business?.name || "", 105, 21, { align: 'center' });
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(business?.address || "garadwadi Shevgajon maharashtra 414501", 105, 26, { align: 'center' });
-  doc.text(`Tel: ${business?.mobile || "9545886257"}   Email: ${business?.email || "hh@gmail.com"}`, 105, 30, { align: 'center' });
+  doc.text(business?.address || "", 105, 26, { align: 'center' });
+  doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 30, { align: 'center' });
   
   doc.setFont("helvetica", "bold");
-  doc.text(`PAN NO.: ${business?.pan_number || "BSFPG3597I"} , GST NO. : ${business?.gst_number || ""}`, 105, 34, { align: 'center' });
-  doc.text(`${business?.bank_name || "HDFC BANK"} A/C NO :- ${business?.bank_account_no || "50200026615791"}, IFSC :- ${business?.bank_ifsc || "HDFC0003800"}`, 105, 38, { align: 'center' });
-  doc.text(`Branch : ${business?.bank_branch || "Bahu Jamalpur, Rohtak-124001 Haryana"}`, 105, 42, { align: 'center' });
+  doc.text(`PAN NO.: ${business?.pan_number || ""} , GST NO. : ${business?.gst_number || ""}`, 105, 34, { align: 'center' });
+  doc.text(`${business?.bank_name || ""} A/C NO :- ${business?.bank_account_no || ""}, IFSC :- ${business?.bank_ifsc || ""}`, 105, 38, { align: 'center' });
+  doc.text(`Branch : ${business?.bank_branch || ""}`, 105, 42, { align: 'center' });
 
   // Right Header
   doc.setFontSize(7);
@@ -152,11 +151,6 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setFont("helvetica", "normal");
   doc.text(invoice.customer_gstin || "", 35, 70);
   
-  doc.setFont("helvetica", "bold");
-  doc.text("STATE CODE :", 65, 70);
-  doc.setFont("helvetica", "normal");
-  doc.text("27", 90, 70);
-  
   // Right side
   doc.setFont("helvetica", "bold");
   doc.text("Invoice No.", 108, 50);
@@ -178,13 +172,10 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.text("S.N.", 15, 91, { align: 'center' });
-  doc.text("Description of Goods", 57.5, 91, { align: 'center' });
-  doc.text("Item Code /\nPart NO.", 105, 89, { align: 'center' });
-  doc.text("HSN /\nSAC\nCode", 122.5, 88, { align: 'center' });
-  doc.text("Cas\ne", 135, 89, { align: 'center' });
-  doc.text("Qty.", 147.5, 91, { align: 'center' });
-  doc.text("Unit", 160, 91, { align: 'center' });
-  doc.text("Price", 172.5, 91, { align: 'center' });
+  doc.text("Description of Goods", 60, 91, { align: 'center' });
+  doc.text("SKU", 120, 91, { align: 'center' });
+  doc.text("Qty.", 150, 91, { align: 'center' });
+  doc.text("Price", 170, 91, { align: 'center' });
   doc.text("Amount\n(Rs.)", 190, 89, { align: 'center' });
 
   // Table Items
@@ -193,64 +184,124 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   invoice.items.forEach((item, index) => {
     doc.text((index + 1).toString(), 15, currentY, { align: 'center' });
     doc.text(item.name, 22, currentY);
-    doc.text("", 105, currentY, { align: 'center' }); // Item Code
-    doc.text("", 122.5, currentY, { align: 'center' }); // HSN
-    doc.text("", 135, currentY, { align: 'center' }); // Case
-    doc.text(item.quantity.toString(), 147.5, currentY, { align: 'center' });
-    doc.text("NOS", 160, currentY, { align: 'center' });
+    doc.text(item.sku || "-", 120, currentY, { align: 'center' });
+    doc.text(item.quantity.toString(), 150, currentY, { align: 'center' });
     doc.text(item.rate.toFixed(2), 178, currentY, { align: 'right' });
-    doc.text(item.amount.toFixed(2), 198, currentY, { align: 'right' });
+    doc.text((item.quantity * item.rate).toFixed(2), 198, currentY, { align: 'right' });
     
-    currentY += 7;
+    currentY += 6;
   });
 
-  // Total Row
+  // Discount Row (Single row style)
+  doc.setFont("helvetica", "bold");
+  const effectiveDiscountPercent = invoice.discount_percentage || (invoice.raw_subtotal > 0 ? (invoice.discount / invoice.raw_subtotal * 100) : 0);
+  const discountText = `Discount (${effectiveDiscountPercent.toFixed(effectiveDiscountPercent % 1 === 0 ? 0 : 1)}%) :`;
+  doc.text(discountText, 25, 227);
+  doc.text((invoice.discount || 0).toFixed(2), 198, 227, { align: 'right' });
+
+  // Total Row in Table (Discounted Amount)
   doc.setFont("helvetica", "bold");
   doc.text("Total :", 25, 236);
   
   const totalQty = invoice.items.reduce((sum, i) => sum + i.quantity, 0);
-  doc.text(totalQty.toString(), 147.5, 236, { align: 'center' });
+  doc.text(totalQty.toString(), 150, 236, { align: 'center' });
   doc.text(invoice.subtotal.toFixed(2), 198, 236, { align: 'right' });
 
-  // GST Row
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text("GST :", 12, 246);
-  
-  doc.setFont("helvetica", "normal");
-  doc.text(numberToWords(Math.round(invoice.tax_amount)).toUpperCase() + " ONLY", 25, 246);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text(`Add :GST ${invoice.items[0]?.gstRate || 18} %`, 150, 246);
-  doc.text(invoice.tax_amount.toFixed(2), 198, 246, { align: 'right' });
-
-  // In Words Row
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text("In Words :", 12, 255);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text(numberToWords(Math.round(invoice.total)).toUpperCase() + " ONLY", 12, 261);
-  
-  doc.text("GRAND TOTAL :", 150, 261);
-  doc.text(invoice.total.toFixed(2), 198, 261, { align: 'right' });
-
-  // Footer
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text("Term & Conditions", 12, 270);
-  
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text("1. Intimation of inspection of goods & rejection if any must be sent back within 15 days", 12, 274);
-  doc.text("from the date of Delivery of Material.", 12, 277);
-  doc.text("2. Our responsibility ceases immediately after goods are delivered to the carriers.", 12, 280);
-  doc.text("3. All disputes are subject to Rohtak Jurisdiction.", 12, 283);
-  
+  // Tax and Grand Total (Stacked on the right)
+  let summaryY = 246;
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text(`For ${business?.name || "Ambade Associate"}`, 198, 270, { align: 'right' });
-  doc.text("Authorised Signatory", 198, 285, { align: 'right' });
 
-  doc.save(`invoice-${invoice.invoice_number}.pdf`);
+  // GST Row (Split into CGST and SGST)
+  const totalGstRate = invoice.items[0]?.gstRate || 0;
+  if (totalGstRate > 0) {
+    const halfRate = totalGstRate / 2;
+    const halfTax = invoice.tax_amount / 2;
+    
+    doc.text(`Add :CGST ${halfRate}% :`, 130, summaryY);
+    doc.text(halfTax.toFixed(2), 198, summaryY, { align: 'right' });
+    
+    summaryY += 6;
+    
+    doc.text(`Add :SGST ${halfRate}% :`, 130, summaryY);
+    doc.text(halfTax.toFixed(2), 198, summaryY, { align: 'right' });
+    
+    summaryY += 6;
+  } else {
+    doc.text(`Add :GST 0% :`, 130, summaryY);
+    doc.text("0.00", 198, summaryY, { align: 'right' });
+    summaryY += 6;
+  }
+
+  // Grand Total Row
+  const words = numberToWords(Math.round(invoice.total)).toUpperCase();
+  doc.setFontSize(7);
+  doc.text(`Amount in Words: ${words}`, 12, summaryY, { maxWidth: 110 });
+  
+  doc.setFontSize(9);
+  doc.text("GRAND TOTAL :", 130, summaryY);
+  doc.text(invoice.total.toFixed(2), 198, summaryY, { align: 'right' });
+
+  // Footer
+  const footerTopY = 262;
+  const footerBottomY = 292;
+  
+  // Terms & Conditions (Left Side)
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text("Term & Conditions", 12, footerTopY + 5);
+  
+  if (invoice.terms) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    const splitTerms = doc.splitTextToSize(invoice.terms, 100);
+    doc.text(splitTerms, 12, footerTopY + 9);
+  }
+  
+  // Signature Area (Right Side Box)
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  // Center text in the right box (120 to 200, center is 160)
+  doc.text(`For ${business?.name || ""}`, 160, footerTopY + 5, { align: 'center' });
+  
+  doc.setFontSize(8);
+  doc.text("Authorised Signatory", 160, footerBottomY - 3, { align: 'center' });
+
+  if (returnBlob) {
+    return doc.output('blob');
+  } else {
+    const d = new Date(invoice.date);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    const dateStr = `${dd}${yy}${mm}`;
+    doc.save(`Invoice_${invoice.invoice_number}_${dateStr}.pdf`);
+  }
+};
+
+export const generateProfitLossPDF = async (data: any, business: BusinessProfile) => {
+  const doc = new jsPDF();
+  
+  doc.setFontSize(18);
+  doc.text("Profit and Loss Ledger", 105, 20, { align: 'center' });
+  
+  doc.setFontSize(10);
+  doc.text(`Business: ${business.name}`, 10, 30);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, 35);
+  
+  const tableData = [
+    ['Category', 'Amount'],
+    ['Total Sales', data.totalSales.toFixed(2)],
+    ['Total Purchases', data.totalPurchases.toFixed(2)],
+    ['Total Expenses', data.totalExpenses.toFixed(2)],
+    ['Net Profit', data.netProfit.toFixed(2)]
+  ];
+  
+  autoTable(doc, {
+    startY: 40,
+    head: [tableData[0]],
+    body: tableData.slice(1),
+  });
+  
+  doc.save(`profit-loss-ledger-${new Date().toISOString().split('T')[0]}.pdf`);
 };

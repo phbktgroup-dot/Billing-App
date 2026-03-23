@@ -1,37 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1e3a8a; /* Deep Blue */
-  --color-secondary: #7c3aed; /* Purple */
-  --color-accent: #10b981; /* Emerald Green */
-  --color-background-soft: #f9fafb; /* Soft Gray */
+  --color-primary: #4f46e5; /* Indigo */
+  --color-secondary: #8b5cf6; /* Violet */
+  --color-accent: #10b981; /* Emerald */
+  --color-background-soft: #f8fafc; /* Slate 50 */
 }
 
 @layer base {
-  html {
-    font-size: 13.5px;
-  }
   body {
     @apply bg-background-soft text-slate-900 antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', sans-serif;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl;
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl;
   }
   
   .btn-primary {
-    @apply bg-primary text-white px-4 py-2 rounded-xl font-medium transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50;
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-white px-4 py-2 rounded-xl font-medium transition-all hover:bg-secondary/90 active:scale-95 disabled:opacity-50;
+    @apply bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-2 rounded-xl font-bold transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95 disabled:opacity-50;
   }
 
   .input-field {
-    @apply w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all;
+    @apply w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all;
   }
 }
 

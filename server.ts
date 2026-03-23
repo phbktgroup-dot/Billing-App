@@ -44,9 +44,11 @@ async function startServer() {
   // Supabase Admin Client
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
   console.log("Supabase URL:", supabaseUrl ? "Present" : "Missing");
   console.log("Supabase Service Key:", supabaseServiceKey ? "Present" : "Missing");
+  console.log("Supabase Anon Key:", supabaseAnonKey ? "Present" : "Missing");
 
   let supabaseAdmin: any = null;
 
@@ -58,12 +60,7 @@ async function startServer() {
     console.error("\x1b[36m%s\x1b[0m", "The server will start, but API routes requiring Supabase will fail.");
   } else {
     try {
-      supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      });
+      supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
       // Test connection on startup
       const { data, error } = await supabaseAdmin.from('users').select('count').single();
@@ -106,11 +103,14 @@ async function startServer() {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    console.log("verifyAdmin - Token:", token);
     console.log("verifyAdmin - Token length:", token.length);
+    console.log("verifyAdmin - Token parts:", token.split('.').length);
 
+    // Use admin client for user auth validation
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      console.error("verifyAdmin - Invalid token:", authError?.message || "User not found");
+      console.error("verifyAdmin - Invalid token:", authError);
       throw new Error("Invalid token: " + (authError?.message || "User not found"));
     }
 
@@ -175,10 +175,7 @@ async function startServer() {
   app.post("/api/admin/create-user", async (req, res) => {
     try {
       const { user: adminUser, profile: adminProfile, isSuperAdmin } = await verifyAdmin(req);
-      const { email, password, name, role, business_id, created_by } = req.body;
-
-      // Enforce business_id for non-Super Admins
-      const targetBusinessId = isSuperAdmin ? business_id : adminProfile.business_id;
+      const { email, password, name, role, created_by } = req.body;
 
       // 1. Create user in Supabase Auth
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -191,17 +188,18 @@ async function startServer() {
       if (authError) throw authError;
 
       // 2. Create/Update profile in public.users table
+      // We intentionally do NOT assign a business_id here.
+      // Every user (even those created by an Admin) will be forced to 
+      // complete the Business Setup page upon their first login to create 
+      // their own separate business profile.
       const profileData: any = {
         id: authData.user.id,
         email,
         name,
         role,
-        created_by: created_by || adminUser.id
+        created_by: created_by || adminUser.id,
+        business_id: null // Ensure it's null so they are forced to setup
       };
-
-      if (targetBusinessId) {
-        profileData.business_id = targetBusinessId;
-      }
 
       const { error: profileError } = await supabaseAdmin
         .from('users')
@@ -270,12 +268,131 @@ async function startServer() {
 
   app.post("/api/admin/delete-user", async (req, res) => {
     try {
-      const { isSuperAdmin } = await verifyAdmin(req);
+      const { isSuperAdmin, user: superAdminUser } = await verifyAdmin(req);
       if (!isSuperAdmin) throw new Error("Forbidden: Only Super Admins can delete users");
 
       const { userId } = req.body;
 
-      // 1. Try to delete user from Supabase Auth
+      if (userId === superAdminUser.id) {
+        throw new Error("You cannot delete your own account.");
+      }
+
+      // 1. Get target user profile to check role
+      const { data: targetUser, error: targetError } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (targetError || !targetUser) {
+        throw new Error("User profile not found");
+      }
+
+      // 2. If Admin, reassign their managed users to the Super Admin
+      if (targetUser.role === 'Admin') {
+        console.log(`Reassigning users created by Admin ${userId} to Super Admin ${superAdminUser.id}`);
+        const { error: reassignError } = await supabaseAdmin
+          .from('users')
+          .update({ created_by: superAdminUser.id })
+          .eq('created_by', userId);
+        
+        if (reassignError) {
+          console.error("Error reassigning users:", reassignError.message);
+          throw new Error("Failed to reassign managed users: " + reassignError.message);
+        }
+      }
+
+      // 3. Handle file deletion (logos)
+      // Try to query storage.objects directly to find ALL files owned by this user
+      try {
+        console.log(`Looking for storage objects owned by user ${userId}...`);
+        const { data: objects, error: objectsError } = await supabaseAdmin
+          .schema('storage')
+          .from('objects')
+          .select('name, bucket_id')
+          .eq('owner', userId);
+        
+        if (objectsError) {
+          console.warn("Could not query storage.objects directly:", objectsError.message);
+        } else if (objects && objects.length > 0) {
+          console.log(`Found ${objects.length} files owned by user ${userId}. Deleting...`);
+          // Group by bucket
+          const buckets = [...new Set(objects.map(o => o.bucket_id))];
+          for (const bucket of buckets) {
+            const filesToRemove = objects.filter(o => o.bucket_id === bucket).map(o => o.name);
+            console.log(`Deleting from bucket ${bucket}:`, filesToRemove);
+            const { error: removeError } = await supabaseAdmin.storage.from(bucket).remove(filesToRemove);
+            if (removeError) {
+              console.warn(`Failed to delete files from bucket ${bucket}:`, removeError.message);
+            }
+          }
+        } else {
+          console.log(`No storage objects found for user ${userId}.`);
+        }
+      } catch (storageErr) {
+        console.warn("Exception querying storage.objects:", storageErr);
+      }
+
+      // Fallback: Also try to delete the business logo folder if they own a business
+      const { data: business } = await supabaseAdmin
+        .from('business_profiles')
+        .select('id, logo_url')
+        .eq('user_id', userId)
+        .single();
+      
+      if (business) {
+        try {
+          // List all files in the business's logo folder
+          const folderPath = `business-logos/${business.id}`;
+          const { data: files, error: listError } = await supabaseAdmin.storage
+            .from('logos')
+            .list(folderPath);
+
+          if (listError) {
+            console.warn("Failed to list logos from storage:", listError);
+          } else if (files && files.length > 0) {
+            const filesToRemove = files.map(f => `${folderPath}/${f.name}`);
+            console.log(`Deleting logo files (fallback):`, filesToRemove);
+            const { error: removeError } = await supabaseAdmin.storage
+              .from('logos')
+              .remove(filesToRemove);
+            
+            if (removeError) {
+              console.warn("Failed to delete logos from storage (fallback):", removeError);
+            }
+          }
+        } catch (storageErr) {
+          console.warn("Failed to delete logos from storage (fallback):", storageErr);
+        }
+      }
+
+      // 3.5. Nullify created_by references to avoid foreign key constraint violations
+      console.log(`Nullifying created_by references for user ${userId}`);
+      await Promise.all([
+        supabaseAdmin.from('products').update({ created_by: null }).eq('created_by', userId),
+        supabaseAdmin.from('customers').update({ created_by: null }).eq('created_by', userId),
+        supabaseAdmin.from('invoices').update({ created_by: null }).eq('created_by', userId),
+        supabaseAdmin.from('suppliers').update({ created_by: null }).eq('created_by', userId),
+        supabaseAdmin.from('purchases').update({ created_by: null }).eq('created_by', userId),
+        supabaseAdmin.from('expenses').update({ created_by: null }).eq('created_by', userId),
+        supabaseAdmin.from('notifications').update({ created_by: null }).eq('created_by', userId),
+      ]);
+
+      // 4. Delete profile from public.users table FIRST
+      // This will cascade to business_profiles (ON DELETE CASCADE)
+      // and then to all business data (customers, products, invoices, etc.)
+      const { error: profileError } = await supabaseAdmin
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error("Profile delete error:", profileError.message);
+        throw profileError;
+      }
+
+      // 5. Delete user from Supabase Auth AFTER public.users is deleted
+      // This avoids "Database error deleting user" if auth.users is referenced by public.users
       if (supabaseServiceKey) {
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (authError) {
@@ -285,20 +402,6 @@ async function startServer() {
         console.warn("SUPABASE_SERVICE_ROLE_KEY is missing. Cannot delete from auth.users.");
       }
 
-      // 2. Delete profile from public.users table
-      const { error: profileError } = await supabaseAdmin
-        .from('users')
-        .delete()
-        .eq('id', userId);
-
-      if (profileError) {
-        console.error("Profile delete error:", profileError.message);
-        if (profileError.code === '23503' || profileError.message.includes('foreign key constraint')) {
-          throw new Error('Cannot delete this user because they have associated records (customers, invoices, etc.). Please reassign or delete those records first, or deactivate the user instead.');
-        }
-        throw profileError;
-      }
-
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting user:", error);
@@ -306,70 +409,119 @@ async function startServer() {
     }
   });
 
-  // AI Scanning Endpoint
-  app.post("/api/scan", async (req, res) => {
+  app.post("/api/admin/send-notification", async (req, res) => {
     try {
-      const { base64Data, mimeType, prompt, apiKey: clientApiKey } = req.body;
-      
-      // Use client-provided API key or fallback to server-side key
-      const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        return res.status(400).json({ error: "Gemini API key is missing." });
-      }
+      const { isSuperAdmin, user } = await verifyAdmin(req);
+      if (!isSuperAdmin) throw new Error("Forbidden: Only Super Admins can send notifications");
 
-      const { GoogleGenAI } = await import("@google/genai");
-      const ai = new GoogleGenAI({ apiKey });
+      const { title, message } = req.body;
+      if (!title || !message) throw new Error("Title and message are required");
 
-      // Helper for exponential backoff
-      const retry = async (fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> => {
-        try {
-          return await fn();
-        } catch (error: any) {
-          const errorMsg = error.message || "";
-          const isRateLimit = error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429');
-          
-          if (retries <= 0 || !isRateLimit) {
-            throw error;
-          }
-          
-          console.warn(`AI Scan rate limit exceeded, retrying in ${delay}ms... (${retries} retries left)`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return retry(fn, retries - 1, delay * 2);
-        }
-      };
+      const { data, error } = await supabaseAdmin.from('notifications').insert({
+        title,
+        message,
+        created_by: user.id,
+        type: 'global'
+      }).select().single();
 
-      const response = await retry(() => ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: mimeType, data: base64Data } }
-            ]
-          }
-        ]
-      }));
+      if (error) throw error;
 
-      if (!response.text) {
-        throw new Error("AI returned an empty response.");
-      }
-
-      res.json({ text: response.text });
+      res.json({ success: true, notification: data });
     } catch (error: any) {
-      console.error("AI Scan failed:", error);
-      
-      const errorMsg = error.message || "";
-      if (error.status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429')) {
-        return res.status(429).json({ 
-          error: "AI scanning is currently at capacity. Please wait a moment and try again.",
-          details: "Rate limit exceeded (429)"
-        });
-      }
-      
-      res.status(500).json({ error: errorMsg || "An error occurred while scanning." });
+      console.error("Error sending notification:", error);
+      res.status(400).json({ error: error.message });
     }
   });
+
+  app.post("/api/admin/send-user-notification", async (req, res) => {
+    try {
+      const { user, isSuperAdmin } = await verifyAdmin(req);
+      const { title, message, userId } = req.body;
+      if (!title || !message) throw new Error("Title and message are required");
+
+      let targetUsers = [];
+
+      if (userId === 'all') {
+        let query = supabaseAdmin.from('users').select('id');
+        if (!isSuperAdmin) {
+          query = query.eq('created_by', user.id);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        targetUsers = data || [];
+      } else {
+        const { data: targetUser, error: userError } = await supabaseAdmin
+          .from('users')
+          .select('id, created_by')
+          .eq('id', userId)
+          .single();
+        
+        if (userError || !targetUser) throw new Error("User not found");
+
+        if (!isSuperAdmin && targetUser.created_by !== user.id) {
+          throw new Error("Forbidden: You can only send notifications to users you created");
+        }
+        targetUsers = [targetUser];
+      }
+
+      console.log("DEBUG: targetUsers count:", targetUsers.length);
+      console.log("DEBUG: targetUsers:", JSON.stringify(targetUsers));
+
+      if (targetUsers.length === 0) {
+        res.json({ success: true });
+        return;
+      }
+
+      // 1. Insert notification content
+      const { data: newNotification, error: notifError } = await supabaseAdmin
+        .from('notifications')
+        .insert({
+          title,
+          message,
+          created_by: user.id,
+          type: 'user'
+        })
+        .select('id')
+        .single();
+      
+      if (notifError) throw notifError;
+
+      // 2. Insert user_notifications links
+      const userNotifications = targetUsers.map(u => ({
+        notification_id: newNotification.id,
+        user_id: u.id
+      }));
+
+      const { error: linkError } = await supabaseAdmin.from('user_notifications').insert(userNotifications);
+      if (linkError) throw linkError;
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error sending user notification:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/delete-notification", async (req, res) => {
+    console.log("POST /api/admin/delete-notification - Request received");
+    try {
+      const { isSuperAdmin } = await verifyAdmin(req);
+      if (!isSuperAdmin) throw new Error("Forbidden: Only Super Admins can delete notifications");
+
+      const { id } = req.body;
+      console.log("Deleting notification with id:", id);
+      if (!id) throw new Error("Notification ID is required");
+
+      const { error } = await supabaseAdmin.from('notifications').delete().eq('id', id);
+      if (error) throw error;
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting notification:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
 
   // OTP routes
   app.post("/api/auth/request-otp", async (req, res) => {

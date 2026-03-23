@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Download, Calendar, Filter } from 'lucide-react';
+import { BarChart as BarChartIcon, PieChart as PieChartIcon, TrendingUp, Download, Calendar, Filter, Receipt } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, getDateRange, FilterType } from '../lib/utils';
+import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
+import { generateProfitLossPDF } from '../lib/pdfGenerator';
+import { generateProfitLossExcel } from '../lib/excelGenerator';
 import {
   BarChart,
   Bar,
@@ -23,13 +27,22 @@ const COLORS = ['#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 export default function Reports() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('this_month');
   
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
   const [salesData, setSalesData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
   const [summary, setSummary] = useState({
     totalSales: 0,
     totalPurchases: 0,
+    totalExpenses: 0,
     netProfit: 0,
     invoiceCount: 0
   });
@@ -40,50 +53,92 @@ export default function Reports() {
     if (businessId) {
       fetchReportData();
     }
-  }, [businessId, dateRange]);
+  }, [businessId, filterType, customRange, day, year]);
 
   const fetchReportData = async () => {
     setLoading(true);
     try {
-      // Mock data for demonstration since we can't easily aggregate in Supabase without RPC
-      // In a real app, you'd use Supabase RPC or fetch all and aggregate
-      
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+
       const { data: invoices } = await supabase
         .from('invoices')
-        .select('total, date')
-        .eq('business_id', businessId);
+        .select('id, total, date')
+        .eq('business_id', businessId)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0]);
         
-      const { data: items } = await supabase
-        .from('invoice_items')
-        .select('total_price, products(name)')
-        .limit(100);
+      const { data: purchases } = await supabase
+        .from('purchases')
+        .select('total_amount, date')
+        .eq('business_id', businessId)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0]);
+
+      const { data: expenses } = await supabase
+        .from('expenses')
+        .select('amount, date')
+        .eq('business_id', businessId)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0]);
 
       const totalSales = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
+      const totalPurchases = purchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
+      const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       const invoiceCount = invoices?.length || 0;
       
-      // Generate some realistic looking chart data based on the total
-      const mockSalesData = [
-        { name: 'Jan', sales: totalSales * 0.1, purchases: totalSales * 0.05 },
-        { name: 'Feb', sales: totalSales * 0.15, purchases: totalSales * 0.08 },
-        { name: 'Mar', sales: totalSales * 0.2, purchases: totalSales * 0.1 },
-        { name: 'Apr', sales: totalSales * 0.25, purchases: totalSales * 0.12 },
-        { name: 'May', sales: totalSales * 0.18, purchases: totalSales * 0.09 },
-        { name: 'Jun', sales: totalSales * 0.12, purchases: totalSales * 0.06 },
-      ];
+      // Aggregate real monthly data
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyData = months.map((month, index) => {
+        const monthInvoices = invoices?.filter(inv => new Date(inv.date).getMonth() === index) || [];
+        const monthPurchases = purchases?.filter(p => new Date(p.date).getMonth() === index) || [];
+        const monthExpenses = expenses?.filter(e => new Date(e.date).getMonth() === index) || [];
 
-      const mockProductData = [
-        { name: 'Product A', value: 400 },
-        { name: 'Product B', value: 300 },
-        { name: 'Product C', value: 300 },
-        { name: 'Product D', value: 200 },
-      ];
+        return {
+          name: month,
+          sales: monthInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0),
+          purchases: monthPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+          expenses: monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+        };
+      });
 
-      setSalesData(mockSalesData);
-      setProductData(mockProductData);
+      // Filter to show only months with data or the last 6 months
+      const currentMonth = new Date().getMonth();
+      const last6Months = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthIndex = (currentMonth - i + 12) % 12;
+        last6Months.push(monthlyData[monthIndex]);
+      }
+
+      setSalesData(last6Months);
+      
+      // Aggregate top products from invoices (this would require invoice_items)
+      // For now, let's keep a more realistic mock or fetch items
+      const { data: items } = await supabase
+        .from('invoice_items')
+        .select('product_name, total_price')
+        .in('invoice_id', invoices?.map(inv => inv.id) || []);
+
+      if (items && items.length > 0) {
+        const productTotals: Record<string, number> = {};
+        items.forEach(item => {
+          productTotals[item.product_name] = (productTotals[item.product_name] || 0) + (item.total_price || 0);
+        });
+        const sortedProducts = Object.entries(productTotals)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
+        setProductData(sortedProducts);
+      } else {
+        setProductData([
+          { name: 'No Data', value: 0 }
+        ]);
+      }
+
       setSummary({
         totalSales,
-        totalPurchases: totalSales * 0.5, // Mock purchase data
-        netProfit: totalSales * 0.5,
+        totalPurchases,
+        totalExpenses,
+        netProfit: totalSales - totalPurchases - totalExpenses,
         invoiceCount
       });
 
@@ -96,31 +151,37 @@ export default function Reports() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Reports & Analytics</h1>
-          <p className="text-xs text-slate-500">Comprehensive insights into your business performance.</p>
-        </div>
+      <PageHeader 
+        title="Reports & Analytics" 
+        description="Comprehensive insights into your business performance."
+      >
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <select 
-              className="appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-slate-700 focus:outline-none focus:border-primary shadow-sm"
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-            >
-              <option value="this_month">This Month</option>
-              <option value="last_month">Last Month</option>
-              <option value="this_year">This Year</option>
-              <option value="all_time">All Time</option>
-            </select>
-            <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-          </div>
-          <button className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+          />
+          <button 
+            onClick={() => generateProfitLossPDF(summary, profile?.business_profiles || { name: 'Business' })}
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm"
+          >
             <Download size={14} className="mr-1.5" />
-            Export
+            Export PDF
+          </button>
+          <button 
+            onClick={() => generateProfitLossExcel(summary, profile?.business_profiles || { name: 'Business' })}
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm"
+          >
+            <Download size={14} className="mr-1.5" />
+            Export Excel
           </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -144,6 +205,17 @@ export default function Reports() {
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Purchases</p>
           <h3 className="text-lg font-bold text-slate-900">{formatCurrency(summary.totalPurchases)}</h3>
+        </div>
+
+        <div className="glass-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+              <Receipt size={16} />
+            </div>
+            <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">+2.1%</span>
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Expenses</p>
+          <h3 className="text-lg font-bold text-slate-900">{formatCurrency(summary.totalExpenses)}</h3>
         </div>
 
         <div className="glass-card p-4">
@@ -185,6 +257,7 @@ export default function Reports() {
                 />
                 <Line type="monotone" dataKey="sales" stroke="#7c3aed" strokeWidth={2} dot={{r: 3, strokeWidth: 1.5}} activeDot={{r: 5}} />
                 <Line type="monotone" dataKey="purchases" stroke="#f59e0b" strokeWidth={2} dot={{r: 3, strokeWidth: 1.5}} activeDot={{r: 5}} />
+                <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} dot={{r: 3, strokeWidth: 1.5}} activeDot={{r: 5}} />
               </LineChart>
             </ResponsiveContainer>
           </div>

@@ -15,15 +15,19 @@ import {
   Loader2,
   Save
 } from 'lucide-react';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
+import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
 
 interface Product {
   id: string;
   name: string;
   sku: string;
+  product_code?: string;
+  hsn_code: string;
   category: string;
   purchase_price: number;
   price: number;
@@ -31,6 +35,7 @@ interface Product {
   stock: number;
   min_stock: number;
   business_id: string;
+  created_at?: string;
 }
 
 export default function Inventory() {
@@ -44,12 +49,31 @@ export default function Inventory() {
   const [showStockHistory, setShowStockHistory] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkFormData, setBulkFormData] = useState({
+    stock: 0,
+    price: 0,
+    category: ''
+  });
+  const [lowStockAlerts, setLowStockAlerts] = useState<Product[]>([]);
+
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
 
   const businessId = profile?.business_id;
 
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
+    hsn_code: '',
     category: 'Electronics',
     purchase_price: 0,
     price: 0,
@@ -62,19 +86,26 @@ export default function Inventory() {
     if (businessId) {
       fetchProducts();
     }
-  }, [businessId]);
+  }, [businessId, filterType, customRange, day, year]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('business_id', businessId)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (data) setProducts(data);
+      if (data) {
+        setProducts(data);
+        setLowStockAlerts(data.filter(p => p.stock <= p.min_stock && p.stock > 0));
+      }
     } catch (error: any) {
       console.error('Error fetching products:', error);
       alert('Failed to load products: ' + error.message);
@@ -124,22 +155,69 @@ export default function Inventory() {
 
   const confirmDelete = (id: string) => {
     setProductToDelete(id);
+    setIsBulkDelete(false);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    setIsBulkDelete(true);
     setDeleteModalOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!productToDelete) return;
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productToDelete);
-      
-      if (error) {
-        if (error.code === '23503' || error.message.includes('foreign key constraint')) {
-          throw new Error('Cannot delete this product because it has associated invoice items or records. Please delete those first or mark the product as inactive.');
+      if (isBulkDelete) {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .in('id', selectedProducts);
+        
+        if (error) {
+          if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+            throw new Error('Some products cannot be deleted because they have associated records. Please delete those records first.');
+          }
+          throw error;
         }
-        throw error;
+        setSelectedProducts([]);
+      } else {
+        if (!productToDelete) return;
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productToDelete);
+        
+        if (error) {
+          if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+            // Fetch associated invoices and purchases
+            const { data: invItems } = await supabase
+              .from('invoice_items')
+              .select('invoice_id, invoices(invoice_number)')
+              .eq('product_id', productToDelete)
+              .limit(5);
+
+            const { data: purItems } = await supabase
+              .from('purchase_items')
+              .select('purchase_id, purchases(invoice_number)')
+              .eq('product_id', productToDelete)
+              .limit(5);
+
+            let message = 'Cannot delete this product because it has associated records.';
+            
+            if (invItems && invItems.length > 0) {
+              const numbers = [...new Set(invItems.map((item: any) => item.invoices?.invoice_number).filter(Boolean))].join(', ');
+              if (numbers) message += `\n\nAssociated Invoices: ${numbers}${invItems.length >= 5 ? '...' : ''}`;
+            }
+
+            if (purItems && purItems.length > 0) {
+              const numbers = [...new Set(purItems.map((item: any) => item.purchases?.invoice_number).filter(Boolean))].join(', ');
+              if (numbers) message += `\n\nAssociated Purchase Bills: ${numbers}${purItems.length >= 5 ? '...' : ''}`;
+            }
+
+            message += '\n\nPlease delete those records first or mark the product as inactive.';
+            throw new Error(message);
+          }
+          throw error;
+        }
       }
       fetchProducts();
     } catch (error: any) {
@@ -147,6 +225,7 @@ export default function Inventory() {
       alert(error.message || 'Failed to delete product.');
     } finally {
       setProductToDelete(null);
+      setIsBulkDelete(false);
     }
   };
 
@@ -156,6 +235,7 @@ export default function Inventory() {
       setFormData({
         name: product.name,
         sku: product.sku,
+        hsn_code: product.hsn_code || '',
         category: product.category,
         purchase_price: product.purchase_price,
         price: product.price,
@@ -168,6 +248,7 @@ export default function Inventory() {
       setFormData({
         name: '',
         sku: '',
+        hsn_code: '',
         category: 'Electronics',
         purchase_price: 0,
         price: 0,
@@ -181,7 +262,7 @@ export default function Inventory() {
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const lowStockCount = products.filter(p => p.stock <= p.min_stock && p.stock > 0).length;
@@ -189,13 +270,21 @@ export default function Inventory() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Inventory Management</h1>
-          <p className="text-[10px] text-slate-500">Track stock levels, movements, and low stock alerts.</p>
-        </div>
+      <PageHeader 
+        title="Inventory Management" 
+        description="Track stock levels, movements, and low stock alerts."
+      >
         <div className="flex items-center space-x-2">
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+          />
           <button 
             onClick={() => setShowStockHistory(true)}
             className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 flex items-center text-[10px]"
@@ -208,7 +297,21 @@ export default function Inventory() {
             Add Product
           </button>
         </div>
-      </div>
+      </PageHeader>
+
+      {lowStockAlerts.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 text-orange-800">
+            <AlertTriangle size={16} />
+            <p className="text-[10px] font-bold">
+              {lowStockAlerts.length} items are running low on stock!
+            </p>
+          </div>
+          <button onClick={() => setLowStockAlerts([])} className="text-orange-600 hover:text-orange-800">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -241,15 +344,35 @@ export default function Inventory() {
       {/* Inventory Table */}
       <div className="glass-card overflow-hidden">
         <div className="p-2.5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
-            <input 
-              type="text" 
-              placeholder="Search by SKU or Product Name..."
-              className="w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+              <input 
+                type="text" 
+                placeholder="Search by SKU or Product Name..."
+                className="w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {selectedProducts.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsBulkEditModalOpen(true)}
+                  className="bg-primary text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-all"
+                >
+                  <Edit size={12} />
+                  Bulk Edit ({selectedProducts.length})
+                </button>
+                <button 
+                  onClick={confirmBulkDelete}
+                  className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all"
+                >
+                  <Trash2 size={12} />
+                  Bulk Delete
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <button className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
@@ -264,8 +387,23 @@ export default function Inventory() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
+                <th className="px-2.5 py-1.5">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedProducts(filteredProducts.map(p => p.id));
+                      } else {
+                        setSelectedProducts([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th className="px-2.5 py-1.5">Product Details</th>
+                <th className="px-2.5 py-1.5">Product Code</th>
                 <th className="px-2.5 py-1.5">Category</th>
+                <th className="px-2.5 py-1.5">Date Added</th>
                 <th className="px-2.5 py-1.5">Stock Level</th>
                 <th className="px-2.5 py-1.5">Selling Price</th>
                 <th className="px-2.5 py-1.5">Status</th>
@@ -275,14 +413,14 @@ export default function Inventory() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center">
+                  <td colSpan={8} className="px-3 py-6 text-center">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary mb-1.5" />
                     <p className="text-slate-500 text-[10px]">Loading products...</p>
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center">
+                  <td colSpan={8} className="px-3 py-6 text-center">
                     <Package className="w-8 h-8 mx-auto text-slate-200 mb-1.5" />
                     <p className="text-slate-500 font-medium text-[10px]">No products found</p>
                     <button onClick={() => openModal()} className="text-primary text-[10px] font-bold mt-0.5 hover:underline">Add your first product</button>
@@ -292,17 +430,33 @@ export default function Inventory() {
                 filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-2.5 py-1.5">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedProducts([...selectedProducts, product.id]);
+                          } else {
+                            setSelectedProducts(selectedProducts.filter(id => id !== product.id));
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center">
                         <div className="w-6 h-6 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 mr-2">
                           <Package size={12} />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-900">{product.name}</p>
-                          <p className="text-[8px] text-slate-500">{product.sku}</p>
                         </div>
                       </div>
                     </td>
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600 font-medium">{product.sku}</td>
                     <td className="px-2.5 py-1.5 text-[10px] text-slate-600">{product.category}</td>
+                    <td className="px-2.5 py-1.5 text-[8px] text-slate-400">
+                      {product.created_at ? new Date(product.created_at).toLocaleDateString() : 'N/A'}
+                    </td>
                     <td className="px-2.5 py-1.5">
                       <div className="space-y-0.5">
                         <div className="flex justify-between text-[8px] font-medium">
@@ -360,6 +514,75 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* Bulk Edit Modal */}
+      {isBulkEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">Bulk Edit ({selectedProducts.length} items)</h3>
+              <button onClick={() => setIsBulkEditModalOpen(false)} className="p-1 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={16} className="text-slate-400" />
+              </button>
+            </div>
+            <div className="p-3 space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-700">New Category</label>
+                <input 
+                  type="text" 
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px]"
+                  value={bulkFormData.category}
+                  onChange={e => setBulkFormData({...bulkFormData, category: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-700">New Price</label>
+                <input 
+                  type="number" 
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px]"
+                  value={bulkFormData.price}
+                  onChange={e => setBulkFormData({...bulkFormData, price: Number(e.target.value)})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-700">New Stock</label>
+                <input 
+                  type="number" 
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px]"
+                  value={bulkFormData.stock}
+                  onChange={e => setBulkFormData({...bulkFormData, stock: Number(e.target.value)})}
+                />
+              </div>
+            </div>
+            <div className="p-3 border-t border-slate-100 flex justify-end gap-2">
+              <button onClick={() => setIsBulkEditModalOpen(false)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg font-bold text-[10px]">Cancel</button>
+              <button 
+                onClick={async () => {
+                  const updates: any = {};
+                  if (bulkFormData.category) updates.category = bulkFormData.category;
+                  if (bulkFormData.price > 0) updates.price = bulkFormData.price;
+                  if (bulkFormData.stock > 0) updates.stock = bulkFormData.stock;
+                  
+                  const { error } = await supabase
+                    .from('products')
+                    .update(updates)
+                    .in('id', selectedProducts);
+                  
+                  if (error) alert(error.message);
+                  else {
+                    fetchProducts();
+                    setIsBulkEditModalOpen(false);
+                    setSelectedProducts([]);
+                  }
+                }}
+                className="px-3 py-1.5 bg-primary text-white rounded-lg font-bold text-[10px]"
+              >
+                Apply Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
@@ -386,13 +609,24 @@ export default function Inventory() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-slate-700">SKU / Item Code</label>
+                  <label className="text-[10px] font-semibold text-slate-700">Product Code</label>
                   <input 
                     required
                     type="text" 
                     className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                     value={formData.sku}
                     onChange={e => setFormData({...formData, sku: e.target.value})}
+                    placeholder="e.g. PROD-001"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-700">HSN Code</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
+                    value={formData.hsn_code}
+                    onChange={e => setFormData({...formData, hsn_code: e.target.value})}
+                    placeholder="e.g. 8471"
                   />
                 </div>
                 <div className="space-y-1">
@@ -542,12 +776,15 @@ export default function Inventory() {
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModalOpen}
-        title="Delete Product"
-        message="Are you sure you want to delete this product? This action cannot be undone."
+        title={isBulkDelete ? "Bulk Delete Products" : "Delete Product"}
+        message={isBulkDelete 
+          ? `Are you sure you want to delete ${selectedProducts.length} selected products? This action cannot be undone.`
+          : "Are you sure you want to delete this product? This action cannot be undone."}
         onConfirm={handleDelete}
         onCancel={() => {
           setDeleteModalOpen(false);
           setProductToDelete(null);
+          setIsBulkDelete(false);
         }}
       />
     </div>

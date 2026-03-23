@@ -23,8 +23,10 @@ import {
   Area
 } from 'recharts';
 import { GoogleGenAI } from '@google/genai';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
 
 const predictionData = [
   { name: 'Mar', actual: 45000, predicted: 45000 },
@@ -40,6 +42,15 @@ export default function Analytics() {
   const [query, setQuery] = useState('');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
+
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
 
   const businessName = profile?.business_profiles?.name || 'PHBKT Group';
 
@@ -85,20 +96,32 @@ export default function Analytics() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center">
-            <BrainCircuit className="mr-2 text-primary" size={20} />
+      <PageHeader 
+        title={
+          <>
+            <BrainCircuit className="mr-2 text-primary" size={24} />
             AI Business Analytics
-          </h1>
-          <p className="text-xs text-slate-500">Next-generation insights powered by Google Gemini AI.</p>
+          </>
+        }
+        description="Next-generation insights powered by Google Gemini AI."
+      >
+        <div className="flex items-center space-x-2">
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+          />
+          <div className="flex items-center space-x-1.5 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
+            <Sparkles className="text-primary" size={14} />
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Powered</span>
+          </div>
         </div>
-        <div className="flex items-center space-x-1.5 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
-          <Sparkles className="text-primary" size={14} />
-          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Powered</span>
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Prediction Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

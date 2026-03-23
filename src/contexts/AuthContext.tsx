@@ -8,6 +8,10 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  impersonate: (user: any) => Promise<void>;
+  stopImpersonating: () => void;
+  isImpersonating: boolean;
+  originalProfile: any | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,11 +20,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [impersonatedUser, setImpersonatedUser] = useState<any | null>(null);
+  const [impersonatedProfile, setImpersonatedProfile] = useState<any | null>(null);
+  const [originalProfile, setOriginalProfile] = useState<any | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const userIdRef = useRef<string | null>(null);
 
-  async function getProfile(userId: string) {
+  async function getProfile(userId: string, isImpersonation = false) {
     try {
-      console.log('Fetching profile for user:', userId);
+      console.log(`Fetching profile for ${isImpersonation ? 'impersonated ' : ''}user:`, userId);
       
       // 1. Fetch the user record first
       const { data: userData, error: userError } = await supabase
@@ -29,23 +37,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      console.log('User data from DB:', userData);
-      
       if (userError) {
         console.error('Error fetching user:', userError);
-        return;
+        return null;
       }
 
       let finalProfile = userData;
 
-      if (!userData) {
-        // If user record doesn't exist, try to create it
+      if (!userData && !isImpersonation) {
+        // If user record doesn't exist, try to create it (only for the logged-in user)
         const { data: { session } } = await supabase.auth.getSession();
         const authUser = session?.user;
         
         if (authUser && authUser.id === userId) {
           console.log('Creating missing user record for:', authUser.email);
-          // Use upsert to handle race conditions with the database trigger
           const { data: newUser, error: insertError } = await supabase
             .from('users')
             .upsert([{
@@ -59,8 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (insertError) {
             console.error('Error creating/upserting user record:', insertError);
-            // If it's a duplicate key error, it means the trigger just created it
-            // Let's try to fetch it one more time
             const { data: retryData } = await supabase
               .from('users')
               .select('*')
@@ -73,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 2. Fetch the business profile separately to avoid join errors (PGRST200)
+      // 2. Fetch the business profile separately
       if (finalProfile) {
         const { data: businessData, error: businessError } = await supabase
           .from('business_profiles')
@@ -84,11 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (businessError) {
           console.error('Error fetching business profile:', businessError);
         } else if (businessData) {
-          // Attach business data to profile
           finalProfile = {
             ...finalProfile,
             business_profiles: businessData,
-            business_id: businessData.id // Ensure business_id is set
+            business_id: businessData.id
           };
         }
       }
@@ -101,23 +103,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // 4. Check if account is disabled
-      if (finalProfile && finalProfile.is_active === false) {
-        console.warn('User account is disabled:', userId);
-        await supabase.auth.signOut();
-        setProfile(null);
-        setUser(null);
-        userIdRef.current = null;
-        alert('Your account has been disabled. Please contact your administrator.');
-        return;
+      if (!isImpersonation) {
+        // 4. Check if account is disabled (only for real user)
+        if (finalProfile && finalProfile.is_active === false) {
+          console.warn('User account is disabled:', userId);
+          await supabase.auth.signOut();
+          setProfile(null);
+          setUser(null);
+          userIdRef.current = null;
+          alert('Your account has been disabled. Please contact your administrator.');
+          return null;
+        }
+        setProfile(finalProfile);
+        setOriginalProfile(finalProfile);
       }
 
-      console.log('Final profile state:', finalProfile);
-      setProfile(finalProfile);
+      return finalProfile;
     } catch (err) {
       console.error('Unexpected error in getProfile:', err);
+      return null;
     }
   }
+
+  const impersonate = async (targetUser: any) => {
+    setLoading(true);
+    try {
+      const targetProfile = await getProfile(targetUser.id, true);
+      if (targetProfile) {
+        setImpersonatedUser(targetUser);
+        setImpersonatedProfile(targetProfile);
+        setProfile(targetProfile);
+        sessionStorage.setItem('impersonatedUserId', targetUser.id);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stopImpersonating = () => {
+    setImpersonatedUser(null);
+    setImpersonatedProfile(null);
+    setProfile(originalProfile);
+    sessionStorage.removeItem('impersonatedUserId');
+  };
 
   const refreshProfile = async () => {
     if (user) {
@@ -137,11 +165,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userIdRef.current = currentUser?.id ?? null;
       
       if (currentUser) {
-        await getProfile(currentUser.id);
+        const userProfile = await getProfile(currentUser.id);
+        
+        // Check for persisted impersonation
+        const impersonatedId = sessionStorage.getItem('impersonatedUserId');
+        if (impersonatedId && userProfile && (userProfile.role === 'Admin' || userProfile.role === 'Super Admin')) {
+          const targetProfile = await getProfile(impersonatedId, true);
+          if (targetProfile) {
+            setImpersonatedUser({ id: impersonatedId, name: targetProfile.name, email: targetProfile.email });
+            setImpersonatedProfile(targetProfile);
+            setProfile(targetProfile);
+          }
+        }
       } else {
         setProfile(null);
       }
       setLoading(false);
+      setIsAuthReady(true);
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
@@ -187,11 +227,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setImpersonatedUser(null);
+    setImpersonatedProfile(null);
+    setOriginalProfile(null);
     userIdRef.current = null;
+    sessionStorage.removeItem('impersonatedUserId');
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      signOut, 
+      refreshProfile,
+      impersonate,
+      stopImpersonating,
+      isImpersonating: !!impersonatedUser,
+      originalProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );

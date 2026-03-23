@@ -18,6 +18,8 @@ export interface BusinessProfile {
   logo_url?: string;
   invoice_prefix: string;
   invoice_number_format: string;
+  default_notes?: string;
+  default_terms?: string;
 }
 
 export interface Product {
@@ -63,5 +65,6 @@ export interface InvoiceItem {
   quantity: number;
   rate: number;
   gst_rate: number;
+  discount?: number;
   amount: number;
 }

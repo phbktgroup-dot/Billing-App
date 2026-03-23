@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -7,6 +8,8 @@ interface ConfirmModalProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmText?: string;
+  confirmVariant?: 'danger' | 'primary' | 'success';
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -15,14 +18,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   onConfirm,
   onCancel,
+  confirmText = 'Delete',
+  confirmVariant = 'danger'
 }) => {
   if (!isOpen) return null;
+
+  const variantClasses = {
+    danger: 'bg-red-600 hover:bg-red-700',
+    primary: 'bg-primary hover:bg-primary/90',
+    success: 'bg-emerald-600 hover:bg-emerald-700'
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="flex justify-between items-center p-4 border-b border-slate-100">
-          <div className="flex items-center space-x-2 text-red-600">
+          <div className={cn("flex items-center space-x-2", confirmVariant === 'danger' ? "text-red-600" : confirmVariant === 'success' ? "text-emerald-600" : "text-primary")}>
             <AlertTriangle size={20} />
             <h3 className="font-semibold">{title}</h3>
           </div>
@@ -47,9 +58,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onConfirm();
               onCancel();
             }}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+            className={cn("px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm", variantClasses[confirmVariant])}
           >
-            Delete
+            {confirmText}
           </button>
         </div>
       </div>
