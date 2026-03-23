@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
-const DEFAULT_API_KEY = process.env.GEMINI_API_KEY || '';
+const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 function getAI(apiKey?: string) {
   const key = apiKey || DEFAULT_API_KEY;

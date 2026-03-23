@@ -287,7 +287,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }, 500);
 
     try {
-      const apiKey = profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY;
+      const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');
       
       const prompt = "Extract invoice details: invoice number, customer name, customer phone, customer email, customer gst, customer address, items (name, quantity, price, gst, product code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, productCode: string }] }";

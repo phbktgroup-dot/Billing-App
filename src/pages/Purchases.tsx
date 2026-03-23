@@ -407,7 +407,7 @@ export default function Purchases() {
 
     try {
       // Use environment API key
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
       // If no API key is found at all, we'll let the backend try with its own env key
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None (falling back to backend default)');

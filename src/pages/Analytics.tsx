@@ -60,7 +60,7 @@ export default function Analytics() {
     setAiResponse(null);
 
     try {
-      const apiKey = profile?.business_profiles?.gemini_api_key || process.env.GEMINI_API_KEY || '';
+      const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY || '';
       const ai = new GoogleGenAI({ apiKey });
       
       const retry = async (fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> => {
