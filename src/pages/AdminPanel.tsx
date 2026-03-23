@@ -187,6 +187,7 @@ export default function AdminPanel() {
   const [editingApiKeyUser, setEditingApiKeyUser] = useState<any>(null);
   const [newApiKey, setNewApiKey] = useState('');
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [isLoadingApiKey, setIsLoadingApiKey] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -240,6 +241,23 @@ export default function AdminPanel() {
       }
     }
   }, [currentUser?.id, businessId, isSuperAdmin, activeTab]);
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setNotifications(data || []);
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchUserNotifications = async () => {
     setLoading(true);
@@ -407,6 +425,7 @@ export default function AdminPanel() {
   const handleEditApiKey = async (user: any) => {
     setEditingApiKeyUser(user);
     setNewApiKey('');
+    setIsLoadingApiKey(true);
     // Fetch current API key
     try {
       const { data, error } = await supabase
@@ -420,6 +439,8 @@ export default function AdminPanel() {
       }
     } catch (err) {
       console.error('Error fetching API key:', err);
+    } finally {
+      setIsLoadingApiKey(false);
     }
   };
 
@@ -1069,17 +1090,25 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">API Integration Key</label>
-                <input 
-                  type="password" 
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
-                  value={newApiKey}
-                  onChange={e => setNewApiKey(e.target.value)}
-                  placeholder="Paste Gemini API Key here"
-                />
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all pr-10" 
+                    value={newApiKey}
+                    onChange={e => setNewApiKey(e.target.value)}
+                    placeholder={isLoadingApiKey ? "Loading..." : "Paste Gemini API Key here"}
+                    disabled={isLoadingApiKey}
+                  />
+                  {isLoadingApiKey && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                    </div>
+                  )}
+                </div>
               </div>
               <button 
                 onClick={handleSaveApiKey}
-                disabled={isSavingApiKey}
+                disabled={isSavingApiKey || isLoadingApiKey}
                 className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
               >
                 {isSavingApiKey ? (

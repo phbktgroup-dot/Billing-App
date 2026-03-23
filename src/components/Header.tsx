@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, User, LogOut, Search, Settings, ShieldCheck, HelpCircle, Lock, Menu, X, CheckCircle2, LogIn } from 'lucide-react';
+import { Bell, User, LogOut, Search, Settings, ShieldCheck, HelpCircle, Lock, Menu, X, CheckCircle2, LogIn, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (user) {
@@ -131,6 +135,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right Actions */}
       <div className="flex items-center space-x-4">
+        <button 
+          onClick={handleRefresh}
+          className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+        >
+          <RefreshCw size={20} />
+        </button>
         <div className="relative" ref={notificationRef}>
           <button 
             onClick={() => {

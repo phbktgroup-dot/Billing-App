@@ -6,14 +6,13 @@ export const getApiUrl = (path: string) => {
     window.location.hostname === 'localhost' || 
     window.location.protocol === 'capacitor:'
   ) {
-    // Check if we are in development mode (Vite dev server usually runs on localhost:5173 or we use 3000 for our express server)
-    // In production, import.meta.env.DEV is false
+    // Check if we are in development mode
     if (import.meta.env.DEV) {
       return `http://localhost:3000${path.startsWith('/') ? '' : '/'}${path}`;
     }
 
-    // In production desktop/mobile app, always use the deployed backend URL
-    const baseUrl = 'https://ais-pre-63egfcyw5xcnj4izhkgqaa-583844668197.asia-east1.run.app';
+    // In production desktop/mobile app, use the environment variable if available, otherwise fallback
+    const baseUrl = import.meta.env.VITE_APP_URL || 'https://ais-pre-63egfcyw5xcnj4izhkgqaa-583844668197.asia-east1.run.app';
     
     // Ensure no trailing slash on baseUrl
     const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;

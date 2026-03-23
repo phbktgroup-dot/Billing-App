@@ -173,6 +173,14 @@ export default function Dashboard() {
       let suppliersData = suppliers || [];
       if (supError) suppliersData = JSON.parse(localStorage.getItem(`suppliers_${businessId}`) || '[]');
 
+      setRawData({
+        invoices: invoicesData,
+        purchases: purchasesData,
+        customers: [], // Not fully fetched here, just count
+        suppliers: suppliersData,
+        products: productsData
+      });
+
       // 2. Apply Filters
       const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
 
@@ -182,13 +190,20 @@ export default function Dashboard() {
       });
 
       const filteredPurchases = purchasesData.filter(p => {
-        const date = new Date(p.date);
-        return date >= startDate && date <= endDate;
+        const pDate = new Date(p.date);
+        // Reset times for date-only comparison
+        const d = new Date(pDate.getFullYear(), pDate.getMonth(), pDate.getDate());
+        const s = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const e = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        return d >= s && d <= e;
       });
 
-      const filteredExpenses = (expensesData || []).filter(e => {
-        const date = new Date(e.date);
-        return date >= startDate && date <= endDate;
+      const filteredExpenses = (expensesData || []).filter(exp => {
+        const eDate = new Date(exp.date);
+        const d = new Date(eDate.getFullYear(), eDate.getMonth(), eDate.getDate());
+        const s = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        return d >= s && d <= end;
       });
 
       // 3. Calculate Stats
@@ -415,6 +430,7 @@ export default function Dashboard() {
       ]);
       
       if (recentInvoicesData) setRecentInvoices(recentInvoicesData);
+      setRecentPurchases(filteredPurchases.slice(0, 5));
 
       if (invoicesForCustomers) {
         const customerTotals: Record<string, { name: string, total: number }> = {};
@@ -436,6 +452,32 @@ export default function Dashboard() {
           .slice(0, 5);
         setTopCustomers(sortedCustomers);
       }
+
+      const supplierTotals: Record<string, { name: string, total: number }> = {};
+      filteredPurchases.forEach(p => {
+        const sid = p.supplier_id;
+        if (!sid) return;
+        
+        let supplierName = Array.isArray(p.suppliers) 
+          ? p.suppliers[0]?.name 
+          : p.suppliers?.name;
+          
+        // Fallback to suppliersData if join is missing
+        if (!supplierName) {
+          const supplier = suppliersData.find((s: any) => s.id === sid);
+          supplierName = supplier?.name;
+        }
+          
+        if (!supplierTotals[sid]) {
+          supplierTotals[sid] = { name: supplierName || 'Unknown', total: 0 };
+        }
+        supplierTotals[sid].total += Number(p.total_amount || p.total || 0);
+      });
+      const sortedSuppliers = Object.entries(supplierTotals)
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+      setTopSuppliers(sortedSuppliers);
 
       // 4. Prepare Chart Data (Mocking monthly aggregation for now)
       const baseChartData = [
@@ -617,7 +659,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+            className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden h-full"
           >
             <div className={cn("absolute top-0 right-0 w-24 h-24 rounded-full -mr-12 -mt-12 blur-2xl opacity-50 transition-opacity group-hover:opacity-100", stat.bg)} />
             <div className="relative z-10">
@@ -1667,7 +1709,14 @@ export default function Dashboard() {
                     </td>
                     <td className="py-3">
                       <div className="text-[11px] font-medium text-slate-600">
-                        {Array.isArray(purchase.suppliers) ? purchase.suppliers[0]?.name : purchase.suppliers?.name || 'Unknown'}
+                        {(() => {
+                          let name = Array.isArray(purchase.suppliers) ? purchase.suppliers[0]?.name : purchase.suppliers?.name;
+                          if (!name && purchase.supplier_id) {
+                            const s = rawData.suppliers.find((s: any) => s.id === purchase.supplier_id);
+                            name = s?.name;
+                          }
+                          return name || 'Unknown';
+                        })()}
                       </div>
                     </td>
                     <td className="py-3 text-[10px] text-slate-500">
