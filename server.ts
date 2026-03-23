@@ -652,15 +652,23 @@ async function startServer() {
     }
   });
 
-  // API 404 handler
+  // API 404 handler - MUST come before Vite/Static middleware
   app.all("/api/*", (req, res) => {
-    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
+    res.status(404).json({ 
+      error: "API Route Not Found", 
+      method: req.method, 
+      url: req.url,
+      suggestion: "Check if the API path is correct in your frontend code."
+    });
   });
 
-  // Global error handler
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error("Unhandled error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+  // Global error handler for API
+  app.use("/api/*", (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("API Error:", err);
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: err.message 
+    });
   });
 
   // Vite middleware for development
