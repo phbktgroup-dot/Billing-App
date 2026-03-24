@@ -855,9 +855,10 @@ Return as JSON format: {
                         <input 
                           type="text" 
                           placeholder="GSTIN"
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                          maxLength={15}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all uppercase"
                           value={formData.supplier_gstin}
-                          onChange={e => setFormData({...formData, supplier_gstin: e.target.value})}
+                          onChange={e => setFormData({...formData, supplier_gstin: e.target.value.toUpperCase()})}
                         />
                       </div>
                       <div>
@@ -865,9 +866,10 @@ Return as JSON format: {
                         <input 
                           type="text" 
                           placeholder="Contact number"
+                          maxLength={10}
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
                           value={formData.supplier_phone}
-                          onChange={e => setFormData({...formData, supplier_phone: e.target.value})}
+                          onChange={e => setFormData({...formData, supplier_phone: e.target.value.replace(/\D/g, '')})}
                         />
                       </div>
                     </div>

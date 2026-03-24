@@ -475,12 +475,24 @@ export default function Settings() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pincode</label>
-                      <input type="text" className="input-field text-xs py-2" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} />
+                      <input 
+                        type="text" 
+                        maxLength={6}
+                        className="input-field text-xs py-2" 
+                        value={formData.pincode} 
+                        onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})} 
+                      />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mobile</label>
-                    <input type="text" className="input-field text-xs py-2" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
+                    <input 
+                      type="text" 
+                      maxLength={10}
+                      className="input-field text-xs py-2" 
+                      value={formData.mobile} 
+                      onChange={e => setFormData({...formData, mobile: e.target.value.replace(/\D/g, '')})} 
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Email</label>
@@ -488,11 +500,23 @@ export default function Settings() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GST Number</label>
-                    <input type="text" className="input-field text-xs py-2" value={formData.gstNumber} onChange={e => setFormData({...formData, gstNumber: e.target.value})} />
+                    <input 
+                      type="text" 
+                      maxLength={15}
+                      className="input-field text-xs py-2 uppercase" 
+                      value={formData.gstNumber} 
+                      onChange={e => setFormData({...formData, gstNumber: e.target.value.toUpperCase()})} 
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">PAN Number</label>
-                    <input type="text" className="input-field text-xs py-2" value={formData.panNumber} onChange={e => setFormData({...formData, panNumber: e.target.value})} />
+                    <input 
+                      type="text" 
+                      maxLength={10}
+                      className="input-field text-xs py-2 uppercase" 
+                      value={formData.panNumber} 
+                      onChange={e => setFormData({...formData, panNumber: e.target.value.toUpperCase()})} 
+                    />
                   </div>
                 </div>
 

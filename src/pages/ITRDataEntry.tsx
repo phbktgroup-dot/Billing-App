@@ -240,7 +240,15 @@ export default function ITRDataEntry() {
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Aadhar Number (12 digits)</label>
-              <input type="text" name="aadharNumber" value={formData.aadharNumber || ''} onChange={handleChange} className="input-field text-sm" placeholder="1234 5678 9012" maxLength={12} />
+              <input 
+                type="text" 
+                name="aadharNumber" 
+                value={formData.aadharNumber || ''} 
+                onChange={e => setFormData({...formData, aadharNumber: e.target.value.replace(/\D/g, '')})} 
+                className="input-field text-sm" 
+                placeholder="1234 5678 9012" 
+                maxLength={12} 
+              />
             </div>
           </div>
 

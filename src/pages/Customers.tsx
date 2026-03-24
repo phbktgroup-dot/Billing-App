@@ -463,9 +463,10 @@ export default function Customers() {
                   <label className="text-sm font-semibold text-slate-700">Phone Number</label>
                   <input 
                     type="tel" 
+                    maxLength={10}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
                     value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -484,9 +485,10 @@ export default function Customers() {
                   <label className="text-sm font-semibold text-slate-700">GSTIN (Optional)</label>
                   <input 
                     type="text" 
+                    maxLength={15}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all uppercase"
                     value={formData.gstin}
-                    onChange={e => setFormData({...formData, gstin: e.target.value})}
+                    onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -534,9 +536,10 @@ export default function Customers() {
                     <label className="text-sm font-semibold text-slate-700">Pin Code</label>
                     <input 
                       type="text"
+                      maxLength={6}
                       className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
                       value={formData.pincode}
-                      onChange={e => setFormData({...formData, pincode: e.target.value})}
+                      onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})}
                     />
                   </div>
                 </div>

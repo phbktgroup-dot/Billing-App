@@ -334,10 +334,11 @@ export default function BusinessSetup() {
                 <input 
                   type="text" 
                   required
+                  maxLength={6}
                   className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                   placeholder="400001"
                   value={formData.pincode}
-                  onChange={e => setFormData({...formData, pincode: e.target.value})}
+                  onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})}
                 />
               </div>
             </div>
@@ -350,10 +351,11 @@ export default function BusinessSetup() {
                   <input 
                     type="tel" 
                     required
+                    maxLength={10}
                     className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
-                    placeholder="+91 98765 43210"
+                    placeholder="9876543210"
                     value={formData.mobile}
-                    onChange={e => setFormData({...formData, mobile: e.target.value})}
+                    onChange={e => setFormData({...formData, mobile: e.target.value.replace(/\D/g, '')})}
                   />
                 </div>
               </div>
@@ -382,10 +384,11 @@ export default function BusinessSetup() {
                   <input 
                     type="text" 
                     required
+                    maxLength={15}
                     className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all uppercase"
                     placeholder="27AAAAA0000A1Z5"
                     value={formData.gstNumber}
-                    onChange={e => setFormData({...formData, gstNumber: e.target.value})}
+                    onChange={e => setFormData({...formData, gstNumber: e.target.value.toUpperCase()})}
                   />
                 </div>
               </div>
@@ -396,10 +399,11 @@ export default function BusinessSetup() {
                   <input 
                     type="text" 
                     required
+                    maxLength={10}
                     className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all uppercase"
                     placeholder="ABCDE1234F"
                     value={formData.panNumber}
-                    onChange={e => setFormData({...formData, panNumber: e.target.value})}
+                    onChange={e => setFormData({...formData, panNumber: e.target.value.toUpperCase()})}
                   />
                 </div>
               </div>

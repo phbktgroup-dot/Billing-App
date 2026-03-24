@@ -396,9 +396,10 @@ export default function Suppliers() {
                   <label className="block text-xs font-medium text-slate-700 mb-1">Phone</label>
                   <input 
                     type="text" 
+                    maxLength={10}
                     className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
                     value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
                   />
                 </div>
                 <div>
@@ -416,9 +417,10 @@ export default function Suppliers() {
                   <label className="block text-xs font-medium text-slate-700 mb-1">GSTIN</label>
                   <input 
                     type="text" 
+                    maxLength={15}
                     className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all uppercase"
                     value={formData.gst_number}
-                    onChange={e => setFormData({...formData, gst_number: e.target.value})}
+                    onChange={e => setFormData({...formData, gst_number: e.target.value.toUpperCase()})}
                   />
                 </div>
                 <div>

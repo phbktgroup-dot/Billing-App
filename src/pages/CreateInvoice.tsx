@@ -1349,9 +1349,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="Contact number"
+                      maxLength={10}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all text-slate-900 placeholder-slate-400 font-medium"
                       value={customer.phone || ''}
-                      onChange={e => handleCustomerChange('phone', e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        handleCustomerChange('phone', val);
+                      }}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1359,9 +1363,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="GST Number"
+                      maxLength={15}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all uppercase text-slate-900 placeholder-slate-400 font-medium"
                       value={customer.gst || ''}
-                      onChange={e => handleCustomerChange('gst', e.target.value)}
+                      onChange={e => handleCustomerChange('gst', e.target.value.toUpperCase())}
                     />
                   </div>
                 </div>
@@ -1404,9 +1409,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="text" 
                         placeholder="Pincode"
+                        maxLength={6}
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all text-slate-900 placeholder-slate-400 font-medium"
                         value={customer.pincode || ''}
-                        onChange={e => handleCustomerChange('pincode', e.target.value)}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          handleCustomerChange('pincode', val);
+                        }}
                       />
                     </div>
                     <div className="space-y-1.5">
