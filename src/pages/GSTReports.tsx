@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Download, FileText, PieChart, Table as TableIcon, Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
 import { FilterType, cn, formatCurrency, getDateRange } from '../lib/utils';
@@ -142,7 +143,7 @@ export default function GSTReports() {
     };
   }, [invoices, profile]);
 
-  const exportGSTR1 = () => {
+  const getGSTR1Workbook = () => {
     const workbook = XLSX.utils.book_new();
 
     // B2B Sheet
@@ -222,10 +223,15 @@ export default function GSTReports() {
     const docWS = XLSX.utils.json_to_sheet(docRows);
     XLSX.utils.book_append_sheet(workbook, docWS, 'Docs');
 
+    return workbook;
+  };
+
+  const exportGSTR1 = () => {
+    const workbook = getGSTR1Workbook();
     XLSX.writeFile(workbook, `GSTR1_${filterType}_${day}.xlsx`);
   };
 
-  const exportGSTR3B = () => {
+  const getGSTR3BWorkbook = () => {
     const workbook = XLSX.utils.book_new();
     const outwardTaxable = invoices.reduce((sum, inv) => sum + (inv.subtotal || 0), 0);
     const outwardTax = invoices.reduce((sum, inv) => sum + (inv.tax_amount || 0), 0);
@@ -240,10 +246,15 @@ export default function GSTReports() {
 
     const ws = XLSX.utils.json_to_sheet(summaryRows);
     XLSX.utils.book_append_sheet(workbook, ws, 'GSTR-3B Summary');
+    return workbook;
+  };
+
+  const exportGSTR3B = () => {
+    const workbook = getGSTR3BWorkbook();
     XLSX.writeFile(workbook, `GSTR3B_${filterType}_${day}.xlsx`);
   };
 
-  const exportGSTR2A = () => {
+  const getGSTR2AWorkbook = () => {
     const workbook = XLSX.utils.book_new();
     const b2bRows = purchases.map(pur => ({
       'GSTIN of Supplier': pur.suppliers?.gstin,
@@ -261,7 +272,39 @@ export default function GSTReports() {
 
     const ws = XLSX.utils.json_to_sheet(b2bRows);
     XLSX.utils.book_append_sheet(workbook, ws, 'B2B Purchases');
+    return workbook;
+  };
+
+  const exportGSTR2A = () => {
+    const workbook = getGSTR2AWorkbook();
     XLSX.writeFile(workbook, `GSTR2A_${filterType}_${day}.xlsx`);
+  };
+
+  const downloadAllAsZip = async () => {
+    const zip = new JSZip();
+    
+    // GSTR-1
+    const wb1 = getGSTR1Workbook();
+    const out1 = XLSX.write(wb1, { type: 'array', bookType: 'xlsx' });
+    zip.file(`GSTR1_${filterType}_${day}.xlsx`, out1);
+
+    // GSTR-3B
+    const wb3 = getGSTR3BWorkbook();
+    const out3 = XLSX.write(wb3, { type: 'array', bookType: 'xlsx' });
+    zip.file(`GSTR3B_${filterType}_${day}.xlsx`, out3);
+
+    // GSTR-2A
+    const wb2 = getGSTR2AWorkbook();
+    const out2 = XLSX.write(wb2, { type: 'array', bookType: 'xlsx' });
+    zip.file(`GSTR2A_${filterType}_${day}.xlsx`, out2);
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const url = window.URL.createObjectURL(content);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `GST_Reports_${filterType}_${day}.zip`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const renderGSTR1Analysis = () => {
@@ -462,7 +505,14 @@ export default function GSTReports() {
         title="GST Compliance Reports" 
         description="Generate and download GSTR-1, GSTR-3B, and GSTR-2A reports for filing."
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={downloadAllAsZip}
+            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[11px] font-bold hover:bg-slate-800 transition-all flex items-center shadow-lg shadow-slate-200"
+          >
+            <Download size={14} className="mr-2" />
+            Download All Reports (ZIP)
+          </button>
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}

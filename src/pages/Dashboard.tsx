@@ -677,7 +677,7 @@ export default function Dashboard() {
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">
                   {stat.isCurrency
                     ? formatCurrency(stat.value as number) 
                     : stat.value}
@@ -772,7 +772,7 @@ export default function Dashboard() {
                         Profit & Loss
                       </h3>
                     </div>
-                    <div className="text-2xl font-black text-slate-900 mt-2">{formatCurrency(businessSummary?.profitAndLoss.netProfit || 0)}</div>
+                    <div className="text-xl font-black text-slate-900 mt-2">{formatCurrency(businessSummary?.profitAndLoss.netProfit || 0)}</div>
                     <div className={cn(
                       "text-[10px] font-bold flex items-center mt-1",
                       (businessSummary?.profitAndLoss.change || 0) >= 0 ? "text-emerald-600" : "text-red-600"
@@ -803,7 +803,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Gross Revenue</p>
-                    <p className="text-[13px] font-black text-slate-800">{formatCurrency(businessSummary?.profitAndLoss.revenue || 0)}</p>
+                    <p className="text-[11px] font-black text-slate-800">{formatCurrency(businessSummary?.profitAndLoss.revenue || 0)}</p>
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-[8px] font-bold text-slate-400 uppercase">Margin:</span>
                       <span className="text-[9px] font-black text-emerald-600">{businessSummary?.profitAndLoss.grossMarginPercent}%</span>
@@ -811,7 +811,7 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Total Expenses</p>
-                    <p className="text-[13px] font-black text-red-500">-{formatCurrency(businessSummary?.profitAndLoss.expenses || 0)}</p>
+                    <p className="text-[11px] font-black text-red-500">-{formatCurrency(businessSummary?.profitAndLoss.expenses || 0)}</p>
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-[8px] font-bold text-slate-400 uppercase">EBITDA:</span>
                       <span className="text-[9px] font-black text-slate-700">{formatCompactCurrency(businessSummary?.profitAndLoss.ebitda || 0)}</span>
@@ -832,7 +832,7 @@ export default function Dashboard() {
                         Cash Flow
                       </h3>
                     </div>
-                    <div className="text-2xl font-black text-slate-900 mt-2">{formatCurrency(businessSummary?.cashFlow.netCashFlow || 0)}</div>
+                    <div className="text-xl font-black text-slate-900 mt-2">{formatCurrency(businessSummary?.cashFlow.netCashFlow || 0)}</div>
                     <div className={cn(
                       "text-[10px] font-bold flex items-center mt-1",
                       (businessSummary?.cashFlow.change || 0) >= 0 ? "text-blue-600" : "text-red-600"
@@ -863,7 +863,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Inflow (Paid)</p>
-                    <p className="text-[13px] font-black text-emerald-600">+{formatCurrency(businessSummary?.cashFlow.inflow || 0)}</p>
+                    <p className="text-[11px] font-black text-emerald-600">+{formatCurrency(businessSummary?.cashFlow.inflow || 0)}</p>
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-[8px] font-bold text-slate-400 uppercase">DSO:</span>
                       <span className="text-[9px] font-black text-blue-600">{businessSummary?.cashFlow.dso} Days</span>
@@ -871,7 +871,7 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Outflow (Purchases)</p>
-                    <p className="text-[13px] font-black text-red-400">-{formatCurrency(businessSummary?.cashFlow.outflow || 0)}</p>
+                    <p className="text-[11px] font-black text-red-400">-{formatCurrency(businessSummary?.cashFlow.outflow || 0)}</p>
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-[8px] font-bold text-slate-400 uppercase">DPO:</span>
                       <span className="text-[9px] font-black text-slate-700">{businessSummary?.cashFlow.dpo} Days</span>
@@ -892,7 +892,7 @@ export default function Dashboard() {
                         Customer Flow
                       </h3>
                     </div>
-                    <div className="text-2xl font-black text-slate-900 mt-2">{businessSummary?.customerFlow.total}</div>
+                    <div className="text-xl font-black text-slate-900 mt-2">{businessSummary?.customerFlow.total}</div>
                     <div className="text-[10px] font-bold text-purple-600 flex items-center mt-1">
                       <div className="p-0.5 bg-purple-100 rounded-full mr-1.5">
                         <ArrowUpRight size={10} />
@@ -917,7 +917,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">New MTD</p>
-                    <p className="text-[13px] font-black text-emerald-600">+{businessSummary?.customerFlow.newThisMonth}</p>
+                    <p className="text-[11px] font-black text-emerald-600">+{businessSummary?.customerFlow.newThisMonth}</p>
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-[8px] font-bold text-slate-400 uppercase">CAC:</span>
                       <span className="text-[9px] font-black text-purple-600">{formatCurrency(businessSummary?.customerFlow.cac || 0)}</span>
@@ -925,7 +925,7 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Retention</p>
-                    <p className="text-[13px] font-black text-slate-700">94.2%</p>
+                    <p className="text-[11px] font-black text-slate-700">94.2%</p>
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-[8px] font-bold text-slate-400 uppercase">LTV:</span>
                       <span className="text-[9px] font-black text-slate-700">{formatCurrency(businessSummary?.customerFlow.ltv || 0)}</span>
@@ -946,7 +946,7 @@ export default function Dashboard() {
                     </h3>
                   </div>
                   <div className="flex items-baseline space-x-1">
-                    <span className="text-2xl font-black text-white">{businessSummary?.businessHealth.score || 0}</span>
+                    <span className="text-xl font-black text-white">{businessSummary?.businessHealth.score || 0}</span>
                     <span className="text-[10px] font-bold text-slate-500">/100</span>
                   </div>
                 </div>
@@ -973,7 +973,7 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                    <span className="text-2xl font-black text-white leading-none">{healthScore}</span>
+                    <span className="text-xl font-black text-white leading-none">{healthScore}</span>
                     <span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest mt-1">Score</span>
                   </div>
                 </div>
@@ -1047,7 +1047,7 @@ export default function Dashboard() {
                       <div>
                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Monthly Burn Rate</p>
                         <div className="flex items-center space-x-2">
-                          <p className="text-lg font-black text-slate-900">{formatCurrency(businessSummary?.runway.burnRate || 0)}</p>
+                          <p className="text-base font-black text-slate-900">{formatCurrency(businessSummary?.runway.burnRate || 0)}</p>
                           <span className={cn(
                             "text-[8px] font-bold px-1.5 py-0.5 rounded uppercase",
                             businessSummary?.runway.burnTrend === 'decreasing' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
@@ -1286,11 +1286,11 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
                     <div className="text-[8px] font-bold text-emerald-600 uppercase mb-1">Projected Revenue</div>
-                    <div className="text-[14px] font-black text-emerald-700">{formatCurrency(simulationResult.projectedRevenue)}</div>
+                    <div className="text-[12px] font-black text-emerald-700">{formatCurrency(simulationResult.projectedRevenue)}</div>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100">
                     <div className="text-[8px] font-bold text-blue-600 uppercase mb-1">Projected Profit</div>
-                    <div className="text-[14px] font-black text-blue-700">{formatCurrency(simulationResult.projectedProfit)}</div>
+                    <div className="text-[12px] font-black text-blue-700">{formatCurrency(simulationResult.projectedProfit)}</div>
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-500 leading-relaxed italic">
@@ -1320,7 +1320,7 @@ export default function Dashboard() {
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Inventory Turnover</p>
               <div className="flex items-baseline justify-between">
-                <p className="text-xl font-black text-slate-900">{businessSummary?.inventory.turnoverRate}x</p>
+                <p className="text-lg font-black text-slate-900">{businessSummary?.inventory.turnoverRate}x</p>
                 <span className="text-[9px] font-bold text-emerald-600">Healthy</span>
               </div>
               <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden mt-3">
@@ -1331,11 +1331,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
                 <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Value</p>
-                <p className="text-[12px] font-black text-slate-900">{formatCompactCurrency(businessSummary?.inventory.totalStockValue || 0)}</p>
+                <p className="text-[11px] font-black text-slate-900">{formatCompactCurrency(businessSummary?.inventory.totalStockValue || 0)}</p>
               </div>
               <div className="p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
                 <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1">Lead Time</p>
-                <p className="text-[12px] font-black text-slate-900">{businessSummary?.supplyChain.avgLeadTime} Days</p>
+                <p className="text-[11px] font-black text-slate-900">{businessSummary?.supplyChain.avgLeadTime} Days</p>
               </div>
             </div>
 
@@ -1452,13 +1452,13 @@ export default function Dashboard() {
           <div className="space-y-4 flex-1">
             <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Dividend Capacity</p>
-              <p className="text-xl font-black text-emerald-400">{formatCurrency(businessSummary?.ownerVisibility.dividendCapacity || 0)}</p>
+              <p className="text-lg font-black text-emerald-400">{formatCurrency(businessSummary?.ownerVisibility.dividendCapacity || 0)}</p>
               <p className="text-[9px] text-slate-500 mt-1 italic">Safe withdrawal (45% FCF)</p>
             </div>
             
             <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Owner Equity Est.</p>
-              <p className="text-xl font-black text-white">{formatCurrency(businessSummary?.ownerVisibility.ownerEquity || 0)}</p>
+              <p className="text-lg font-black text-white">{formatCurrency(businessSummary?.ownerVisibility.ownerEquity || 0)}</p>
               <p className="text-[9px] text-slate-500 mt-1 italic">1.5x Cash + Assets</p>
             </div>
 
@@ -1468,7 +1468,7 @@ export default function Dashboard() {
                 <span className="text-[9px] font-bold text-orange-400">Action Required</span>
               </div>
               <div className="flex items-baseline space-x-2">
-                <span className="text-lg font-black text-white">{formatCurrency(businessSummary?.ownerVisibility.estimatedTax || 0)}</span>
+                <span className="text-base font-black text-white">{formatCurrency(businessSummary?.ownerVisibility.estimatedTax || 0)}</span>
                 <span className="text-[8px] font-bold text-slate-500 uppercase">Liability</span>
               </div>
             </div>
@@ -1492,12 +1492,12 @@ export default function Dashboard() {
                     {customer.name.charAt(0)}
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold text-slate-900">{customer.name}</div>
-                    <div className="text-[9px] text-slate-500">Premium Tier</div>
+                    <div className="text-[10px] font-bold text-slate-900">{customer.name}</div>
+                    <div className="text-[8px] text-slate-500">Premium Tier</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[11px] font-black text-slate-900">{formatCurrency(customer.total)}</div>
+                  <div className="text-[10px] font-black text-slate-900">{formatCurrency(customer.total)}</div>
                   <div className="text-[9px] text-emerald-600 font-bold flex items-center justify-end">
                     <ArrowUpRight size={10} className="mr-0.5" />
                     12%
@@ -1546,18 +1546,18 @@ export default function Dashboard() {
                 {recentInvoices.map((invoice) => (
                   <tr key={invoice.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="py-3">
-                      <div className="text-[11px] font-bold text-slate-900">#{invoice.invoice_number || invoice.id.slice(0, 8)}</div>
+                      <div className="text-[10px] font-bold text-slate-900">#{invoice.invoice_number || invoice.id.slice(0, 8)}</div>
                     </td>
                     <td className="py-3">
-                      <div className="text-[11px] font-medium text-slate-600">
+                      <div className="text-[10px] font-medium text-slate-600">
                         {Array.isArray(invoice.customers) ? invoice.customers[0]?.name : invoice.customers?.name || 'Unknown'}
                       </div>
                     </td>
-                    <td className="py-3 text-[10px] text-slate-500">
+                    <td className="py-3 text-[9px] text-slate-500">
                       {new Date(invoice.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3">
-                      <div className="text-[11px] font-black text-slate-900">{formatCurrency(invoice.total)}</div>
+                      <div className="text-[10px] font-black text-slate-900">{formatCurrency(invoice.total)}</div>
                     </td>
                     <td className="py-3">
                       <span className={cn(
@@ -1651,12 +1651,12 @@ export default function Dashboard() {
                     {supplier.name.charAt(0)}
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold text-slate-900">{supplier.name}</div>
-                    <div className="text-[9px] text-slate-500">Reliability: 98%</div>
+                    <div className="text-[10px] font-bold text-slate-900">{supplier.name}</div>
+                    <div className="text-[8px] text-slate-500">Reliability: 98%</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[11px] font-black text-slate-900">{formatCurrency(supplier.total)}</div>
+                  <div className="text-[10px] font-black text-slate-900">{formatCurrency(supplier.total)}</div>
                   <div className="text-[9px] text-emerald-600 font-bold">Active</div>
                 </div>
               </div>
@@ -1705,10 +1705,10 @@ export default function Dashboard() {
                 {recentPurchases.map((purchase) => (
                   <tr key={purchase.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="py-3">
-                      <div className="text-[11px] font-bold text-slate-900">#{purchase.invoice_number || purchase.id.slice(0, 8)}</div>
+                      <div className="text-[10px] font-bold text-slate-900">#{purchase.invoice_number || purchase.id.slice(0, 8)}</div>
                     </td>
                     <td className="py-3">
-                      <div className="text-[11px] font-medium text-slate-600">
+                      <div className="text-[10px] font-medium text-slate-600">
                         {(() => {
                           let name = Array.isArray(purchase.suppliers) ? purchase.suppliers[0]?.name : purchase.suppliers?.name;
                           if (!name && purchase.supplier_id) {
@@ -1719,11 +1719,11 @@ export default function Dashboard() {
                         })()}
                       </div>
                     </td>
-                    <td className="py-3 text-[10px] text-slate-500">
+                    <td className="py-3 text-[9px] text-slate-500">
                       {new Date(purchase.date).toLocaleDateString()}
                     </td>
                     <td className="py-3">
-                      <div className="text-[11px] font-black text-slate-900">{formatCurrency(purchase.total_amount)}</div>
+                      <div className="text-[10px] font-black text-slate-900">{formatCurrency(purchase.total_amount)}</div>
                     </td>
                     <td className="py-3">
                       <span className={cn(

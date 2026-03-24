@@ -50,7 +50,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { profile, originalProfile } = useAuth();
+  const { profile, originalProfile, appSettings, settingsLoading } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
@@ -92,18 +92,29 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       >
         {/* Logo Section */}
-        <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
-              P
-            </div>
+        <div className="h-32 flex items-center justify-between px-6 border-b border-slate-100">
+          <div className="flex flex-col items-center">
+            {settingsLoading ? (
+              <div className="w-10 h-10 bg-slate-100 rounded-xl animate-pulse shrink-0" />
+            ) : appSettings?.logo_url ? (
+              <img 
+                src={appSettings.logo_url} 
+                alt="Logo" 
+                className="w-10 h-10 object-contain rounded-xl shrink-0"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
+                P
+              </div>
+            )}
             {(!isCollapsed || isOpen) && (
               <motion.span 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="ml-3 font-bold text-base text-primary whitespace-nowrap overflow-hidden"
+                className="mt-2 font-bold text-base text-primary whitespace-nowrap overflow-hidden"
               >
-                PHBKT Billing Pro+
+                {appSettings?.app_name || 'PHBKT Billing Pro+'}
               </motion.span>
             )}
           </div>

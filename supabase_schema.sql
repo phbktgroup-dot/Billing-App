@@ -622,10 +622,13 @@
     ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
     -- NOTIFICATIONS POLICY
-    -- 1. Everyone can read notifications
+    -- 1. Users can read relevant notifications
     DROP POLICY IF EXISTS "Anyone can read notifications" ON notifications;
-    CREATE POLICY "Anyone can read notifications" ON notifications
-        FOR SELECT USING (true);
+    DROP POLICY IF EXISTS "Users can read relevant notifications" ON notifications;
+    CREATE POLICY "Users can read relevant notifications" ON notifications
+        FOR SELECT USING (
+            auth.role() = 'authenticated'
+        );
 
     -- 2. Only Super Admins can manage notifications
     DROP POLICY IF EXISTS "Super Admins can manage notifications" ON notifications;
@@ -636,8 +639,12 @@
     CREATE OR REPLACE FUNCTION public.create_user_notifications()
     RETURNS TRIGGER AS $$
     BEGIN
-        INSERT INTO public.user_notifications (user_id, notification_id)
-        SELECT id, NEW.id FROM public.users;
+        -- Only automatically create user_notifications for 'global' type
+        -- 'user' type notifications are handled manually by the API for specific users
+        IF NEW.type = 'global' THEN
+            INSERT INTO public.user_notifications (user_id, notification_id)
+            SELECT id, NEW.id FROM public.users;
+        END IF;
         RETURN NEW;
     END;
     $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -665,7 +672,42 @@
     CREATE POLICY "Users can read their own notifications" ON user_notifications
         FOR SELECT USING (auth.uid() = user_id);
 
-    -- Users can update their own notifications (to mark as read)
-    DROP POLICY IF EXISTS "Users can update their own notifications" ON user_notifications;
-    CREATE POLICY "Users can update their own notifications" ON user_notifications
-        FOR UPDATE USING (auth.uid() = user_id);
+    -- 16. APP SETTINGS (Global)
+    CREATE TABLE IF NOT EXISTS app_settings (
+        id TEXT PRIMARY KEY DEFAULT 'global',
+        logo_url TEXT,
+        app_name TEXT DEFAULT 'My App',
+        updated_at TIMESTAMPTZ DEFAULT now()
+    );
+
+    -- Enable RLS
+    ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+    -- APP SETTINGS POLICY
+    -- 1. Anyone can read app settings (for login page)
+    DROP POLICY IF EXISTS "Public read app settings" ON app_settings;
+    CREATE POLICY "Public read app settings" ON app_settings
+        FOR SELECT USING (true);
+
+    -- 2. Only Super Admins can manage app settings
+    DROP POLICY IF EXISTS "Super Admins manage app settings" ON app_settings;
+    CREATE POLICY "Super Admins manage app settings" ON app_settings
+        FOR ALL USING (public.is_super_admin());
+
+    -- 17. GLOBAL LOGOS BUCKET
+    INSERT INTO storage.buckets (id, name, public) 
+    VALUES ('global-logos', 'global-logos', true)
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Allow public to view global logos
+    DROP POLICY IF EXISTS "Public Access Global Logos" ON storage.objects;
+    CREATE POLICY "Public Access Global Logos" ON storage.objects 
+    FOR SELECT USING (bucket_id = 'global-logos');
+
+    -- Only Super Admins can upload global logos
+    DROP POLICY IF EXISTS "Super Admin Upload Global Logos" ON storage.objects;
+    CREATE POLICY "Super Admin Upload Global Logos" ON storage.objects 
+    FOR ALL USING (
+        bucket_id = 'global-logos' 
+        AND public.is_super_admin()
+    );

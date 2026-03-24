@@ -27,16 +27,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
     if (user) {
       fetchNotifications();
       
-      // Subscribe to new notifications
+      // Subscribe to new user-specific notifications
       const channel = supabase
-        .channel('public:notifications')
+        .channel(`user-notifications:${user.id}`)
         .on('postgres_changes', { 
-          event: 'INSERT', 
+          event: '*', 
           schema: 'public', 
-          table: 'notifications' 
-        }, (payload) => {
-          setNotifications(prev => [payload.new, ...prev]);
-          setUnreadCount(prev => prev + 1);
+          table: 'user_notifications',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          fetchNotifications();
         })
         .subscribe();
 
@@ -49,27 +49,47 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const fetchNotifications = async () => {
     if (!user) return;
     try {
-      // DEBUG: Fetch directly from notifications table
+      // Fetch from unread user_notifications joined with notifications
       const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
+        .from('user_notifications')
+        .select('*, notifications(*)')
+        .eq('user_id', user.id)
+        .eq('is_read', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log('DEBUG: Notifications:', data);
       
-      setNotifications(data || []);
-      setUnreadCount(data?.length || 0);
+      // Map to a flatter structure for the UI
+      const mappedNotifications = data
+        ?.filter(n => n.notifications) // Only show if we can read the notification content
+        .map(n => ({
+          ...n.notifications,
+          user_notification_id: n.id,
+          is_read: n.is_read
+        })) || [];
+      
+      setNotifications(mappedNotifications);
+      setUnreadCount(mappedNotifications.length);
     } catch (err) {
       console.error('Error fetching notifications:', err);
     }
   };
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (userNotificationId: string) => {
     const { error } = await supabase
       .from('user_notifications')
       .update({ is_read: true })
-      .eq('id', id);
+      .eq('id', userNotificationId);
+    if (!error) fetchNotifications();
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('user_notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
     if (!error) fetchNotifications();
   };
 
@@ -145,13 +165,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <button 
             onClick={() => {
               setShowNotifications(!showNotifications);
-              if (!showNotifications) setUnreadCount(0);
             }}
             className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all relative"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                {unreadCount}
+              </span>
             )}
           </button>
 
@@ -166,9 +187,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <h3 className="text-xs font-bold text-slate-900">Notifications</h3>
-                <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={14} />
-                </button>
+                <div className="flex items-center space-x-3">
+                  {unreadCount > 0 && (
+                    <button onClick={markAllAsRead} className="text-[10px] text-primary font-bold hover:underline">
+                      Mark all as read
+                    </button>
+                  )}
+                  <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600">
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 {notifications.length === 0 ? (
@@ -181,9 +209,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 ) : (
                   <div className="divide-y divide-slate-50">
                     {notifications.map((notif) => (
-                      <div key={notif.id} className="p-4 hover:bg-slate-50 transition-colors cursor-default">
+                      <div key={notif.user_notification_id} className={cn(
+                        "p-4 hover:bg-slate-50 transition-colors cursor-default",
+                        !notif.is_read && "bg-blue-50/30"
+                      )}>
                         <div className="flex items-start space-x-3">
-                          <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center shrink-0">
+                          <div className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                            notif.is_read ? "bg-slate-100 text-slate-400" : "bg-primary/10 text-primary"
+                          )}>
                             <Bell size={14} />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -194,10 +228,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
                             )}
                             <div className="flex justify-between items-center mt-1.5">
                               <p className="text-[9px] text-slate-400 flex items-center">
-                                <CheckCircle2 size={10} className="mr-1 text-emerald-500" />
+                                <CheckCircle2 size={10} className={cn("mr-1", notif.is_read ? "text-emerald-500" : "text-slate-300")} />
                                 {new Date(notif.created_at).toLocaleDateString()}
                               </p>
-                              {/* Clear button disabled for debug */}
+                              {!notif.is_read && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markAsRead(notif.user_notification_id);
+                                  }}
+                                  className="text-[9px] font-bold text-primary hover:underline"
+                                >
+                                  Mark as read
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>

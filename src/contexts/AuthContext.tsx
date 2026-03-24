@@ -12,6 +12,9 @@ interface AuthContextType {
   stopImpersonating: () => void;
   isImpersonating: boolean;
   originalProfile: any | null;
+  appSettings: any | null;
+  settingsLoading: boolean;
+  refreshAppSettings: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [impersonatedUser, setImpersonatedUser] = useState<any | null>(null);
   const [impersonatedProfile, setImpersonatedProfile] = useState<any | null>(null);
   const [originalProfile, setOriginalProfile] = useState<any | null>(null);
+  const [appSettings, setAppSettings] = useState<any | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const userIdRef = useRef<string | null>(null);
 
@@ -125,6 +130,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshAppSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('*')
+        .eq('id', 'global')
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching app settings:', error);
+      } else if (data) {
+        setAppSettings(data);
+      }
+    } catch (err) {
+      console.error('Unexpected error in refreshAppSettings:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   const impersonate = async (targetUser: any) => {
     setLoading(true);
     try {
@@ -159,6 +185,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
+      
+      // Fetch app settings first (needed for login page)
+      await refreshAppSettings();
       
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -244,7 +273,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       impersonate,
       stopImpersonating,
       isImpersonating: !!impersonatedUser,
-      originalProfile
+      originalProfile,
+      appSettings,
+      settingsLoading,
+      refreshAppSettings
     }}>
       {children}
     </AuthContext.Provider>

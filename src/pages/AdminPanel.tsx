@@ -164,16 +164,14 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
 
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const { user: currentUser, profile: currentProfile, impersonate, originalProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'notifications' | 'user-notifications'>('users');
+  const { user: currentUser, profile: currentProfile, impersonate, originalProfile, appSettings, refreshAppSettings } = useAuth();
+  const [activeTab, setActiveTab] = useState<'users' | 'notifications' | 'settings'>('users');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [userNotifications, setUserNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showAddNotification, setShowAddNotification] = useState(false);
-  const [showAddUserNotification, setShowAddUserNotification] = useState(false);
   const [selectedUserForNotification, setSelectedUserForNotification] = useState('all');
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -188,15 +186,13 @@ export default function AdminPanel() {
   const [newApiKey, setNewApiKey] = useState('');
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [isLoadingApiKey, setIsLoadingApiKey] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [newAppName, setNewAppName] = useState('');
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     password: '',
     role: 'Business User'
-  });
-  const [newNotification, setNewNotification] = useState({
-    title: '',
-    message: ''
   });
   const [notificationStatus, setNotificationStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
@@ -236,19 +232,20 @@ export default function AdminPanel() {
         fetchUsers();
       } else if (activeTab === 'notifications') {
         fetchNotifications();
-      } else if (activeTab === 'user-notifications') {
-        fetchUserNotifications();
+      } else if (activeTab === 'settings') {
+        setNewAppName(appSettings?.app_name || 'My App');
       }
     }
-  }, [currentUser?.id, businessId, isSuperAdmin, activeTab]);
+  }, [currentUser?.id, businessId, isSuperAdmin, activeTab, appSettings]);
 
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('notifications').select('*, sender:users(name)');
+      if (!isSuperAdmin) {
+        query = query.eq('created_by', currentUser?.id);
+      }
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       setNotifications(data || []);
     } catch (error: any) {
@@ -259,76 +256,40 @@ export default function AdminPanel() {
     }
   };
 
-  const fetchUserNotifications = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_notifications')
-        .select('*, notifications(*)')
-        .order('created_at', { foreignTable: 'notifications', ascending: false });
-      if (error) throw error;
-      console.log('Fetched user notifications:', data);
-      setUserNotifications(data || []);
-    } catch (error: any) {
-      console.error('Error fetching user notifications:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateNotification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Attempting to send notification via API:', newNotification);
-    
-    if (!isSuperAdmin) {
-      console.error('Permission denied: User is not a Super Admin');
-      setNotificationStatus({ type: 'error', message: 'Only Super Admins can send notifications.' });
-      return;
-    }
-    
+  const handleCreateNotification = async () => {
+    if (!notificationTitle || !notificationMessage) return;
     setIsSubmitting(true);
     setNotificationStatus(null);
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No active session");
 
-      const response = await fetch(getApiUrl('/api/admin/send-notification'), {
+      const response = await fetch(getApiUrl('/api/admin/send-user-notification'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({
-          title: newNotification.title,
-          message: newNotification.message
+        body: JSON.stringify({ 
+          title: notificationTitle, 
+          message: notificationMessage, 
+          userId: selectedUserForNotification 
         }),
       });
 
       const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to send notification');
 
-      if (!response.ok) {
-        console.error('API error sending notification:', result.error);
-        throw new Error(result.error || 'Failed to send notification');
-      }
-
-      console.log('Notification sent successfully via API');
+      setNotificationTitle('');
+      setNotificationMessage('');
+      setShowAddNotification(false);
       setNotificationStatus({ type: 'success', message: 'Notification sent successfully!' });
-      
-      // Reset form after a short delay
-      setTimeout(() => {
-        setShowAddNotification(false);
-        setNewNotification({ title: '', message: '' });
-        setNotificationStatus(null);
-        fetchNotifications();
-      }, 1500);
-      
+      fetchNotifications();
     } catch (err: any) {
-      console.error('Catch error sending notification:', err);
+      console.error('Error sending notification:', err);
       setNotificationStatus({ 
         type: 'error', 
-        message: err.message || 'Failed to send notification. Please check your internet connection or server status.' 
+        message: err.message || 'Failed to send notification.' 
       });
     } finally {
       setIsSubmitting(false);
@@ -336,7 +297,6 @@ export default function AdminPanel() {
   };
 
   const handleDeleteNotification = async (id: string) => {
-    console.log("handleDeleteNotification called with id:", id);
     if (!confirm('Are you sure you want to delete this notification?')) return;
     
     try {
@@ -359,43 +319,6 @@ export default function AdminPanel() {
     } catch (err: any) {
       console.error("Error in handleDeleteNotification:", err);
       alert(err.message || 'Failed to delete notification');
-    }
-  };
-
-  const handleSendUserNotification = async () => {
-    if (!notificationTitle || !notificationMessage) return;
-    setIsSubmitting(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No active session");
-      
-      const response = await fetch(getApiUrl('/api/admin/send-user-notification'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ 
-          title: notificationTitle, 
-          message: notificationMessage, 
-          userId: selectedUserForNotification 
-        }),
-      });
-      
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to send notification');
-      }
-      
-      setNotificationTitle('');
-      setNotificationMessage('');
-      setShowAddUserNotification(false);
-      await fetchUserNotifications();
-      alert('Notification sent successfully!');
-    } catch (err: any) {
-      alert(err.message || 'Failed to send notification');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -641,6 +564,77 @@ export default function AdminPanel() {
     setImpersonateModalOpen(true);
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!isSuperAdmin) {
+      alert("Only Super Admins can update the global logo.");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `app-logo-${Date.now()}.${fileExt}`;
+      const filePath = fileName;
+
+      const { error: uploadError } = await supabase.storage
+        .from('global-logos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('global-logos')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('app_settings')
+        .upsert({ 
+          id: 'global', 
+          logo_url: publicUrl,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (updateError) throw updateError;
+
+      await refreshAppSettings();
+      alert('Global logo updated successfully!');
+    } catch (err: any) {
+      console.error('Error uploading logo:', err);
+      alert(err.message || 'Failed to upload logo');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleUpdateSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isSuperAdmin) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ 
+          id: 'global', 
+          app_name: newAppName,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (error) throw error;
+
+      await refreshAppSettings();
+      alert('App settings updated successfully!');
+    } catch (err: any) {
+      console.error('Error updating settings:', err);
+      alert(err.message || 'Failed to update settings');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const confirmImpersonate = async () => {
     if (!userToImpersonate) return;
     await impersonate(userToImpersonate);
@@ -738,28 +732,28 @@ export default function AdminPanel() {
           <Users size={14} />
           <span>Users</span>
         </button>
-        {isSuperAdmin && (
-          <button 
-            onClick={() => setActiveTab('notifications')}
-            className={cn(
-              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
-              activeTab === 'notifications' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            <Bell size={14} />
-            <span>Notifications</span>
-          </button>
-        )}
         <button 
-          onClick={() => setActiveTab('user-notifications')}
+          onClick={() => setActiveTab('notifications')}
           className={cn(
             "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
-            activeTab === 'user-notifications' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+            activeTab === 'notifications' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
           )}
         >
           <Bell size={14} />
-          <span>User Notifications</span>
+          <span>Notifications</span>
         </button>
+        {isSuperAdmin && (
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+              activeTab === 'settings' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Settings size={14} />
+            <span>Settings</span>
+          </button>
+        )}
       </div>
 
       {/* User Management Hierarchy */}
@@ -803,9 +797,101 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* Settings Management */}
+      {activeTab === 'settings' && isSuperAdmin && (
+        <div className="space-y-6">
+          <div className="glass-card p-6">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center">
+              <Settings size={16} className="mr-2 text-primary" />
+              Global Application Settings
+            </h3>
+            
+            <div className="space-y-6">
+              {/* Logo Management */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Global Logo</label>
+                <div className="flex items-start space-x-4">
+                  <div className="w-24 h-24 bg-slate-100 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0 relative group">
+                    {appSettings?.logo_url ? (
+                      <img 
+                        src={appSettings.logo_url} 
+                        alt="App Logo" 
+                        className="w-full h-full object-contain p-2"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Shield size={32} className="text-slate-300" />
+                    )}
+                    {isUploadingLogo && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                        <Loader2 size={20} className="animate-spin text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-slate-500">
+                      This logo will be displayed on the login page and in the sidebar.
+                      Recommended size: 200x200px. Max size: 2MB.
+                    </p>
+                    <label className="inline-flex items-center px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-all">
+                      <Edit2 size={12} className="mr-1.5" />
+                      {appSettings?.logo_url ? 'Change Logo' : 'Upload Logo'}
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* App Name Management */}
+              <form onSubmit={handleUpdateSettings} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Application Name</label>
+                  <input 
+                    type="text" 
+                    value={newAppName}
+                    onChange={(e) => setNewAppName(e.target.value)}
+                    placeholder="Enter application name"
+                    className="w-full max-w-md px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-primary px-6 py-2 text-xs flex items-center"
+                >
+                  {isSubmitting ? (
+                    <Loader2 size={14} className="animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 size={14} className="mr-2" />
+                  )}
+                  Save Settings
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Notifications Management */}
-      {activeTab === 'notifications' && isSuperAdmin && (
+      {activeTab === 'notifications' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">Sent Notifications</h3>
+            <button 
+              onClick={() => setShowAddNotification(true)}
+              className="btn-primary px-4 py-2 text-xs"
+            >
+              Send New Notification
+            </button>
+          </div>
           {loading ? (
             <div className="glass-card p-8 text-center">
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
@@ -824,11 +910,29 @@ export default function AdminPanel() {
                       <Bell size={16} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">{notif.title}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-slate-900">{notif.title}</h4>
+                        <span className={cn(
+                          "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase",
+                          notif.type === 'global' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                        )}>
+                          {notif.type}
+                        </span>
+                      </div>
                       <p className="text-[11px] text-slate-600 mt-0.5">{notif.message}</p>
-                      <p className="text-[9px] text-slate-400 mt-2">
-                        {new Date(notif.created_at).toLocaleString()}
-                      </p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <p className="text-[9px] text-slate-400">
+                          {new Date(notif.created_at).toLocaleString()}
+                        </p>
+                        {notif.sender?.name && (
+                          <>
+                            <span className="text-[9px] text-slate-300">•</span>
+                            <p className="text-[9px] font-medium text-primary/70">
+                              By {notif.sender.name}
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button 
@@ -981,55 +1085,22 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* User Notifications Management */}
-      {activeTab === 'user-notifications' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900">User Notifications</h3>
-            <button 
-              onClick={() => setShowAddUserNotification(true)}
-              className="btn-primary px-4 py-2 text-xs"
-            >
-              Send New Notification
-            </button>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            {loading ? (
-              <p className="text-slate-500 text-xs">Loading notifications...</p>
-            ) : userNotifications.length === 0 ? (
-              <p className="text-slate-500 text-xs">No user notifications sent yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {userNotifications.map((notif) => (
-                  <div key={notif.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <h4 className="text-xs font-bold text-slate-900">{notif.notifications?.title}</h4>
-                    <p className="text-xs text-slate-600 mt-1">{notif.notifications?.message}</p>
-                    <p className="text-[10px] text-slate-400 mt-2">
-                      {new Date(notif.notifications?.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Add User Notification Modal */}
-      {showAddUserNotification && (
+      {/* Add Notification Modal */}
+      {showAddNotification && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Send User Notification</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Send Notification</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Select User</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Select Recipient</label>
                 <select 
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                   onChange={(e) => setSelectedUserForNotification(e.target.value)}
+                  value={selectedUserForNotification}
                 >
-                  <option value="all">All Users</option>
+                  <option value="all">{isSuperAdmin ? "All System Users" : "All My Users"}</option>
                   {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                    <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
                   ))}
                 </select>
               </div>
@@ -1052,13 +1123,13 @@ export default function AdminPanel() {
               </div>
               <div className="flex gap-2 mt-4">
                 <button 
-                  onClick={() => setShowAddUserNotification(false)}
+                  onClick={() => setShowAddNotification(false)}
                   className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button 
-                  onClick={handleSendUserNotification}
+                  onClick={handleCreateNotification}
                   disabled={isSubmitting}
                   className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
                 >
@@ -1147,69 +1218,6 @@ export default function AdminPanel() {
           setUserToImpersonate(null);
         }}
       />
-
-      {/* Add Notification Modal */}
-      {showAddNotification && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Send Global Notification</h2>
-                <p className="text-[10px] text-slate-500 mt-0.5">This notification will be visible to all users in the system.</p>
-              </div>
-              <button onClick={() => setShowAddNotification(false)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
-                <X size={18} className="text-slate-400" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateNotification} className="space-y-4">
-              {notificationStatus && (
-                <div className={cn(
-                  "p-3 rounded-lg text-xs font-medium mb-4",
-                  notificationStatus.type === 'success' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
-                )}>
-                  {notificationStatus.message}
-                </div>
-              )}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Title</label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
-                  placeholder="System Update"
-                  value={newNotification.title}
-                  onChange={e => setNewNotification({...newNotification, title: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Message</label>
-                <textarea 
-                  required
-                  rows={4}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all resize-none" 
-                  placeholder="Enter your message here..."
-                  value={newNotification.message}
-                  onChange={e => setNewNotification({...newNotification, message: e.target.value})}
-                />
-              </div>
-              <button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Send size={14} className="mr-2" />
-                    Send Notification
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

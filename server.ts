@@ -287,19 +287,31 @@ app.post("/api/admin/send-notification", async (req, res) => {
 
 app.post("/api/admin/send-user-notification", async (req, res) => {
   try {
-    const { user, isSuperAdmin } = await verifyAdmin(req);
+    const { user, profile, isSuperAdmin } = await verifyAdmin(req);
     const { title, message, userId } = req.body;
     let targetUsers = [];
     if (userId === 'all') {
       let query = supabaseAdmin.from('users').select('id');
-      if (!isSuperAdmin) query = query.eq('created_by', user.id);
+      if (!isSuperAdmin) {
+        // Admin sends to all users they created or are in their business
+        if (profile.business_id) {
+          query = query.or(`created_by.eq.${user.id},business_id.eq.${profile.business_id}`);
+        } else {
+          query = query.eq('created_by', user.id);
+        }
+      }
       const { data, error } = await query;
       if (error) throw error;
       targetUsers = data || [];
     } else {
-      const { data: targetUser, error: userError } = await supabaseAdmin.from('users').select('id, created_by').eq('id', userId).single();
+      const { data: targetUser, error: userError } = await supabaseAdmin.from('users').select('id, created_by, business_id').eq('id', userId).single();
       if (userError || !targetUser) throw new Error("User not found");
-      if (!isSuperAdmin && targetUser.created_by !== user.id) throw new Error("Forbidden");
+      
+      if (!isSuperAdmin) {
+        const isDescendant = targetUser.created_by === user.id;
+        const isColleague = profile.business_id && targetUser.business_id === profile.business_id;
+        if (!isDescendant && !isColleague) throw new Error("Forbidden: You can only send notifications to users under your management.");
+      }
       targetUsers = [targetUser];
     }
     if (targetUsers.length === 0) return res.json({ success: true });

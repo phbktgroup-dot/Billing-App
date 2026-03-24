@@ -19,7 +19,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const { user, loading } = useAuth();
+  const { user, loading, appSettings, settingsLoading } = useAuth();
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(true);
 
@@ -154,65 +154,76 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background-soft flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background-soft flex items-center justify-center p-3 sm:p-6">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4 shadow-xl shadow-primary/20">
-            P
+        <div className="glass-card p-5 sm:p-8 shadow-2xl shadow-slate-200/50">
+          <div className="text-center mb-6">
+            {settingsLoading ? (
+              <div className="w-16 h-16 bg-slate-100 rounded-xl animate-pulse mx-auto mb-3" />
+            ) : appSettings?.logo_url ? (
+              <img 
+                src={appSettings.logo_url} 
+                alt="Logo" 
+                className="w-16 h-16 object-contain mx-auto mb-3"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-3 shadow-xl shadow-primary/20">
+                P
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-slate-900">{appSettings?.app_name || 'PHBKT Group'}</h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">Enterprise Business Management Suite</p>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">PHBKT Group</h1>
-          <p className="text-slate-500 mt-2">Enterprise Business Management Suite</p>
-        </div>
 
-        <div className="glass-card p-8 shadow-2xl shadow-slate-200/50">
-          <div className="flex items-center space-x-2 mb-8">
-            <ShieldCheck className="text-primary" size={24} />
-            <h2 className="text-xl font-bold text-slate-900">
+          <div className="flex items-center space-x-2 mb-3">
+            <ShieldCheck className="text-primary" size={20} />
+            <h2 className="text-lg font-bold text-slate-900">
               {isForgotPassword ? 'Reset Password' : 'Secure Login'}
             </h2>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3 text-red-600 text-sm animate-shake">
-              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3 text-red-600 text-xs animate-shake">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
               <p>{error}</p>
             </div>
           )}
           
           {successMsg && (
-            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start space-x-3 text-emerald-600 text-sm">
-              <ShieldCheck size={18} className="shrink-0 mt-0.5" />
+            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start space-x-3 text-emerald-600 text-xs">
+              <ShieldCheck size={16} className="shrink-0 mt-0.5" />
               <p>{successMsg}</p>
             </div>
           )}
 
           {isForgotPassword ? (
-            <form onSubmit={handleForgotPassword} className="space-y-6">
+            <form onSubmit={handleForgotPassword} className="space-y-3">
               {forgotPasswordStep === 'email' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 ml-1">Email Address</label>
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
                     <input 
                       type="email" 
                       required
                       value={forgotPasswordEmail}
                       onChange={(e) => setForgotPasswordEmail(e.target.value)}
                       placeholder="admin@phbkt.com"
-                      className="input-field pl-12"
+                      className="input-field pl-10 py-2 text-sm"
                     />
                   </div>
                 </div>
               )}
 
               {forgotPasswordStep === 'otp' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 ml-1">Enter OTP</label>
-                  <div className="flex gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 ml-1">Enter OTP</label>
+                  <div className="flex gap-1.5">
                     {otp.map((digit, index) => (
                       <input
                         key={index}
@@ -245,7 +256,7 @@ export default function Login() {
                         }}
                         id={`otp-${index}`}
                         placeholder="0"
-                        className="w-12 h-12 text-center text-xl font-bold border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        className="w-9 h-9 text-center text-sm font-bold border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                       />
                     ))}
                   </div>
@@ -253,27 +264,27 @@ export default function Login() {
               )}
 
               {forgotPasswordStep === 'password' && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700 ml-1">New Password</label>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 ml-1">New Password</label>
                     <input 
                       type="password" 
                       required
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="input-field"
+                      className="input-field py-2 text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700 ml-1">Confirm New Password</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 ml-1">Confirm New Password</label>
                     <input 
                       type="password" 
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="input-field"
+                      className="input-field py-2 text-sm"
                     />
                   </div>
                 </div>
@@ -282,10 +293,10 @@ export default function Login() {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="btn-primary w-full py-3 text-lg flex items-center justify-center space-x-2"
+                className="btn-primary w-full py-2 text-sm flex items-center justify-center space-x-2"
               >
                 {isLoading ? (
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 ) : (
                   <span>
                     {forgotPasswordStep === 'email' ? 'Send OTP' : 
@@ -299,60 +310,60 @@ export default function Login() {
                   setIsForgotPassword(false);
                   setForgotPasswordStep('email');
                 }}
-                className="w-full text-sm text-slate-500 hover:text-slate-900"
+                className="w-full text-xs text-slate-500 hover:text-slate-900"
               >
                 Back to Login
               </button>
             </form>
           ) : (
-            <form onSubmit={handleAuth} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+            <form onSubmit={handleAuth} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 ml-1">Email Address</label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
                   <input 
                     type="email" 
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@phbkt.com"
-                    className="input-field pl-12"
+                    className="input-field pl-10 py-2 text-sm"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 ml-1">Password</label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
                   <input 
                     type={showPassword ? "text" : "password"} 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="input-field pl-12 pr-12"
+                    className="input-field pl-10 pr-10 py-2 text-sm"
                     minLength={6}
                   />
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" />
-                  <span className="text-sm text-slate-600">Remember me</span>
+                  <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-300 text-primary focus:ring-primary" />
+                  <span className="text-xs text-slate-600">Remember me</span>
                 </label>
                 <button 
                   type="button" 
                   onClick={() => setIsForgotPassword(true)}
-                  className="text-sm font-bold text-primary hover:underline"
+                  className="text-xs font-bold text-primary hover:underline"
                 >
                   Forgot Password?
                 </button>
@@ -361,10 +372,10 @@ export default function Login() {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="btn-primary w-full py-3 text-lg flex items-center justify-center space-x-2"
+                className="btn-primary w-full py-2 text-sm flex items-center justify-center space-x-2"
               >
                 {isLoading ? (
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 ) : (
                   <span>Login to Dashboard</span>
                 )}
@@ -372,14 +383,14 @@ export default function Login() {
             </form>
           )}
 
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
             <p className="text-xs text-slate-400">
               Only authorized personnel can access this system.
             </p>
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-8">
+        <p className="text-center text-xs text-slate-400 mt-4">
           © 2026 PHBKT Group Limited. All rights reserved.
         </p>
       </motion.div>
