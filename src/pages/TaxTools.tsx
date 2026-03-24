@@ -10,22 +10,116 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
-  FileArchive
+  FileArchive,
+  Upload,
+  Trash2,
+  FileUp
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateProfitLossExcel } from '../lib/excelGenerator';
 import { generateGST1Zip } from '../lib/zipGenerator';
+import { generateITRJson, validateITRData } from '../lib/itrGenerator';
 
 type ToolType = 'gst' | 'itr' | 'eway';
 
 export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+  const [portalDocs, setPortalDocs] = useState<{ [key: string]: { name: string, date: string } }>({});
+  const [isUploading, setIsUploading] = useState<string | null>(null);
+  const [financialData, setFinancialData] = useState({
+    totalSales: 0,
+    totalPurchases: 0,
+    totalExpenses: 0,
+    netProfit: 0
+  });
 
   const businessId = profile?.business_id;
+
+  React.useEffect(() => {
+    if (businessId && type === 'itr') {
+      fetchFinancialData();
+      loadPortalDocs();
+    }
+  }, [businessId, type]);
+
+  const loadPortalDocs = () => {
+    if (!businessId) return;
+    const saved = localStorage.getItem(`portal_docs_${businessId}`);
+    if (saved) {
+      try {
+        setPortalDocs(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load portal docs");
+      }
+    }
+  };
+
+  const handlePortalDocUpload = (docId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !businessId) return;
+
+    setIsUploading(docId);
+    
+    // Simulate upload
+    setTimeout(() => {
+      const newDocs = {
+        ...portalDocs,
+        [docId]: {
+          name: file.name,
+          date: new Date().toLocaleDateString()
+        }
+      };
+      setPortalDocs(newDocs);
+      localStorage.setItem(`portal_docs_${businessId}`, JSON.stringify(newDocs));
+      setIsUploading(null);
+    }, 1000);
+  };
+
+  const removePortalDoc = (docId: string) => {
+    if (!businessId) return;
+    const newDocs = { ...portalDocs };
+    delete newDocs[docId];
+    setPortalDocs(newDocs);
+    localStorage.setItem(`portal_docs_${businessId}`, JSON.stringify(newDocs));
+  };
+
+  const fetchFinancialData = async () => {
+    if (!businessId) return;
+    try {
+      const [invoicesRes, purchasesRes, expensesRes] = await Promise.all([
+        supabase.from('invoices').select('total').eq('business_id', businessId),
+        supabase.from('purchases').select('total_amount').eq('business_id', businessId),
+        supabase.from('expenses').select('amount').eq('business_id', businessId)
+      ]);
+
+      const totalSales = invoicesRes.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
+      const totalPurchases = purchasesRes.data?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
+      const totalExpenses = expensesRes.data?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const netProfit = totalSales - totalPurchases - totalExpenses;
+
+      setFinancialData({ totalSales, totalPurchases, totalExpenses, netProfit });
+    } catch (error) {
+      console.error("Error fetching financial data:", error);
+    }
+  };
+
+  const calculateEstimatedTax = (income: number) => {
+    // Simple New Tax Regime Slab for FY 25-26 (Estimate)
+    if (income <= 300000) return 0;
+    if (income <= 600000) return (income - 300000) * 0.05;
+    if (income <= 900000) return 15000 + (income - 600000) * 0.10;
+    if (income <= 1200000) return 45000 + (income - 900000) * 0.15;
+    if (income <= 1500000) return 90000 + (income - 1200000) * 0.20;
+    return 150000 + (income - 1500000) * 0.30;
+  };
+
+  const estimatedTax = calculateEstimatedTax(financialData.netProfit);
 
   const tools = {
     gst: {
@@ -48,10 +142,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       color: 'text-purple-600',
       bg: 'bg-purple-50',
       reports: [
-        { id: 'income', name: 'Income Summary', format: 'CSV', status: 'Ready' },
-        { id: 'expense', name: 'Expense Breakdown', format: 'CSV', status: 'Ready' },
-        { id: 'pnl', name: 'Profit & Loss Statement', format: 'CSV', status: 'Ready' },
-        { id: 'tax_est', name: 'Tax Estimation (FY 25-26)', format: 'CSV', status: 'Draft' },
+        { id: 'itr1', name: 'ITR-1 (Sahaj)', format: 'JSON', status: 'Ready' },
+        { id: 'itr2', name: 'ITR-2', format: 'JSON', status: 'Ready' },
+        { id: 'itr3', name: 'ITR-3', format: 'JSON', status: 'Ready' },
+        { id: 'itr4', name: 'ITR-4 (Sugam)', format: 'JSON', status: 'Ready' },
+        { id: 'itr5', name: 'ITR-5', format: 'JSON', status: 'Ready' },
+        { id: 'itr6', name: 'ITR-6', format: 'JSON', status: 'Ready' },
+        { id: 'itr7', name: 'ITR-7', format: 'JSON', status: 'Ready' },
       ]
     },
     eway: {
@@ -130,15 +227,50 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           dataToExport = [{ report: reportName, status: 'Generated', date: new Date().toISOString() }];
         }
       } else if (type === 'itr') {
-        if (reportId === 'income') {
-          const { data } = await supabase
-            .from('invoices')
-            .select('invoice_number, date, total')
-            .eq('business_id', businessId);
-          dataToExport = data || [];
-        } else {
-          dataToExport = [{ report: reportName, status: 'Generated', date: new Date().toISOString() }];
+        // Fetch financial data to populate ITR forms
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('total')
+          .eq('business_id', businessId);
+          
+        const { data: purchases } = await supabase
+          .from('purchases')
+          .select('total_amount')
+          .eq('business_id', businessId);
+          
+        const { data: expenses } = await supabase
+          .from('expenses')
+          .select('amount')
+          .eq('business_id', businessId);
+
+        const totalSales = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
+        const totalPurchases = purchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
+        const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+        const netProfit = totalSales - totalPurchases - totalExpenses;
+
+        const financialData = { totalSales, totalPurchases, totalExpenses, netProfit };
+        
+        const validation = validateITRData(reportId, profile, financialData);
+        if (!validation.isValid) {
+          alert(`Cannot generate ${reportId.toUpperCase()}:\n\n- ` + validation.errors.join('\n- '));
+          setDownloadingReport(null);
+          return;
         }
+
+        const itrJson = generateITRJson(reportId, profile, financialData);
+        
+        const blob = new Blob([JSON.stringify(itrJson, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${reportId.toUpperCase()}_${new Date().toISOString().split('T')[0]}.json`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setDownloadingReport(null);
+        return; // Exit early since we handled the download
       } else {
         dataToExport = [{ report: reportName, status: 'Generated', date: new Date().toISOString() }];
       }
@@ -223,7 +355,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     setIsGenerating(true);
     try {
       // Just download the first available report as a demo of "Export All"
-      await handleDownloadReport(current.reports[0].id, current.reports[0].name);
+      await handleDownloadReport(current.reports[0].id, current.reports[0].name, current.reports[0].format);
     } finally {
       setIsGenerating(false);
     }
@@ -247,6 +379,15 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             <Info size={18} className="mr-2" />
             Help Guide
           </button>
+          {type === 'itr' && (
+            <button 
+              onClick={() => navigate('/itr-data-entry')}
+              className="px-4 py-2 bg-white border border-primary/20 text-primary rounded-xl font-medium hover:bg-primary/5 flex items-center transition-colors"
+            >
+              <FileText size={18} className="mr-2" />
+              Complete ITR Profile
+            </button>
+          )}
           <button className="btn-primary flex items-center" onClick={handleGenerateAll} disabled={isGenerating}>
             {isGenerating ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
@@ -288,10 +429,10 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                     </span>
                     <div className="flex items-center space-x-2">
                       <button 
-                        onClick={() => handleDownloadReport(report.id, report.name, 'CSV')}
+                        onClick={() => handleDownloadReport(report.id, report.name, report.format)}
                         disabled={downloadingReport === report.id}
                         className="text-slate-400 hover:text-primary transition-colors disabled:opacity-50"
-                        title="Download CSV"
+                        title={`Download ${report.format}`}
                       >
                         {downloadingReport === report.id ? (
                           <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
@@ -299,24 +440,100 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                           <Download size={20} />
                         )}
                       </button>
-                      <button 
-                        onClick={() => handleDownloadReport(report.id, report.name, 'Excel')}
-                        disabled={downloadingReport === report.id}
-                        className="text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
-                        title="Download Excel"
-                      >
-                        {downloadingReport === report.id ? (
-                          <div className="w-5 h-5 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
-                        ) : (
-                          <FileText size={20} />
-                        )}
-                      </button>
+                      {type !== 'itr' && (
+                        <button 
+                          onClick={() => handleDownloadReport(report.id, report.name, 'Excel')}
+                          disabled={downloadingReport === report.id}
+                          className="text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                          title="Download Excel"
+                        >
+                          {downloadingReport === report.id ? (
+                            <div className="w-5 h-5 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
+                          ) : (
+                            <FileText size={20} />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Government Portal Documents Section */}
+          {type === 'itr' && (
+            <div className="glass-card overflow-hidden">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
+                    <FileUp size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Government Portal Documents</h3>
+                    <p className="text-xs text-slate-500">Upload documents from ITR portal for accurate reporting.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {[
+                  { id: '26as', name: 'Form 26AS (Annual Tax Statement)', desc: 'Contains details of tax deducted/collected at source.' },
+                  { id: 'ais', name: 'AIS (Annual Information Statement)', desc: 'Comprehensive view of all financial transactions.' },
+                  { id: 'tis', name: 'TIS (Taxpayer Information Summary)', desc: 'Simplified summary of AIS for easy filing.' }
+                ].map((doc) => (
+                  <div key={doc.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                        portalDocs[doc.id] ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"
+                      )}>
+                        {portalDocs[doc.id] ? <CheckCircle2 size={20} /> : <FileText size={20} />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{doc.name}</p>
+                        <p className="text-[10px] text-slate-500 max-w-xs">{doc.desc}</p>
+                        {portalDocs[doc.id] && (
+                          <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center">
+                            <CheckCircle2 size={10} className="mr-1" />
+                            Uploaded: {portalDocs[doc.id].name} ({portalDocs[doc.id].date})
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {portalDocs[doc.id] ? (
+                        <button 
+                          onClick={() => removePortalDoc(doc.id)}
+                          className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Remove Document"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      ) : (
+                        <label className="cursor-pointer p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center space-x-2">
+                          {isUploading === doc.id ? (
+                            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                          ) : (
+                            <>
+                              <Upload size={18} />
+                              <span className="text-xs font-bold uppercase tracking-wider">Upload</span>
+                            </>
+                          )}
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept=".pdf,.json,.txt"
+                            onChange={(e) => handlePortalDocUpload(doc.id, e)}
+                            disabled={isUploading !== null}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* External Links */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -349,6 +566,32 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
 
         {/* Info Panel */}
         <div className="space-y-6">
+          {type === 'itr' && (
+            <div className="glass-card p-6 border-primary/20 bg-primary/5">
+              <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+                <Calculator size={18} className="mr-2 text-primary" />
+                Tax Estimation (FY 25-26)
+              </h4>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Estimated Net Profit</span>
+                  <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Taxable Income</span>
+                  <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
+                </div>
+                <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                  <span className="font-bold text-slate-900">Estimated Tax</span>
+                  <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 italic">
+                  *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="glass-card p-6 bg-slate-900 text-white">
             <h4 className="font-bold mb-4 flex items-center">
               <AlertCircle size={18} className="mr-2 text-yellow-400" />

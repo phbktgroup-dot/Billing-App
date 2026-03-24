@@ -30,6 +30,10 @@ interface Customer {
   gstin: string;
   state: string;
   address: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  pincode?: string;
   business_id: string;
   created_at?: string;
 }
@@ -65,7 +69,10 @@ export default function Customers() {
     phone: '',
     gstin: '',
     state: '',
-    address: ''
+    address1: '',
+    address2: '',
+    city: '',
+    pincode: ''
   });
 
   useEffect(() => {
@@ -109,8 +116,16 @@ export default function Customers() {
     if (!businessId) return;
     setIsSaving(true);
 
+    const { address1, address2, city, pincode, ...restData } = formData;
+    const address = [address1, address2, city, pincode].filter(Boolean).join(', ');
+
     const customerData = {
-      ...formData,
+      ...restData,
+      address,
+      address1,
+      address2,
+      city,
+      pincode,
       business_id: businessId,
       created_by: user?.id
     };
@@ -205,13 +220,23 @@ export default function Customers() {
   const openModal = (customer: Customer | null = null) => {
     if (customer) {
       setEditingCustomer(customer);
+      
+      // Use separate fields if they exist, otherwise try to parse the combined address
+      const address1 = customer.address1 || '';
+      const address2 = customer.address2 || '';
+      const city = customer.city || '';
+      const pincode = customer.pincode || '';
+      
       setFormData({
         name: customer.name,
         email: customer.email || '',
         phone: customer.phone || '',
         gstin: customer.gstin || '',
         state: customer.state || '',
-        address: customer.address || ''
+        address1,
+        address2,
+        city,
+        pincode
       });
     } else {
       setEditingCustomer(null);
@@ -221,7 +246,10 @@ export default function Customers() {
         phone: '',
         gstin: '',
         state: '',
-        address: ''
+        address1: '',
+        address2: '',
+        city: '',
+        pincode: ''
       });
     }
     setIsModalOpen(true);
@@ -473,14 +501,45 @@ export default function Customers() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Billing Address</label>
-                <textarea 
-                  rows={3}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all resize-none"
-                  value={formData.address}
-                  onChange={e => setFormData({...formData, address: e.target.value})}
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Address Line 1</label>
+                  <input 
+                    type="text"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    value={formData.address1}
+                    onChange={e => setFormData({...formData, address1: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Address Line 2</label>
+                  <input 
+                    type="text"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                    value={formData.address2}
+                    onChange={e => setFormData({...formData, address2: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">City</label>
+                    <input 
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                      value={formData.city}
+                      onChange={e => setFormData({...formData, city: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Pin Code</label>
+                    <input 
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
+                      value={formData.pincode}
+                      onChange={e => setFormData({...formData, pincode: e.target.value})}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-100">

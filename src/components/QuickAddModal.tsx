@@ -40,6 +40,12 @@ export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAdd
               <>
                 <input type="text" placeholder="Customer Name" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, name: e.target.value})} />
                 <input type="text" placeholder="Phone Number" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, phone: e.target.value})} />
+                <input type="text" placeholder="Address Line 1" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, address1: e.target.value})} />
+                <input type="text" placeholder="Address Line 2" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, address2: e.target.value})} />
+                <div className="flex space-x-4">
+                  <input type="text" placeholder="City" className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, city: e.target.value})} />
+                  <input type="text" placeholder="Pin Code" className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, pincode: e.target.value})} />
+                </div>
               </>
             ) : (
               <>

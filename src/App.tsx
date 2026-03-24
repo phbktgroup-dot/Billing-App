@@ -16,6 +16,7 @@ import AdminPanel from './pages/AdminPanel';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import TaxTools from './pages/TaxTools';
+import ITRDataEntry from './pages/ITRDataEntry';
 import Expenses from './pages/Expenses';
 // import Grow from './pages/Grow';
 import { useAuth } from './contexts/AuthContext';
@@ -93,6 +94,7 @@ export default function App() {
           <Route path="gst-reports" element={<GSTReports />} />
           <Route path="gst" element={<TaxTools type="gst" />} />
           <Route path="itr" element={<TaxTools type="itr" />} />
+          <Route path="itr-data-entry" element={<ITRDataEntry />} />
           <Route path="eway-bill" element={<TaxTools type="eway" />} />
           <Route path="analytics" element={<Analytics />} />
           {/* <Route path="grow" element={<Grow />} /> */}

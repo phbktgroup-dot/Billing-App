@@ -96,6 +96,10 @@
     -- Ensure columns exist if table was created earlier
     ALTER TABLE customers ADD COLUMN IF NOT EXISTS gstin TEXT;
     ALTER TABLE customers ADD COLUMN IF NOT EXISTS state TEXT;
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS address1 TEXT;
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS address2 TEXT;
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode TEXT;
     ALTER TABLE customers ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.users(id);
 
     -- 4. PRODUCTS / INVENTORY
@@ -152,6 +156,12 @@
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS cgst_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sgst_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS igst_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS is_inter_state BOOLEAN DEFAULT false;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS billing_state TEXT;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_state TEXT;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.users(id);
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_mode TEXT DEFAULT 'Cash';

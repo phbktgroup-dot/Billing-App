@@ -40,8 +40,13 @@ export interface Customer {
   name: string;
   phone: string;
   email?: string;
-  gst?: string;
+  gstin?: string;
   address?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  pincode?: string;
+  state?: string;
   business_id: string;
 }
 
@@ -52,9 +57,15 @@ export interface Invoice {
   date: string;
   due_date: string;
   subtotal: number;
-  gst_total: number;
-  total_amount: number;
-  status: 'paid' | 'unpaid' | 'partial' | 'overdue';
+  tax_amount: number;
+  cgst_amount?: number;
+  sgst_amount?: number;
+  igst_amount?: number;
+  is_inter_state?: boolean;
+  billing_state?: string;
+  customer_state?: string;
+  total: number;
+  status: 'paid' | 'unpaid' | 'partial' | 'overdue' | 'pending' | 'cancelled';
   business_id: string;
 }
 

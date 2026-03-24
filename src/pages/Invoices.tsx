@@ -18,7 +18,8 @@ import {
   Trash2,
   TrendingUp,
   CreditCard,
-  AlertTriangle
+  AlertTriangle,
+  Package
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
@@ -28,6 +29,7 @@ import { generateInvoicePDF } from '../lib/pdfGenerator';
 import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
+import { STATE_CODES } from '../constants/stateCodes';
 
 interface Invoice {
   id: string;
@@ -39,8 +41,19 @@ interface Invoice {
   customer_id: string;
   customers: {
     name: string;
+    gstin?: string;
+    address?: string;
+    city?: string;
+    pincode?: string;
+    state?: string;
   };
   created_at: string;
+  cgst_amount?: number;
+  sgst_amount?: number;
+  igst_amount?: number;
+  is_inter_state?: boolean;
+  billing_state?: string;
+  customer_state?: string;
 }
 
 export default function Invoices() {
@@ -140,6 +153,111 @@ export default function Invoices() {
     setDeleteModalOpen(true);
   };
 
+  const handleDownloadEwayBill = async (invoice: Invoice) => {
+    try {
+      const ewayDataStr = localStorage.getItem(`eway_data_${invoice.id}`);
+      if (!ewayDataStr) {
+        alert('E-way bill data not found for this invoice.');
+        return;
+      }
+
+      const ewayData = JSON.parse(ewayDataStr);
+      
+      // Fetch full invoice details to get customer and business info
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          customers (*),
+          invoice_items (
+            *,
+            products (name, sku, hsn_code)
+          )
+        `)
+        .eq('id', invoice.id)
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      const { data: businessProfile, error: businessError } = await supabase
+        .from('business_profiles')
+        .select('*')
+        .eq('id', businessId)
+        .single();
+
+      if (businessError) throw businessError;
+
+      // Format date to DD/MM/YYYY
+      const dateObj = new Date(invoiceData.date);
+      const formattedDate = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+
+      const customerStateCode = invoiceData.customers?.state 
+        ? parseInt(Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === invoiceData.customers.state.toLowerCase() || code === invoiceData.customers.state)?.[0] || '0')
+        : 0;
+
+      const ewayJson = {
+        "supplyType": "O",
+        "subSupplyType": "1",
+        "docType": "INV",
+        "docNo": invoiceData.invoice_number,
+        "docDate": formattedDate,
+        "fromGstin": businessProfile.gst_number || "",
+        "fromTrdName": businessProfile.name || "",
+        "fromAddr1": businessProfile.address || "",
+        "fromAddr2": "",
+        "fromPlace": businessProfile.city || "",
+        "fromPincode": parseInt(businessProfile.pincode) || 0,
+        "fromStateCode": parseInt(ewayData.fromStateCode) || parseInt(businessProfile.gst_number?.substring(0, 2)) || 0,
+        "toGstin": invoiceData.customers?.gstin || "URP",
+        "toTrdName": invoiceData.customers?.name || "Walk-in Customer",
+        "toAddr1": ewayData.toAddr1 || invoiceData.customers?.address || "",
+        "toAddr2": ewayData.toAddr2 || "",
+        "toPlace": ewayData.toPlace || invoiceData.customers?.city || "",
+        "toPincode": ewayData.toPincode || parseInt(invoiceData.customers?.pincode) || 0,
+        "toStateCode": parseInt(ewayData.toStateCode) || parseInt(invoiceData.customers?.gstin?.substring(0, 2)) || customerStateCode,
+        "transactionType": ewayData.transactionType || 1,
+        "totalValue": ewayData.totalValue,
+        "cgstValue": ewayData.cgstValue,
+        "sgstValue": ewayData.sgstValue,
+        "igstValue": ewayData.igstValue,
+        "cessValue": ewayData.cessValue,
+        "totInvValue": ewayData.totInvValue,
+        "transporterId": ewayData.transporterId,
+        "transporterName": ewayData.transporterName,
+        "transDocNo": ewayData.transDocNo,
+        "transMode": ewayData.transMode,
+        "transDistance": ewayData.transDistance,
+        "transDocDate": ewayData.transDocDate,
+        "vehicleNo": ewayData.vehicleNo,
+        "vehicleType": ewayData.vehicleType,
+        "itemList": invoiceData.invoice_items.map((item: any) => ({
+          "productName": item.products?.name || "Product",
+          "productDesc": item.products?.name || "Product",
+          "hsnCode": parseInt(item.products?.hsn_code) || 1234,
+          "quantity": item.quantity,
+          "qtyUnit": "PCS",
+          "taxableAmount": item.unit_price * item.quantity,
+          "sgstRate": invoiceData.is_inter_state ? 0 : item.gst_rate / 2,
+          "cgstRate": invoiceData.is_inter_state ? 0 : item.gst_rate / 2,
+          "igstRate": invoiceData.is_inter_state ? item.gst_rate : 0,
+          "cessRate": 0
+        }))
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(ewayJson, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `eway_bill_${invoiceData.invoice_number}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+
+    } catch (error: any) {
+      console.error('Error generating E-way Bill JSON:', error);
+      alert('Failed to generate E-way Bill JSON: ' + error.message);
+    }
+  };
+
   const handleDownloadPDF = async (invoice: Invoice) => {
     try {
       // Fetch full invoice details
@@ -173,6 +291,11 @@ export default function Invoices() {
         date: new Date(invoiceData.date).toISOString(),
         customer_name: invoiceData.customers?.name || 'Walk-in Customer',
         customer_gstin: invoiceData.customers?.gstin,
+        customer_address: [
+          invoiceData.customers?.address1,
+          invoiceData.customers?.address2,
+          [invoiceData.customers?.city, invoiceData.customers?.pincode].filter(Boolean).join(', ')
+        ].filter(Boolean).join('\n'),
         payment_mode: invoiceData.payment_mode,
         items: invoiceData.invoice_items.map((item: any) => ({
           name: item.products?.name || 'Unknown Item',
@@ -186,6 +309,15 @@ export default function Invoices() {
         discount: invoiceData.discount,
         discount_percentage: invoiceData.discount_percentage,
         tax_amount: invoiceData.tax_amount,
+        cgst_amount: invoiceData.cgst_amount,
+        sgst_amount: invoiceData.sgst_amount,
+        igst_amount: invoiceData.igst_amount,
+        is_inter_state: invoiceData.is_inter_state,
+        billing_state: invoiceData.billing_state,
+        customer_state: invoiceData.customer_state,
+        customer_state_code: invoiceData.customers?.state 
+          ? Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === invoiceData.customers.state.toLowerCase() || code === invoiceData.customers.state)?.[0] || ''
+          : (invoiceData.customers?.gstin?.substring(0, 2) || ''),
         total: invoiceData.total,
         notes: invoiceData.notes,
         terms: invoiceData.terms
@@ -500,6 +632,15 @@ export default function Invoices() {
                           >
                             <Download size={16} />
                           </button>
+                          {invoice.total > 50000 && localStorage.getItem(`eway_data_${invoice.id}`) && (
+                            <button 
+                              onClick={() => handleDownloadEwayBill(invoice)}
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                              title="Download E-way Bill JSON"
+                            >
+                              <Package size={16} />
+                            </button>
+                          )}
                           <button 
                             onClick={() => confirmDelete(invoice.id)}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"

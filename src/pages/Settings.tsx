@@ -57,7 +57,10 @@ export default function Settings() {
     bankBranch: '',
     geminiApiKey: '',
     defaultNotes: '',
-    defaultTerms: ''
+    defaultTerms: '',
+    ewayBillEnabled: false,
+    ewayDefaultTransporterId: '',
+    ewayDefaultTransporterName: ''
   });
 
   const handleTestKey = async () => {
@@ -113,6 +116,22 @@ export default function Settings() {
     };
 
     const populateForm = (bp: any) => {
+      let ewaySettings = {
+        ewayBillEnabled: false,
+        ewayDefaultTransporterId: '',
+        ewayDefaultTransporterName: ''
+      };
+      if (profile?.business_id) {
+        const savedEway = localStorage.getItem(`eway_settings_${profile.business_id}`);
+        if (savedEway) {
+          try {
+            ewaySettings = JSON.parse(savedEway);
+          } catch (e) {
+            console.error("Failed to parse eway settings");
+          }
+        }
+      }
+
       setFormData({
         businessName: bp.name || '',
         ownerName: bp.owner_name || '',
@@ -132,7 +151,8 @@ export default function Settings() {
         bankBranch: bp.bank_branch || '',
         geminiApiKey: bp.gemini_api_key || '',
         defaultNotes: bp.default_notes || '',
-        defaultTerms: bp.default_terms || ''
+        defaultTerms: bp.default_terms || '',
+        ...ewaySettings
       });
       if (bp.logo_url) {
         setLogoPreview(bp.logo_url);
@@ -219,6 +239,13 @@ export default function Settings() {
       if (updateError) {
         throw updateError;
       }
+
+      // Save eway settings to localStorage
+      localStorage.setItem(`eway_settings_${profile.business_id}`, JSON.stringify({
+        ewayBillEnabled: formData.ewayBillEnabled,
+        ewayDefaultTransporterId: formData.ewayDefaultTransporterId,
+        ewayDefaultTransporterName: formData.ewayDefaultTransporterName
+      }));
 
       // 2. Upload logo if exists
       if (logoFile) {
@@ -522,6 +549,53 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900 mb-4">E-way Bill Settings</h3>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Enable E-way Bill Generation</p>
+                        <p className="text-xs text-slate-500 mt-1">Automatically prompt for E-way bill details when invoice value exceeds ₹50,000</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer"
+                          checked={formData.ewayBillEnabled}
+                          onChange={(e) => setFormData({...formData, ewayBillEnabled: e.target.checked})}
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                      </label>
+                    </div>
+
+                    {formData.ewayBillEnabled && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Default Transporter ID</label>
+                          <input 
+                            type="text" 
+                            className="input-field text-xs py-2 bg-white" 
+                            placeholder="e.g., 29AABCU9603R1ZN"
+                            value={formData.ewayDefaultTransporterId} 
+                            onChange={e => setFormData({...formData, ewayDefaultTransporterId: e.target.value})} 
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Default Transporter Name</label>
+                          <input 
+                            type="text" 
+                            className="input-field text-xs py-2 bg-white" 
+                            placeholder="e.g., Fast Logistics"
+                            value={formData.ewayDefaultTransporterName} 
+                            onChange={e => setFormData({...formData, ewayDefaultTransporterName: e.target.value})} 
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <button type="submit" disabled={isLoading} className="btn-primary px-6 py-2 text-sm">
                   {isLoading ? 'Saving...' : 'Save Invoice Settings'}
                 </button>
