@@ -9,8 +9,6 @@ import { DateFilter } from '../components/DateFilter';
 import { GoogleGenAI } from '@google/genai';
 import MessageModal from '../components/MessageModal';
 import { getApiUrl } from '../lib/api';
-import Drawer from '../components/Drawer';
-import { motion } from 'framer-motion';
 
 export default function Purchases() {
   const { profile } = useAuth();
@@ -407,10 +405,8 @@ export default function Purchases() {
     }, 500);
 
     try {
-      // Use environment API key
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      
-      // If no API key is found at all, we'll let the backend try with its own env key
+      // Use business-specific API key if available, otherwise fallback to environment variable
+      const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None (falling back to backend default)');
       
       const prompt = `Extract purchase invoice details: 
@@ -454,11 +450,16 @@ Return as JSON format: {
           if (response.status === 429) {
             throw new Error(errorData.error || "AI scanning is currently busy. Please try again in a minute.");
           }
+          if (response.status === 400) {
+            throw new Error("Invalid Gemini API key. Please check your API key in Settings.");
+          }
           throw new Error(errorData.error || "Backend scan failed");
         }
       } catch (backendError: any) {
-        // If it's a 429 from backend, don't fallback to client-side (it will likely fail too)
-        if (backendError.message.includes('capacity') || backendError.message.includes('limit')) {
+        // If it's a 429 or 400 from backend, don't fallback to client-side
+        if (backendError.message.includes('capacity') || 
+            backendError.message.includes('limit') || 
+            backendError.message.includes('Invalid Gemini API key')) {
           throw backendError;
         }
 
@@ -466,7 +467,7 @@ Return as JSON format: {
         
         // Fallback to client-side scanning
         if (!apiKey) {
-          throw new Error("Gemini API key is missing. Please contact support.");
+          throw new Error("Gemini API key is missing. Please update it in Settings.");
         }
         const ai = new GoogleGenAI({ apiKey });
 
@@ -511,20 +512,22 @@ Return as JSON format: {
           
           // Find or create supplier
           let supplierId = '';
-          if (data.supplierName) {
-            const existingSupplier = suppliers.find(s => s.name.toLowerCase() === data.supplierName.toLowerCase());
+          const supplierName = data.supplierName || data.supplier_name || '';
+          if (supplierName) {
+            const existingSupplier = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
             if (existingSupplier) {
               supplierId = existingSupplier.id;
             } else {
               // Create new supplier
               const supplierInsert: any = {
                 business_id: businessId,
-                name: data.supplierName,
+                name: supplierName,
                 created_by: profile?.id
               };
               
-              if (data.supplierGstin) {
-                supplierInsert.gst_number = data.supplierGstin;
+              const supplierGstin = data.supplierGstin || data.supplier_gstin || data.supplierGst || '';
+              if (supplierGstin) {
+                supplierInsert.gst_number = supplierGstin;
               }
 
               const { data: newSup, error: supError } = await supabase
@@ -542,7 +545,7 @@ Return as JSON format: {
                   .from('suppliers')
                   .insert([{
                     business_id: businessId,
-                    name: data.supplierName,
+                    name: supplierName,
                     created_by: profile?.id
                   }])
                   .select()
@@ -557,12 +560,12 @@ Return as JSON format: {
 
           setFormData({
             supplier_id: supplierId,
-            supplier_name: !supplierId ? data.supplierName : '',
-            supplier_gstin: data.supplierGstin || '',
-            supplier_email: data.supplierEmail || '',
-            supplier_phone: data.supplierPhone || '',
-            supplier_address: data.supplierAddress || '',
-            invoice_number: data.invoiceNumber || `PUR-${Date.now().toString().slice(-6)}`,
+            supplier_name: !supplierId ? supplierName : '',
+            supplier_gstin: data.supplierGstin || data.supplier_gstin || data.supplierGst || '',
+            supplier_email: data.supplierEmail || data.supplier_email || '',
+            supplier_phone: data.supplierPhone || data.supplier_phone || '',
+            supplier_address: data.supplierAddress || data.supplier_address || '',
+            invoice_number: data.invoiceNumber || data.invoice_number || `PUR-${Date.now().toString().slice(-6)}`,
             bill_date: (() => {
               if (!data.date) return new Date().toISOString().split('T')[0];
               const d = new Date(data.date);
@@ -572,14 +575,19 @@ Return as JSON format: {
             total_amount: data.totalAmount || 0,
             status: 'paid',
             notes: 'Scanned via AI',
-            items: data.items?.map((item: any) => {
+            items: (data.items || []).map((item: any) => {
+              const itemName = item.particular || item.name || 'Unknown Item';
               // Try to match product
-              const matchedProduct = products.find(p => p.name.toLowerCase() === item.particular.toLowerCase());
+              const matchedProduct = products.find(p => p.name.toLowerCase() === itemName.toLowerCase());
               return {
-                ...item,
+                particular: itemName,
+                hsn: item.hsn || '',
+                quantity: Number(item.quantity) || 1,
+                rate: Number(item.rate) || 0,
+                amount: Number(item.amount) || 0,
                 product_id: matchedProduct?.id || null
               };
-            }) || []
+            })
           });
           
           setIsModalOpen(true);
@@ -796,344 +804,345 @@ Return as JSON format: {
         </div>
       </div>
 
-      <Drawer
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        title={editingPurchase ? 'Edit Purchase' : 'Record Purchase'}
-        icon={<ShoppingCart size={18} />}
-        maxWidth="max-w-none"
-        footer={
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center text-[10px] text-slate-500">
-              <ShieldCheck size={14} className="mr-1.5 text-emerald-500" />
-              Inventory will be updated automatically on save.
-            </div>
-            <div className="flex items-center space-x-3">
-              <button 
-                type="button"
-                onClick={closeModal}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSave}
-                disabled={isSaving || (!formData.supplier_id && !formData.supplier_name)}
-                className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-black flex items-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
-              >
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                {editingPurchase ? 'Update Record' : 'Save Purchase'}
-              </button>
-            </div>
-          </div>
-        }
-      >
-        <form id="purchase-form" onSubmit={handleSave} className="p-6 space-y-8">
-          {/* Supplier & Invoice Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Supplier Details</h3>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Select Supplier</label>
-                  <select 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.supplier_id}
-                    onChange={e => {
-                      const selected = suppliers.find(s => s.id === e.target.value);
-                      setFormData({
-                        ...formData, 
-                        supplier_id: e.target.value, 
-                        supplier_name: selected ? selected.name : '',
-                        supplier_gstin: selected ? (selected.gstin || selected.gst_number || '') : '',
-                        supplier_email: selected ? (selected.email || '') : '',
-                        supplier_phone: selected ? (selected.phone || '') : '',
-                        supplier_address: selected ? (selected.address || '') : ''
-                      });
-                    }}
-                  >
-                    <option value="">-- New Supplier --</option>
-                    {suppliers.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Supplier Name *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Enter supplier name"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.supplier_name}
-                    onChange={e => setFormData({...formData, supplier_name: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">GSTIN</label>
-                  <input 
-                    type="text" 
-                    placeholder="Supplier GSTIN"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all uppercase"
-                    value={formData.supplier_gstin}
-                    onChange={e => setFormData({...formData, supplier_gstin: e.target.value.toUpperCase()})}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact & Address</h3>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Phone</label>
-                  <input 
-                    type="tel" 
-                    placeholder="Phone number"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.supplier_phone}
-                    onChange={e => setFormData({...formData, supplier_phone: e.target.value.replace(/\D/g, '')})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email</label>
-                  <input 
-                    type="email" 
-                    placeholder="Email address"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.supplier_email}
-                    onChange={e => setFormData({...formData, supplier_email: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Address</label>
-                  <textarea 
-                    rows={2}
-                    placeholder="Full address"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all resize-none"
-                    value={formData.supplier_address}
-                    onChange={e => setFormData({...formData, supplier_address: e.target.value})}
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Invoice Info</h3>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Invoice Number *</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.invoice_number}
-                    onChange={e => setFormData({...formData, invoice_number: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Bill Date *</label>
-                  <input 
-                    type="date" 
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.bill_date}
-                    onChange={e => setFormData({...formData, bill_date: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Upload Date</label>
-                  <input 
-                    type="date" 
-                    readOnly
-                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg outline-none text-[10px] text-slate-500 cursor-not-allowed"
-                    value={formData.upload_date}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Payment & Notes</h3>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Status *</label>
-                  <select 
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                    value={formData.status}
-                    onChange={e => setFormData({...formData, status: e.target.value})}
-                  >
-                    <option value="paid">Paid</option>
-                    <option value="pending">Pending</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Notes</label>
-                  <textarea 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all resize-none"
-                    rows={2}
-                    placeholder="Additional information..."
-                    value={formData.notes}
-                    onChange={e => setFormData({...formData, notes: e.target.value})}
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Items Table */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Purchase Items</h3>
-              <button 
-                type="button"
-                onClick={() => setFormData({
-                  ...formData, 
-                  items: [...formData.items, { particular: '', hsn: '', quantity: 1, rate: 0, amount: 0, product_id: null }]
-                })}
-                className="text-[10px] font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-all flex items-center"
-              >
-                <Plus size={12} className="mr-1" /> Add Item
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ml-16 md:ml-24 lg:ml-32 transition-all duration-300">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-lg font-bold text-slate-900 flex items-center">
+                <ShoppingCart size={20} className="mr-2 text-primary" />
+                {editingPurchase ? 'Edit Purchase' : 'Record Purchase'}
+              </h2>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={20} />
               </button>
             </div>
             
-            <div className="border border-slate-100 rounded-2xl overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="px-4 py-3">Particular (Item Name)</th>
-                    <th className="px-4 py-3">HSN</th>
-                    <th className="px-4 py-3 w-24">Qty</th>
-                    <th className="px-4 py-3 w-32">Rate</th>
-                    <th className="px-4 py-3 w-32">Amount</th>
-                    <th className="px-4 py-3 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {formData.items.map((item, index) => (
-                    <tr key={index} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-2">
-                        <div className="space-y-1">
-                          <input 
-                            type="text"
-                            placeholder="Item name"
-                            className="w-full bg-transparent border-none focus:ring-0 text-xs font-medium p-0"
-                            value={item.particular}
-                            onChange={e => {
-                              const newItems = [...formData.items];
-                              newItems[index].particular = e.target.value;
-                              // Try to match product
-                              const matched = products.find(p => p.name.toLowerCase() === e.target.value.toLowerCase());
-                              newItems[index].product_id = matched?.id || null;
-                              setFormData({...formData, items: newItems});
-                            }}
-                          />
-                          <div className="flex items-center text-[9px] text-slate-400">
-                            <Package size={10} className="mr-1" />
-                            {item.product_id ? (
-                              <span className="text-emerald-500 font-bold">Matched in Inventory</span>
-                            ) : (
-                              <span>Will create new product</span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2">
+            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Supplier & Invoice Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Supplier Details</h3>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Select Supplier</label>
+                    <select 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      value={formData.supplier_id}
+                      onChange={e => {
+                        const selected = suppliers.find(s => s.id === e.target.value);
+                        setFormData({
+                          ...formData, 
+                          supplier_id: e.target.value, 
+                          supplier_name: selected ? selected.name : '',
+                          supplier_gstin: selected ? (selected.gstin || selected.gst_number || '') : '',
+                          supplier_email: selected ? (selected.email || '') : '',
+                          supplier_phone: selected ? (selected.phone || '') : '',
+                          supplier_address: selected ? (selected.address || '') : ''
+                        });
+                      }}
+                    >
+                      <option value="">-- New Supplier --</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Supplier Name *</label>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Enter supplier name"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                        value={formData.supplier_name}
+                        onChange={e => setFormData({...formData, supplier_name: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">GST Number</label>
                         <input 
-                          type="text"
-                          placeholder="HSN"
-                          className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
-                          value={item.hsn}
-                          onChange={e => {
-                            const newItems = [...formData.items];
-                            newItems[index].hsn = e.target.value;
-                            setFormData({...formData, items: newItems});
-                          }}
+                          type="text" 
+                          placeholder="GSTIN"
+                          maxLength={15}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all uppercase"
+                          value={formData.supplier_gstin}
+                          onChange={e => setFormData({...formData, supplier_gstin: e.target.value.toUpperCase()})}
                         />
-                      </td>
-                      <td className="px-4 py-2">
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Phone</label>
                         <input 
-                          type="number"
-                          className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
-                          value={item.quantity}
-                          onChange={e => {
-                            const qty = parseInt(e.target.value) || 0;
-                            const newItems = [...formData.items];
-                            newItems[index].quantity = qty;
-                            newItems[index].amount = qty * newItems[index].rate;
-                            setFormData({
-                              ...formData, 
-                              items: newItems,
-                              total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
-                            });
-                          }}
+                          type="text" 
+                          placeholder="Contact number"
+                          maxLength={10}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                          value={formData.supplier_phone}
+                          onChange={e => setFormData({...formData, supplier_phone: e.target.value.replace(/\D/g, '')})}
                         />
-                      </td>
-                      <td className="px-4 py-2">
-                        <input 
-                          type="number"
-                          className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
-                          value={item.rate}
-                          onChange={e => {
-                            const rate = parseFloat(e.target.value) || 0;
-                            const newItems = [...formData.items];
-                            newItems[index].rate = rate;
-                            newItems[index].amount = newItems[index].quantity * rate;
-                            setFormData({
-                              ...formData, 
-                              items: newItems,
-                              total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
-                            });
-                          }}
-                        />
-                      </td>
-                      <td className="px-4 py-2">
-                        <input 
-                          type="number"
-                          readOnly
-                          className="w-full bg-transparent border-none focus:ring-0 text-xs font-bold p-0"
-                          value={item.amount}
-                        />
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const newItems = formData.items.filter((_, i) => i !== index);
-                            setFormData({
-                              ...formData, 
-                              items: newItems,
-                              total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
-                            });
-                          }}
-                          className="p-1 text-slate-300 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {formData.items.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-xs text-slate-400 italic">
-                        No items added. Use "Add Item" or scan a bill.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                <tfoot className="bg-slate-50/50">
-                  <tr>
-                    <td colSpan={4} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase">Total Amount</td>
-                    <td className="px-4 py-3 text-sm font-black text-primary">{formatCurrency(formData.total_amount)}</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email</label>
+                      <input 
+                        type="email" 
+                        placeholder="Email address"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                        value={formData.supplier_email}
+                        onChange={e => setFormData({...formData, supplier_email: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Address</label>
+                      <textarea 
+                        rows={2}
+                        placeholder="Full address"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all resize-none"
+                        value={formData.supplier_address}
+                        onChange={e => setFormData({...formData, supplier_address: e.target.value})}
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Invoice Info</h3>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Invoice Number *</label>
+                    <input 
+                      type="text" 
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      value={formData.invoice_number}
+                      onChange={e => setFormData({...formData, invoice_number: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bill Date *</label>
+                    <input 
+                      type="date" 
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      value={formData.bill_date}
+                      onChange={e => setFormData({...formData, bill_date: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Upload Date (Today)</label>
+                    <input 
+                      type="date" 
+                      readOnly
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl outline-none text-xs text-slate-500 cursor-not-allowed"
+                      value={formData.upload_date}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Payment & Notes</h3>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status *</label>
+                    <select 
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      value={formData.status}
+                      onChange={e => setFormData({...formData, status: e.target.value})}
+                    >
+                      <option value="paid">Paid</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Notes</label>
+                    <textarea 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all resize-none"
+                      rows={2}
+                      placeholder="Additional information..."
+                      value={formData.notes}
+                      onChange={e => setFormData({...formData, notes: e.target.value})}
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Purchase Items</h3>
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({
+                      ...formData, 
+                      items: [...formData.items, { particular: '', hsn: '', quantity: 1, rate: 0, amount: 0, product_id: null }]
+                    })}
+                    className="text-[10px] font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-all flex items-center"
+                  >
+                    <Plus size={12} className="mr-1" /> Add Item
+                  </button>
+                </div>
+                
+                <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th className="px-4 py-3">Particular (Item Name)</th>
+                        <th className="px-4 py-3">HSN</th>
+                        <th className="px-4 py-3 w-24">Qty</th>
+                        <th className="px-4 py-3 w-32">Rate</th>
+                        <th className="px-4 py-3 w-32">Amount</th>
+                        <th className="px-4 py-3 text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {formData.items.map((item, index) => (
+                        <tr key={index} className="group hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-2">
+                            <div className="space-y-1">
+                              <input 
+                                type="text"
+                                placeholder="Item name"
+                                className="w-full bg-transparent border-none focus:ring-0 text-xs font-medium p-0"
+                                value={item.particular}
+                                onChange={e => {
+                                  const newItems = [...formData.items];
+                                  newItems[index].particular = e.target.value;
+                                  // Try to match product
+                                  const matched = products.find(p => p.name.toLowerCase() === e.target.value.toLowerCase());
+                                  newItems[index].product_id = matched?.id || null;
+                                  setFormData({...formData, items: newItems});
+                                }}
+                              />
+                              <div className="flex items-center text-[9px] text-slate-400">
+                                <Package size={10} className="mr-1" />
+                                {item.product_id ? (
+                                  <span className="text-emerald-500 font-bold">Matched in Inventory</span>
+                                ) : (
+                                  <span>Will create new product</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            <input 
+                              type="text"
+                              placeholder="HSN"
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
+                              value={item.hsn}
+                              onChange={e => {
+                                const newItems = [...formData.items];
+                                newItems[index].hsn = e.target.value;
+                                setFormData({...formData, items: newItems});
+                              }}
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input 
+                              type="number"
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
+                              value={item.quantity}
+                              onChange={e => {
+                                const qty = parseInt(e.target.value) || 0;
+                                const newItems = [...formData.items];
+                                newItems[index].quantity = qty;
+                                newItems[index].amount = qty * newItems[index].rate;
+                                setFormData({
+                                  ...formData, 
+                                  items: newItems,
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input 
+                              type="number"
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
+                              value={item.rate}
+                              onChange={e => {
+                                const rate = parseFloat(e.target.value) || 0;
+                                const newItems = [...formData.items];
+                                newItems[index].rate = rate;
+                                newItems[index].amount = newItems[index].quantity * rate;
+                                setFormData({
+                                  ...formData, 
+                                  items: newItems,
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input 
+                              type="number"
+                              readOnly
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs font-bold p-0"
+                              value={item.amount}
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const newItems = formData.items.filter((_, i) => i !== index);
+                                setFormData({
+                                  ...formData, 
+                                  items: newItems,
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
+                                });
+                              }}
+                              className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {formData.items.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                            No items added. Use "Add Item" or scan a bill.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot className="bg-slate-50/50">
+                      <tr>
+                        <td colSpan={4} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase">Total Amount</td>
+                        <td className="px-4 py-3 text-sm font-black text-primary">{formatCurrency(formData.total_amount)}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </form>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex items-center text-[10px] text-slate-500">
+                <ShieldCheck size={14} className="mr-1.5 text-emerald-500" />
+                Inventory will be updated automatically on save.
+              </div>
+              <div className="flex items-center space-x-3">
+                <button 
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSave}
+                  disabled={isSaving || (!formData.supplier_id && !formData.supplier_name)}
+                  className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-black flex items-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  {editingPurchase ? 'Update Record' : 'Save Purchase'}
+                </button>
+              </div>
             </div>
           </div>
-        </form>
-      </Drawer>
+        </div>
+      )}
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModalOpen}
@@ -1157,56 +1166,36 @@ Return as JSON format: {
         type={modal.type}
       />
 
-      <Drawer
-        isOpen={isScanning}
-        onClose={() => setIsScanning(false)}
-        title="AI Bill Scanning"
-        icon={<Loader2 className="animate-spin" size={18} />}
-        maxWidth="max-w-none"
-      >
-        <div className="flex flex-col items-center justify-center h-full py-12">
-          <div className="relative w-32 h-32 mb-8">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle
-                className="text-slate-100"
-                cx="18" cy="18" r="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-              />
-              <motion.circle
-                className="text-primary"
-                cx="18" cy="18" r="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeDasharray="100"
-                initial={{ strokeDashoffset: 100 }}
-                animate={{ strokeDashoffset: 100 - processingProgress }}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-primary">
-              {processingProgress}%
+      {isScanning && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center">
+            <div className="relative w-24 h-24 mb-4">
+              <svg className="w-full h-full" viewBox="0 0 36 36">
+                <path
+                  className="text-slate-200"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                />
+                <path
+                  className="text-primary transition-all duration-300"
+                  strokeDasharray={processingProgress + ",100"}
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-lg text-primary">
+                {processingProgress}%
+              </div>
             </div>
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">AI is Analyzing</h3>
-          <p className="text-slate-500 text-center text-sm leading-relaxed max-w-xs">
-            We're extracting items and supplier details from your bill. Please wait...
-          </p>
-          
-          <div className="mt-8 w-full max-w-xs space-y-2">
-            <div className="flex items-center space-x-3 text-xs text-emerald-500 font-bold">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>OCR Processing...</span>
-            </div>
-            <div className="flex items-center space-x-3 text-xs text-slate-300 font-bold">
-              <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-              <span>Entity Extraction...</span>
-            </div>
+            <p className="text-slate-600 font-medium">Processing Bill...</p>
           </div>
         </div>
-      </Drawer>
+      )}
     </div>
   );
 }

@@ -142,12 +142,14 @@ export default function BusinessSetup() {
       }
 
       // 1. Create business profile
+      const fullAddress = `${formData.address1}${formData.address2 ? ', ' + formData.address2 : ''}`;
       const { data: business, error: saveError } = await supabase
         .from('business_profiles')
         .insert([{
           user_id: user.id,
           name: formData.businessName,
           owner_name: formData.ownerName,
+          address: fullAddress,
           address1: formData.address1,
           address2: formData.address2,
           city: formData.city,

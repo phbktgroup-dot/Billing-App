@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import cors from "cors";
+import { GoogleGenAI } from "@google/genai";
 
 console.log("SERVER STARTING...");
 dotenv.config();
@@ -410,6 +411,41 @@ app.post("/api/auth/check-email", async (req, res) => {
     res.json({ exists: !!data });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/scan", async (req, res) => {
+  try {
+    const { base64Data, mimeType, prompt, apiKey } = req.body;
+    
+    // Use the provided API key or fallback to the server's environment variable
+    const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY;
+    
+    if (!effectiveApiKey) {
+      throw new Error("Gemini API key is missing. Please provide one in the request or set GEMINI_API_KEY on the server.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey: effectiveApiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType, data: base64Data } }
+          ]
+        }
+      ]
+    });
+
+    res.json({ text: response.text });
+  } catch (error: any) {
+    console.error("Scan API Error:", error.message);
+    res.status(error.status || 500).json({ 
+      error: error.message || "An error occurred during scanning",
+      details: error.details || []
+    });
   }
 });
 

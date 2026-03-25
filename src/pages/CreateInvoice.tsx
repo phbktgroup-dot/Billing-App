@@ -34,7 +34,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
 import MessageModal from '../components/MessageModal';
 import QuickAddModal from '../components/QuickAddModal';
-import Drawer from '../components/Drawer';
 import { getApiUrl } from '../lib/api';
 import { DateFilter } from '../components/DateFilter';
 
@@ -411,7 +410,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         
         // Fallback to client-side scanning
         if (!apiKey) {
-          throw new Error("Gemini API key is missing. Please contact support.");
+          throw new Error("Gemini API key is missing. Please update it in Settings.");
         }
         const ai = new GoogleGenAI({ apiKey });
 
@@ -2161,56 +2160,64 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       />
       
       {/* Scanning Overlay */}
-      <Drawer
-        isOpen={isScanning}
-        onClose={() => setIsScanning(false)}
-        title="AI Invoice Scanning"
-        icon={<Loader2 className="animate-spin" size={18} />}
-        maxWidth="max-w-none"
-      >
-        <div className="flex flex-col items-center justify-center h-full py-12">
-          <div className="relative w-32 h-32 mb-8">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle
-                className="text-slate-100"
-                cx="18" cy="18" r="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-              />
-              <motion.circle
-                className="text-primary"
-                cx="18" cy="18" r="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeDasharray="100"
-                initial={{ strokeDashoffset: 100 }}
-                animate={{ strokeDashoffset: 100 - processingProgress }}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-primary">
-              {processingProgress}%
-            </div>
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">AI is Analyzing</h3>
-          <p className="text-slate-500 text-center text-sm leading-relaxed max-w-xs">
-            We're extracting items and customer details from your invoice. Please wait...
-          </p>
-          
-          <div className="mt-8 w-full max-w-xs space-y-2">
-            <div className="flex items-center space-x-3 text-xs text-emerald-500 font-bold">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>OCR Processing...</span>
-            </div>
-            <div className="flex items-center space-x-3 text-xs text-slate-300 font-bold">
-              <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-              <span>Entity Extraction...</span>
-            </div>
-          </div>
-        </div>
-      </Drawer>
+      <AnimatePresence>
+        {isScanning && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white p-10 rounded-[32px] shadow-2xl flex flex-col items-center max-w-sm w-full mx-4"
+            >
+              <div className="relative w-32 h-32 mb-8">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                  <circle
+                    className="text-slate-100"
+                    cx="18" cy="18" r="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  />
+                  <motion.circle
+                    className="text-primary"
+                    cx="18" cy="18" r="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray="100"
+                    initial={{ strokeDashoffset: 100 }}
+                    animate={{ strokeDashoffset: 100 - processingProgress }}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-primary">
+                  {processingProgress}%
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">AI is Analyzing</h3>
+              <p className="text-slate-500 text-center text-sm leading-relaxed">
+                We're extracting items and customer details from your invoice. Please wait...
+              </p>
+              
+              <div className="mt-8 w-full space-y-2">
+                <div className="flex items-center space-x-3 text-xs text-emerald-500 font-bold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>OCR Processing...</span>
+                </div>
+                <div className="flex items-center space-x-3 text-xs text-slate-300 font-bold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  <span>Entity Extraction...</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <datalist id="customer-list">
         {customers.map(c => (
