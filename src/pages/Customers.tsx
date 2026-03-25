@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
+import Drawer from '../components/Drawer';
 
 interface Customer {
   id: string;
@@ -434,138 +435,129 @@ export default function Customers() {
       </div>
 
       {/* Add/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={20} className="text-slate-400" />
-              </button>
+      <Drawer
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+        icon={<Users size={18} />}
+        maxWidth="max-w-none"
+        footer={
+          <>
+            <button 
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all text-xs"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                handleSave(e as any);
+              }}
+              disabled={isSaving}
+              className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-xs"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              {editingCustomer ? 'Update' : 'Save'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Customer Name</label>
+              <input 
+                required
+                type="text" 
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+              />
             </div>
             
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Customer Name</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Phone Number</label>
-                  <input 
-                    type="tel" 
-                    maxLength={10}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Email Address</label>
-                  <input 
-                    type="email" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                  />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Phone Number</label>
+              <input 
+                type="tel" 
+                maxLength={10}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.phone}
+                onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Email Address</label>
+              <input 
+                type="email" 
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.email}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+              />
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">GSTIN (Optional)</label>
-                  <input 
-                    type="text" 
-                    maxLength={15}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all uppercase"
-                    value={formData.gstin}
-                    onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">State</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                    value={formData.state}
-                    onChange={e => setFormData({...formData, state: e.target.value})}
-                    placeholder="e.g. Maharashtra"
-                  />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GSTIN (Optional)</label>
+              <input 
+                type="text" 
+                maxLength={15}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all uppercase"
+                value={formData.gstin}
+                onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">State</label>
+              <input 
+                type="text" 
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.state}
+                onChange={e => setFormData({...formData, state: e.target.value})}
+                placeholder="e.g. Maharashtra"
+              />
+            </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Address Line 1</label>
-                  <input 
-                    type="text"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                    value={formData.address1}
-                    onChange={e => setFormData({...formData, address1: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Address Line 2</label>
-                  <input 
-                    type="text"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                    value={formData.address2}
-                    onChange={e => setFormData({...formData, address2: e.target.value})}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">City</label>
-                    <input 
-                      type="text"
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                      value={formData.city}
-                      onChange={e => setFormData({...formData, city: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Pin Code</label>
-                    <input 
-                      type="text"
-                      maxLength={6}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-sm transition-all"
-                      value={formData.pincode}
-                      onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-100">
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                  {editingCustomer ? 'Update' : 'Save'}
-                </button>
-              </div>
-            </form>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Address Line 1</label>
+              <input 
+                type="text"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.address1}
+                onChange={e => setFormData({...formData, address1: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Address Line 2</label>
+              <input 
+                type="text"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.address2}
+                onChange={e => setFormData({...formData, address2: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">City</label>
+              <input 
+                type="text"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.city}
+                onChange={e => setFormData({...formData, city: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pin Code</label>
+              <input 
+                type="text"
+                maxLength={6}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                value={formData.pincode}
+                onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Drawer>
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModalOpen}

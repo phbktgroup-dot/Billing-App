@@ -15,7 +15,9 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice, busines
           {business.logo_url && <img src={business.logo_url} alt="Logo" className="w-16 h-16 object-contain" />}
           <div>
             <h1 className="text-2xl font-bold">PHBKT Group Limited</h1>
-            <p className="text-sm text-slate-600">{business.address}</p>
+            <p className="text-sm text-slate-600">
+              {[business.address1, business.address2, business.city, business.state, business.pincode].filter(Boolean).join(', ')}
+            </p>
           </div>
         </div>
         <div className="text-right">
@@ -38,6 +40,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice, busines
           <tr className="bg-slate-100">
             <th className="border p-2 text-left">S.N.</th>
             <th className="border p-2 text-left">Description</th>
+            <th className="border p-2 text-left">Product Code</th>
             <th className="border p-2 text-right">Qty</th>
             <th className="border p-2 text-right">Rate</th>
             <th className="border p-2 text-right">Amount</th>
@@ -48,6 +51,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice, busines
             <tr key={index}>
               <td className="border p-2">{index + 1}</td>
               <td className="border p-2">{item.name}</td>
+              <td className="border p-2">{item.sku || '-'}</td>
               <td className="border p-2 text-right">{item.quantity}</td>
               <td className="border p-2 text-right">{item.rate.toFixed(2)}</td>
               <td className="border p-2 text-right">{item.amount.toFixed(2)}</td>

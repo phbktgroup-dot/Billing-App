@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: authUser.id,
               email: authUser.email!,
               name: authUser.user_metadata?.name || authUser.email?.split('@')[0],
-              role: authUser.email === 'phbktgroup@gmail.com' ? 'Super Admin' : 'Admin'
+              role: authUser.email === 'phbktgroup@gmail.com' ? 'Super Admin' : 'Business User'
             }], { onConflict: 'id' })
             .select('*')
             .maybeSingle();

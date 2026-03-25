@@ -231,14 +231,24 @@ app.post("/api/admin/toggle-status", async (req, res) => {
 
 app.post("/api/admin/delete-user", async (req, res) => {
   try {
-    const { isSuperAdmin, user: superAdminUser } = await verifyAdmin(req);
-    if (!isSuperAdmin) throw new Error("Forbidden: Only Super Admins can delete users");
+    const { isSuperAdmin, isAdmin, user: adminUser, profile: adminProfile } = await verifyAdmin(req);
+    if (!isSuperAdmin && !isAdmin) throw new Error("Forbidden: Only Admins can delete users");
     const { userId } = req.body;
-    if (userId === superAdminUser.id) throw new Error("You cannot delete your own account.");
+    if (userId === adminUser.id) throw new Error("You cannot delete your own account.");
     const { data: targetUser, error: targetError } = await supabaseAdmin.from('users').select('*').eq('id', userId).single();
     if (targetError || !targetUser) throw new Error("User profile not found");
+    
+    if (!isSuperAdmin) {
+      if (targetUser.role === 'Super Admin' || targetUser.role === 'Admin') {
+        throw new Error("Forbidden: Admins cannot delete other Admins or Super Admins");
+      }
+      if (targetUser.created_by !== adminUser.id && targetUser.business_id !== adminProfile.business_id) {
+        throw new Error("Forbidden: You do not have permission to delete this user");
+      }
+    }
+
     if (targetUser.role === 'Admin') {
-      await supabaseAdmin.from('users').update({ created_by: superAdminUser.id }).eq('created_by', userId);
+      await supabaseAdmin.from('users').update({ created_by: adminUser.id }).eq('created_by', userId);
     }
     
     // Storage cleanup

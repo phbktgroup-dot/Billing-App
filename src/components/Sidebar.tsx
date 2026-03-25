@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Receipt
+  Receipt,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -32,14 +33,17 @@ const menuItems = [
   { icon: FileText, label: 'Sales Invoice', path: '/invoices' },
   { icon: Package, label: 'Sales Inventory', path: '/inventory' },
   { icon: Users, label: 'Sales Customer', path: '/customers' },
+  { icon: Truck, label: 'Transporters', path: '/transporters' },
   { icon: Truck, label: 'Suppliers', path: '/suppliers' },
   { icon: ShoppingCart, label: 'Purchases', path: '/purchases' },
   { icon: Receipt, label: 'Expenses', path: '/expenses' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst-reports' },
-  { icon: Calculator, label: 'ITR Tools', path: '/itr' },
+  { icon: Calculator, label: 'Tax Tools', path: '/gst' },
   { icon: FileCheck, label: 'E-Way Bill', path: '/eway-bill' },
+  { icon: FileText, label: 'ITR Report', path: '/itr-report', adminOnly: true },
   { icon: PieChart, label: 'Analytics', path: '/analytics' },
+  { icon: HelpCircle, label: 'Help & Support', path: '/support' },
   { icon: Settings, label: 'Settings', path: '/settings' },
   { icon: ShieldCheck, label: 'Admin Panel', path: '/admin', adminOnly: true },
 ];
@@ -69,6 +73,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     return hasAdminAccess;
   });
 
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const sidebarVariants = {
+    expanded: { width: 280, x: 0 },
+    collapsed: { width: 80, x: 0 },
+    mobileOpen: { width: 280, x: 0 },
+    mobileClosed: { width: 280, x: -280 },
+  };
+
+  const currentVariant = isOpen 
+    ? 'mobileOpen' 
+    : (windowWidth < 1024 ? 'mobileClosed' : (isCollapsed ? 'collapsed' : 'expanded'));
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -82,18 +105,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar Container */}
       <motion.aside
         initial={false}
-        animate={{ 
-          width: isCollapsed ? '80px' : '280px',
-        }}
+        animate={currentVariant}
+        variants={sidebarVariants}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-[70] flex flex-col shadow-2xl lg:shadow-none transition-transform duration-300",
-          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-[70] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
+          !isOpen && "lg:translate-x-0"
         )}
       >
         {/* Logo Section */}
-        <div className="h-32 flex items-center justify-between px-6 border-b border-slate-100">
-          <div className="flex flex-col items-center">
+        <div className={cn(
+          "h-20 flex items-center border-b border-slate-100 transition-all duration-300",
+          (isCollapsed && !isOpen) ? "justify-center px-0" : "justify-between px-6"
+        )}>
+          <div className={cn(
+            "flex items-center overflow-hidden transition-all duration-300",
+            (isCollapsed && !isOpen) ? "justify-center" : "gap-3"
+          )}>
             {settingsLoading ? (
               <div className="w-10 h-10 bg-slate-100 rounded-xl animate-pulse shrink-0" />
             ) : appSettings?.logo_url ? (
@@ -112,7 +140,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <motion.span 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mt-2 font-bold text-base text-primary whitespace-nowrap overflow-hidden"
+                className="font-bold text-sm text-primary truncate"
               >
                 {appSettings?.app_name || 'PHBKT Billing Pro+'}
               </motion.span>
@@ -120,17 +148,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           
           {/* Mobile Close Button */}
-          <button 
-            onClick={onClose}
-            className="lg:hidden p-2 text-slate-400 hover:text-primary transition-colors"
-          >
-            <X size={20} />
-          </button>
+          {isOpen && (
+            <button 
+              onClick={onClose}
+              className="lg:hidden p-2 text-slate-400 hover:text-primary transition-colors"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* Menu Items */}
         <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-          {filteredMenuItems.map((item) => (
+          {filteredMenuItems.filter(item => item.path !== '/support').map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -139,15 +169,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               }}
               end={item.path === '/invoices' || item.path === '/'}
               className={({ isActive }) => cn(
-                "flex items-center px-3 py-3 rounded-xl transition-all group relative",
+                "flex items-center py-3 rounded-xl transition-all group relative",
+                (isCollapsed && !isOpen) ? "px-0 justify-center" : "px-3",
                 isActive 
                   ? "bg-primary text-white shadow-lg shadow-primary/20" 
                   : "text-slate-600 hover:bg-slate-50 hover:text-primary"
               )}
             >
-              <item.icon size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "mx-auto" : "mr-3")} />
+              <item.icon size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "" : "mr-3")} />
               {(!isCollapsed || isOpen) && (
-                <span className="font-medium text-[11px]">{item.label}</span>
+                <span className="font-medium text-[11px] truncate">{item.label}</span>
               )}
               {(isCollapsed && !isOpen) && (
                 <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
@@ -158,13 +189,49 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           ))}
         </div>
 
+        {/* Support Section at Bottom */}
+        <div className="px-3 py-1 border-t border-slate-100">
+          <NavLink
+            to="/support"
+            onClick={() => {
+              if (window.innerWidth < 1024) onClose?.();
+            }}
+            className={({ isActive }) => cn(
+              "flex items-center py-1.5 rounded-xl transition-all group relative",
+              (isCollapsed && !isOpen) ? "px-0 justify-center" : "px-3",
+              isActive 
+                ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                : "text-slate-600 hover:bg-slate-50 hover:text-primary"
+            )}
+          >
+            <HelpCircle size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "" : "mr-3")} />
+            {(!isCollapsed || isOpen) && (
+              <span className="font-medium text-[11px] truncate">Help & Support</span>
+            )}
+            {(isCollapsed && !isOpen) && (
+              <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                Help & Support
+              </div>
+            )}
+          </NavLink>
+        </div>
+
         {/* Collapse Toggle */}
-        <button
-          onClick={toggleSidebar}
-          className="hidden lg:flex h-12 items-center justify-center border-t border-slate-100 text-slate-400 hover:text-primary transition-colors"
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
+        <div className="hidden lg:block border-t border-slate-100">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleSidebar();
+            }}
+            className="flex h-12 w-full items-center justify-center text-slate-400 hover:text-primary hover:bg-slate-50 transition-all cursor-pointer"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors">
+              {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            </div>
+          </button>
+        </div>
       </motion.aside>
     </>
   );

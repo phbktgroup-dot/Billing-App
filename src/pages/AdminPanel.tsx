@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Drawer from '../components/Drawer';
 import { 
   Users, 
   UserPlus, 
@@ -17,7 +18,8 @@ import {
   Send,
   X,
   LogIn,
-  Key
+  Key,
+  Save
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -92,7 +94,7 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
             {user.role}
           </span>
           <div className="flex items-center space-x-0.5">
-            {(isSuperAdmin || isAdmin) && user.role !== 'Super Admin' && (
+            {(isSuperAdmin || isAdmin) && (
               <button 
                 onClick={() => onImpersonate(user)}
                 title="Load User Profile"
@@ -128,11 +130,16 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
                 <Key size={14} />
               </button>
             )}
-            {isSuperAdmin && (
+            {(isSuperAdmin || isAdmin) && (
               <button 
                 onClick={() => onDelete(user.id)}
-                className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-red-400 hover:bg-red-400/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50")}
-                title="Delete User"
+                disabled={!isSuperAdmin && (user.role === 'Admin' || user.role === 'Super Admin')}
+                className={cn("p-1 rounded-lg transition-all", 
+                  (user.role === 'Super Admin' || (!isSuperAdmin && user.role === 'Admin')) 
+                    ? "text-slate-200 cursor-not-allowed" 
+                    : "text-slate-400 hover:text-red-500 hover:bg-red-50"
+                )}
+                title={(!isSuperAdmin && (user.role === 'Admin' || user.role === 'Super Admin')) ? "Cannot delete this user" : "Delete User"}
               >
                 <Trash2 size={14} />
               </button>
@@ -481,8 +488,8 @@ export default function AdminPanel() {
   };
 
   const confirmDelete = (id: string) => {
-    if (!isSuperAdmin) {
-      alert("Only Super Admins can delete users.");
+    if (!isSuperAdmin && !isAdmin) {
+      alert("Only Admins can delete users.");
       return;
     }
 
@@ -949,118 +956,136 @@ export default function AdminPanel() {
       )}
 
       {/* Add User Modal */}
-      {showAddUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Create New User</h2>
-                <p className="text-[10px] text-slate-500 mt-0.5">User will be required to set up their business profile on first login.</p>
-              </div>
-              <button onClick={() => setShowAddUser(false)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
-                <X size={18} className="text-slate-400" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateUser} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Full Name</label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
-                  placeholder="Jane Smith"
-                  value={newUser.name}
-                  onChange={e => setNewUser({...newUser, name: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
-                <input 
-                  type="email" 
-                  required
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
-                  placeholder="jane@phbkt.com"
-                  value={newUser.email}
-                  onChange={e => setNewUser({...newUser, email: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Password</label>
-                <input 
-                  type="password" 
-                  required
-                  minLength={6}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
-                  placeholder="••••••••"
-                  value={newUser.password}
-                  onChange={e => setNewUser({...newUser, password: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Role</label>
-                <select 
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
-                  value={newUser.role}
-                  onChange={e => setNewUser({...newUser, role: e.target.value})}
-                >
-                  {getRoleOptions().map(role => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
-                </select>
-              </div>
-              <button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Create User'
-                )}
-              </button>
-            </form>
+      <Drawer
+        isOpen={showAddUser}
+        onClose={() => setShowAddUser(false)}
+        title="Create New User"
+        icon={<UserPlus size={18} />}
+        footer={
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
+            <button 
+              onClick={() => setShowAddUser(false)} 
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleCreateUser}
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px]"
+            >
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <UserPlus className="w-3.5 h-3.5 mr-1.5" />}
+              Create User
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <div className="p-6">
+          <form onSubmit={handleCreateUser} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
+              <input 
+                type="text" 
+                required
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
+                placeholder="Jane Smith"
+                value={newUser.name}
+                onChange={e => setNewUser({...newUser, name: e.target.value})}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email Address</label>
+              <input 
+                type="email" 
+                required
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
+                placeholder="jane@phbkt.com"
+                value={newUser.email}
+                onChange={e => setNewUser({...newUser, email: e.target.value})}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Password</label>
+              <input 
+                type="password" 
+                required
+                minLength={6}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
+                placeholder="••••••••"
+                value={newUser.password}
+                onChange={e => setNewUser({...newUser, password: e.target.value})}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Role</label>
+              <select 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
+                value={newUser.role}
+                onChange={e => setNewUser({...newUser, role: e.target.value})}
+              >
+                {getRoleOptions().map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+    </Drawer>
 
       {/* Edit User Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Edit User</h2>
-                <p className="text-[10px] text-slate-500 mt-0.5">Update user details and permissions.</p>
-              </div>
-              <button onClick={() => setEditingUser(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
-                <X size={18} className="text-slate-400" />
-              </button>
-            </div>
-            <form onSubmit={handleUpdateUser} className="space-y-3">
+      <Drawer
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title="Edit User"
+        icon={<Edit2 size={18} />}
+        footer={
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
+            <button 
+              onClick={() => setEditingUser(null)} 
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleUpdateUser}
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px]"
+            >
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+              Save Changes
+            </button>
+          </div>
+        }
+      >
+        {editingUser && (
+          <div className="p-6">
+            <form onSubmit={handleUpdateUser} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Full Name</label>
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
                 <input 
                   type="text" 
                   required
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all" 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
                   value={editingUser.name}
                   onChange={e => setEditingUser({...editingUser, name: e.target.value})}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email Address</label>
                 <input 
                   type="email" 
                   disabled
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all bg-slate-100 text-slate-500 cursor-not-allowed" 
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-[10px] text-slate-500 cursor-not-allowed" 
                   value={editingUser.email}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Role</label>
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Role</label>
                 <select 
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                   value={editingUser.role}
                   onChange={e => setEditingUser({...editingUser, role: e.target.value})}
                 >
@@ -1069,129 +1094,131 @@ export default function AdminPanel() {
                   ))}
                 </select>
               </div>
-              <button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Save Changes'
-                )}
-              </button>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       )}
+    </Drawer>
 
       {/* Add Notification Modal */}
-      {showAddNotification && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Send Notification</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Select Recipient</label>
-                <select 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                  onChange={(e) => setSelectedUserForNotification(e.target.value)}
-                  value={selectedUserForNotification}
-                >
-                  <option value="all">{isSuperAdmin ? "All System Users" : "All My Users"}</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Title</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                  value={notificationTitle}
-                  onChange={e => setNotificationTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Message</label>
-                <textarea 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                  value={notificationMessage}
-                  onChange={e => setNotificationMessage(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button 
-                  onClick={() => setShowAddNotification(false)}
-                  className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleCreateNotification}
-                  disabled={isSubmitting}
-                  className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    'Send'
-                  )}
-                </button>
-              </div>
+      <Drawer
+        isOpen={showAddNotification}
+        onClose={() => setShowAddNotification(false)}
+        title="Send Notification"
+        icon={<Bell size={18} />}
+        footer={
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
+            <button 
+              onClick={() => setShowAddNotification(false)} 
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleCreateNotification}
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px]"
+            >
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Send className="w-3.5 h-3.5 mr-1.5" />}
+              Send
+            </button>
+          </div>
+        }
+      >
+        <div className="p-6">
+          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Select Recipient</label>
+              <select 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:bg-white focus:border-primary outline-none"
+                onChange={(e) => setSelectedUserForNotification(e.target.value)}
+                value={selectedUserForNotification}
+              >
+                <option value="all">{isSuperAdmin ? "All System Users" : "All My Users"}</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Title</label>
+              <input 
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:bg-white focus:border-primary outline-none"
+                value={notificationTitle}
+                onChange={e => setNotificationTitle(e.target.value)}
+                placeholder="Notification Title"
+              />
             </div>
           </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Message</label>
+            <textarea 
+              rows={4}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:bg-white focus:border-primary outline-none resize-none"
+              value={notificationMessage}
+              onChange={e => setNotificationMessage(e.target.value)}
+              placeholder="Type your message here..."
+            />
+          </div>
         </div>
-      )}
+      </div>
+    </Drawer>
 
       {/* Edit API Key Modal */}
-      {editingApiKeyUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Edit API Key</h2>
-                <p className="text-[10px] text-slate-500 mt-0.5">Update API Integration Key for {editingApiKeyUser.name || editingApiKeyUser.email}</p>
-              </div>
-              <button onClick={() => setEditingApiKeyUser(null)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all">
-                <X size={18} className="text-slate-400" />
-              </button>
+      <Drawer
+        isOpen={!!editingApiKeyUser}
+        onClose={() => setEditingApiKeyUser(null)}
+        title="Edit API Key"
+        icon={<Key size={18} />}
+        footer={
+          <>
+            <button 
+              onClick={() => setEditingApiKeyUser(null)} 
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSaveApiKey}
+              disabled={isSavingApiKey || isLoadingApiKey}
+              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px]"
+            >
+              {isSavingApiKey ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+              Save API Key
+            </button>
+          </>
+        }
+      >
+        {editingApiKeyUser && (
+          <div className="space-y-4">
+            <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
+              <p className="text-[10px] text-amber-700 leading-relaxed">
+                Updating API Integration Key for <strong>{editingApiKeyUser.name || editingApiKeyUser.email}</strong>. This key is used for AI-powered features.
+              </p>
             </div>
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">API Integration Key</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all pr-10" 
-                    value={newApiKey}
-                    onChange={e => setNewApiKey(e.target.value)}
-                    placeholder={isLoadingApiKey ? "Loading..." : "Paste Gemini API Key here"}
-                    disabled={isLoadingApiKey}
-                  />
-                  {isLoadingApiKey && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <button 
-                onClick={handleSaveApiKey}
-                disabled={isSavingApiKey || isLoadingApiKey}
-                className="w-full py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center justify-center mt-4 transition-all hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isSavingApiKey ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Save API Key'
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">API Integration Key</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all pr-10" 
+                  value={newApiKey}
+                  onChange={e => setNewApiKey(e.target.value)}
+                  placeholder={isLoadingApiKey ? "Loading..." : "Paste Gemini API Key here"}
+                  disabled={isLoadingApiKey}
+                />
+                {isLoadingApiKey && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Drawer>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

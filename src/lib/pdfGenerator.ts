@@ -30,6 +30,7 @@ export interface InvoiceData {
   sgst_amount?: number;
   igst_amount?: number;
   is_inter_state?: boolean;
+  eway_bill_no?: string;
   total: number;
   notes?: string;
   terms?: string;
@@ -37,7 +38,11 @@ export interface InvoiceData {
 
 export interface BusinessProfile {
   name: string;
-  address?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   mobile?: string;
   email?: string;
   gst_number?: string;
@@ -127,7 +132,14 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(business?.address || "", 105, 26, { align: 'center' });
+  const businessAddress = [
+    business?.address1,
+    business?.address2,
+    business?.city,
+    business?.state,
+    business?.pincode ? `PIN: ${business.pincode}` : ''
+  ].filter(Boolean).join(', ');
+  doc.text(businessAddress || "", 105, 26, { align: 'center' });
   doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 30, { align: 'center' });
   
   doc.setFont("helvetica", "bold");
@@ -184,7 +196,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   // E-WAY BILL
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("E-WAY BILL NO. :", 12, 88);
+  doc.text(`E-WAY BILL NO. : ${invoice.eway_bill_no || ""}`, 12, 88);
   doc.text("Weight :", 108, 88);
 
   // Table Headers
@@ -238,33 +250,32 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   const totalGstRate = isSingleRate ? gstRates[0] : 0;
 
   if (gstRates.length > 0) {
-    // Always show CGST and SGST as requested ("do not remove CGST and SGST both keep")
-    const halfRate = totalGstRate / 2;
-    const cgstText = isSingleRate ? `CGST ${halfRate}%` : "CGST";
-    const sgstText = isSingleRate ? `SGST ${halfRate}%` : "SGST";
-    
-    // Use the values passed from the UI
-    const cgstVal = invoice.cgst_amount || 0;
-    const sgstVal = invoice.sgst_amount || 0;
-    
-    doc.text(`Add :${cgstText} :`, 130, summaryY);
-    doc.text(cgstVal.toFixed(2), 198, summaryY, { align: 'right' });
-    summaryY += 6;
-    
-    doc.text(`Add :${sgstText} :`, 130, summaryY);
-    doc.text(sgstVal.toFixed(2), 198, summaryY, { align: 'right' });
-    summaryY += 6;
+    if (!invoice.is_inter_state) {
+      const cgstRate = isSingleRate ? totalGstRate / 2 : 0;
+      const sgstRate = isSingleRate ? totalGstRate / 2 : 0;
+      const cgstText = isSingleRate ? `CGST ${cgstRate}%` : "CGST Variable%";
+      const sgstText = isSingleRate ? `SGST ${sgstRate}%` : "SGST Variable%";
+      const cgstVal = invoice.cgst_amount || 0;
+      const sgstVal = invoice.sgst_amount || 0;
 
-    // Show IGST (it will be 0 for intra-state and full rate for inter-state)
-    const igstRate = invoice.is_inter_state ? totalGstRate : 0;
-    const igstText = isSingleRate ? `IGST ${igstRate}%` : "IGST";
-    const igstVal = invoice.igst_amount || 0;
+      doc.text(`Add :${cgstText} :`, 130, summaryY);
+      doc.text(cgstVal.toFixed(2), 198, summaryY, { align: 'right' });
+      summaryY += 6;
 
-    doc.text(`Add :${igstText} :`, 130, summaryY);
-    doc.text(igstVal.toFixed(2), 198, summaryY, { align: 'right' });
-    summaryY += 6;
+      doc.text(`Add :${sgstText} :`, 130, summaryY);
+      doc.text(sgstVal.toFixed(2), 198, summaryY, { align: 'right' });
+      summaryY += 6;
+    } else {
+      const igstRate = isSingleRate ? totalGstRate : 0;
+      const igstText = isSingleRate ? `IGST ${igstRate}%` : "IGST Variable%";
+      const igstVal = invoice.igst_amount || 0;
 
-    // Add Subtotal GST row to match UI
+      doc.text(`Add :${igstText} :`, 130, summaryY);
+      doc.text(igstVal.toFixed(2), 198, summaryY, { align: 'right' });
+      summaryY += 6;
+    }
+
+    // Add Subtotal GST row
     doc.setFont("helvetica", "bold");
     doc.text("Subtotal GST :", 130, summaryY);
     doc.text((invoice.tax_amount || 0).toFixed(2), 198, summaryY, { align: 'right' });

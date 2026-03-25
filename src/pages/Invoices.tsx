@@ -54,6 +54,9 @@ interface Invoice {
   is_inter_state?: boolean;
   billing_state?: string;
   customer_state?: string;
+  supply_type?: string;
+  sub_supply_type?: string;
+  eway_bills?: { id: string }[];
 }
 
 export default function Invoices() {
@@ -77,8 +80,20 @@ export default function Invoices() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [ewaySettings, setEwaySettings] = useState<any>(null);
 
   const businessId = profile?.business_id;
+
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('business_profile_settings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      setEwaySettings({
+        ewayBillEnabled: settings.ewayBillEnabled,
+        ewayThreshold: settings.ewayThreshold || 50000
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (businessId) {
@@ -109,7 +124,8 @@ export default function Invoices() {
         .from('invoices')
         .select(`
           *,
-          customers (name)
+          customers (name),
+          eway_bills (id)
         `)
         .eq('business_id', businessId)
         .gte('created_at', startDate.toISOString())
@@ -155,14 +171,6 @@ export default function Invoices() {
 
   const handleDownloadEwayBill = async (invoice: Invoice) => {
     try {
-      const ewayDataStr = localStorage.getItem(`eway_data_${invoice.id}`);
-      if (!ewayDataStr) {
-        alert('E-way bill data not found for this invoice.');
-        return;
-      }
-
-      const ewayData = JSON.parse(ewayDataStr);
-      
       // Fetch full invoice details to get customer and business info
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
@@ -171,7 +179,7 @@ export default function Invoices() {
           customers (*),
           invoice_items (
             *,
-            products (name, sku, hsn_code)
+            products (name, sku, hsn_code, gst_rate)
           )
         `)
         .eq('id', invoice.id)
@@ -187,70 +195,35 @@ export default function Invoices() {
 
       if (businessError) throw businessError;
 
-      // Format date to DD/MM/YYYY
-      const dateObj = new Date(invoiceData.date);
-      const formattedDate = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+      const { data: ewayBills, error: ewayError } = await supabase
+        .from('eway_bills')
+        .select('*')
+        .eq('invoice_id', invoice.id);
+      
+      if (ewayError) throw ewayError;
 
-      const customerStateCode = invoiceData.customers?.state 
-        ? parseInt(Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === invoiceData.customers.state.toLowerCase() || code === invoiceData.customers.state)?.[0] || '0')
-        : 0;
+      // If no eway bill record, we'll pass an empty array, 
+      // the generator will handle it by using defaults.
+      const ewayBillsData = ewayBills || [];
 
-      const ewayJson = {
-        "supplyType": "O",
-        "subSupplyType": "1",
-        "docType": "INV",
-        "docNo": invoiceData.invoice_number,
-        "docDate": formattedDate,
-        "fromGstin": businessProfile.gst_number || "",
-        "fromTrdName": businessProfile.name || "",
-        "fromAddr1": businessProfile.address || "",
-        "fromAddr2": "",
-        "fromPlace": businessProfile.city || "",
-        "fromPincode": parseInt(businessProfile.pincode) || 0,
-        "fromStateCode": parseInt(ewayData.fromStateCode) || parseInt(businessProfile.gst_number?.substring(0, 2)) || 0,
-        "toGstin": invoiceData.customers?.gstin || "URP",
-        "toTrdName": invoiceData.customers?.name || "Walk-in Customer",
-        "toAddr1": ewayData.toAddr1 || invoiceData.customers?.address || "",
-        "toAddr2": ewayData.toAddr2 || "",
-        "toPlace": ewayData.toPlace || invoiceData.customers?.city || "",
-        "toPincode": ewayData.toPincode || parseInt(invoiceData.customers?.pincode) || 0,
-        "toStateCode": parseInt(ewayData.toStateCode) || parseInt(invoiceData.customers?.gstin?.substring(0, 2)) || customerStateCode,
-        "transactionType": ewayData.transactionType || 1,
-        "totalValue": ewayData.totalValue,
-        "cgstValue": ewayData.cgstValue,
-        "sgstValue": ewayData.sgstValue,
-        "igstValue": ewayData.igstValue,
-        "cessValue": ewayData.cessValue,
-        "totInvValue": ewayData.totInvValue,
-        "transporterId": ewayData.transporterId,
-        "transporterName": ewayData.transporterName,
-        "transDocNo": ewayData.transDocNo,
-        "transMode": ewayData.transMode,
-        "transDistance": ewayData.transDistance,
-        "transDocDate": ewayData.transDocDate,
-        "vehicleNo": ewayData.vehicleNo,
-        "vehicleType": ewayData.vehicleType,
-        "itemList": invoiceData.invoice_items.map((item: any) => ({
-          "productName": item.products?.name || "Product",
-          "productDesc": item.products?.name || "Product",
-          "hsnCode": parseInt(item.products?.hsn_code) || 1234,
-          "quantity": item.quantity,
-          "qtyUnit": "PCS",
-          "taxableAmount": item.unit_price * item.quantity,
-          "sgstRate": invoiceData.is_inter_state ? 0 : item.gst_rate / 2,
-          "cgstRate": invoiceData.is_inter_state ? 0 : item.gst_rate / 2,
-          "igstRate": invoiceData.is_inter_state ? item.gst_rate : 0,
-          "cessRate": 0
-        }))
-      };
+      // Use the shared generator function
+      const { generateEwayJSON } = await import('../lib/ewayGenerator');
+      const ewayJson = generateEwayJSON([invoiceData], businessProfile, ewayBillsData, false);
 
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(ewayJson, null, 2));
+      if (!ewayJson || !ewayJson.billLists || ewayJson.billLists.length === 0) {
+        alert('Failed to generate E-way Bill JSON. Please check if all required data is present.');
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(ewayJson, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("href", url);
       downloadAnchorNode.setAttribute("download", `eway_bill_${invoiceData.invoice_number}.json`);
       document.body.appendChild(downloadAnchorNode);
       downloadAnchorNode.click();
-      downloadAnchorNode.remove();
+      document.body.removeChild(downloadAnchorNode);
+      URL.revokeObjectURL(url);
 
     } catch (error: any) {
       console.error('Error generating E-way Bill JSON:', error);
@@ -299,6 +272,7 @@ export default function Invoices() {
         payment_mode: invoiceData.payment_mode,
         items: invoiceData.invoice_items.map((item: any) => ({
           name: item.products?.name || 'Unknown Item',
+          sku: item.products?.sku,
           quantity: item.quantity,
           rate: item.unit_price,
           gstRate: item.gst_rate,
@@ -632,7 +606,7 @@ export default function Invoices() {
                           >
                             <Download size={16} />
                           </button>
-                          {invoice.total > 50000 && localStorage.getItem(`eway_data_${invoice.id}`) && (
+                          {invoice.total > (ewaySettings?.ewayThreshold || 50000) && (
                             <button 
                               onClick={() => handleDownloadEwayBill(invoice)}
                               className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"

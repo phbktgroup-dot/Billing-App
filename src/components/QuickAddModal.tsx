@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, Package } from 'lucide-react';
+import { UserPlus, Package, Save, Loader2 } from 'lucide-react';
+import Drawer from './Drawer';
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -10,73 +10,240 @@ interface QuickAddModalProps {
 }
 
 export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAddModalProps) {
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>(
+    type === 'product' 
+      ? { gst_rate: 18, min_stock: 5, purchase_price: '', price: '', stock: '', category: '', name: '', sku: '' }
+      : {}
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
-  if (!isOpen) return null;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await onAdd(formData);
+      onClose();
+    } catch (error) {
+      console.error('Error adding:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const footer = (
+    <>
+      <button 
+        type="button"
+        onClick={onClose}
+        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px] shadow-sm"
+      >
+        Cancel
+      </button>
+      <button 
+        onClick={handleSubmit}
+        disabled={isSaving}
+        className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px] shadow-lg shadow-primary/20"
+      >
+        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+        Add {type === 'customer' ? 'Customer' : 'Product'}
+      </button>
+    </>
+  );
 
   return (
-    <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      >
-        <motion.div 
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
-        >
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="font-bold text-lg text-slate-900 flex items-center">
-              {type === 'customer' ? <UserPlus className="mr-2 text-primary" size={20} /> : <Package className="mr-2 text-primary" size={20} />}
-              Add New {type === 'customer' ? 'Customer' : 'Product'}
-            </h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+    <Drawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Add New ${type === 'customer' ? 'Customer' : 'Product'}`}
+      icon={type === 'customer' ? <UserPlus size={18} /> : <Package size={18} />}
+      footer={footer}
+      maxWidth="max-w-none"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {type === 'customer' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Customer Name</label>
+              <input 
+                required
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                placeholder="Enter customer name"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Phone Number</label>
+              <input 
+                type="text" 
+                maxLength={10}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.phone || ''}
+                onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})} 
+                placeholder="Contact number"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">GST Number</label>
+              <input 
+                type="text" 
+                maxLength={15}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.gst_number || ''}
+                onChange={e => setFormData({...formData, gst_number: e.target.value.toUpperCase()})} 
+                placeholder="GSTIN"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Address Line 1</label>
+              <input 
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                onChange={e => setFormData({...formData, address1: e.target.value})} 
+                placeholder="Building, Street, etc."
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Address Line 2</label>
+              <input 
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                onChange={e => setFormData({...formData, address2: e.target.value})} 
+                placeholder="Area, Locality, etc."
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">City</label>
+              <input 
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                onChange={e => setFormData({...formData, city: e.target.value})} 
+                placeholder="City"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">State</label>
+              <input 
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                onChange={e => setFormData({...formData, state: e.target.value})} 
+                placeholder="State"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Pin Code</label>
+              <input 
+                type="text" 
+                maxLength={6}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.pincode || ''}
+                onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})} 
+                placeholder="Pincode"
+              />
+            </div>
           </div>
-          <div className="p-6 space-y-4">
-            {type === 'customer' ? (
-              <>
-                <input type="text" placeholder="Customer Name" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, name: e.target.value})} />
-                <input 
-                  type="text" 
-                  placeholder="Phone Number" 
-                  maxLength={10}
-                  className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" 
-                  value={formData.phone || ''}
-                  onChange={e => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})} 
-                />
-                <input type="text" placeholder="Address Line 1" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, address1: e.target.value})} />
-                <input type="text" placeholder="Address Line 2" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, address2: e.target.value})} />
-                <div className="flex space-x-4">
-                  <input type="text" placeholder="City" className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, city: e.target.value})} />
-                  <input 
-                    type="text" 
-                    placeholder="Pin Code" 
-                    maxLength={6}
-                    className="w-1/2 px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" 
-                    value={formData.pincode || ''}
-                    onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})} 
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <input type="text" placeholder="Product Name" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, name: e.target.value})} />
-                <input type="text" placeholder="Product Code (SKU)" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, sku: e.target.value})} />
-                <input type="number" placeholder="Price" className="w-full px-4 py-3 bg-slate-50 rounded-xl text-xs outline-none focus:border-primary border border-transparent" onChange={e => setFormData({...formData, price: e.target.value})} />
-              </>
-            )}
-            <button 
-              onClick={() => { onAdd(formData); onClose(); }}
-              className="w-full py-3 bg-primary text-white rounded-xl font-bold text-xs hover:bg-primary/90 transition-all"
-            >
-              Add {type === 'customer' ? 'Customer' : 'Product'}
-            </button>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Product Name</label>
+              <input 
+                required
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                placeholder="Enter product name"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Product/HSN Code</label>
+              <input 
+                required
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.sku}
+                onChange={e => setFormData({...formData, sku: e.target.value, hsn_code: e.target.value})}
+                placeholder="e.g. PROD-001 or 8471"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Category</label>
+              <input 
+                type="text" 
+                list="categories"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.category}
+                onChange={e => setFormData({...formData, category: e.target.value})}
+                placeholder="Select or type category"
+              />
+              <datalist id="categories">
+                <option value="Electronics" />
+                <option value="Furniture" />
+                <option value="Accessories" />
+                <option value="Stationery" />
+                <option value="Services" />
+              </datalist>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">GST Rate (%)</label>
+              <select 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.gst_rate}
+                onChange={e => setFormData({...formData, gst_rate: Number(e.target.value)})}
+              >
+                <option value={0}>0% (Exempt)</option>
+                <option value={5}>5%</option>
+                <option value={12}>12%</option>
+                <option value={18}>18%</option>
+                <option value={28}>28%</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Purchase Price</label>
+              <input 
+                required
+                type="number" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.purchase_price}
+                onChange={e => setFormData({...formData, purchase_price: e.target.value})}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Selling Price</label>
+              <input 
+                required
+                type="number" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.price}
+                onChange={e => setFormData({...formData, price: e.target.value})}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Initial Stock</label>
+              <input 
+                required
+                type="number" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.stock}
+                onChange={e => setFormData({...formData, stock: e.target.value})}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Min Stock Level</label>
+              <input 
+                required
+                type="number" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.min_stock}
+                onChange={e => setFormData({...formData, min_stock: Number(e.target.value)})}
+              />
+            </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        )}
+      </form>
+    </Drawer>
   );
 }

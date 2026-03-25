@@ -42,3 +42,38 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .print-container {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  .print-content {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .no-print-inputs input,
+  .no-print-inputs textarea {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}

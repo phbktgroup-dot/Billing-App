@@ -34,6 +34,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
 import MessageModal from '../components/MessageModal';
 import QuickAddModal from '../components/QuickAddModal';
+import Drawer from '../components/Drawer';
 import { getApiUrl } from '../lib/api';
 import { DateFilter } from '../components/DateFilter';
 
@@ -57,6 +58,7 @@ interface Product {
   id: string;
   name: string;
   sku: string;
+  hsn_code?: string;
   price: number;
   gst_rate: number;
   stock: number;
@@ -106,7 +108,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
   // E-way bill state
   const [ewaySettings, setEwaySettings] = useState<any>(null);
+  const [transporters, setTransporters] = useState<any[]>([]);
   const [ewayData, setEwayData] = useState({
+    ewayBillNo: '',
     transporterId: '',
     transporterName: '',
     transDocNo: '',
@@ -116,7 +120,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     vehicleNo: '',
     vehicleType: 'R',
     transactionType: 1,
-    fromStateCode: ''
+    supplyType: 'O',
+    subSupplyType: '1',
+    TotNonAdvolVal: 0,
+    OthValue: 0
   });
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
@@ -132,7 +139,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
   useEffect(() => {
     if (invoiceSeries.length > 0 && !invoiceNumber && !isScannedInvoiceNumberFound) {
-      const series = invoiceSeries[0];
+      // Prefer INV- series as default
+      const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
+      const series = invSeries || invoiceSeries[0];
       setInvoiceNumber(formatSeriesNumber(series));
       setSelectedSeriesId(series.id);
     }
@@ -180,6 +189,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       sgst_amount: sgstAmount,
       igst_amount: igstAmount,
       is_inter_state: isInterState,
+      eway_bill_no: ewayData.ewayBillNo,
       total,
       notes,
       terms
@@ -187,7 +197,11 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     
     const blob = await generateInvoicePDF(invoiceData, {
       name: businessProfile?.name || '',
-      address: businessProfile?.address,
+      address1: businessProfile?.address1,
+      address2: businessProfile?.address2,
+      city: businessProfile?.city,
+      state: businessProfile?.state,
+      pincode: businessProfile?.pincode,
       mobile: businessProfile?.mobile,
       email: businessProfile?.email,
       gst_number: businessProfile?.gst_number,
@@ -241,12 +255,6 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       }
       if (!terms && businessProfile.default_terms) {
         setTerms(businessProfile.default_terms);
-      }
-      if (!ewayData.fromStateCode && businessProfile.gst_number && businessProfile.gst_number.length >= 2) {
-        const stateCode = businessProfile.gst_number.substring(0, 2);
-        if (STATE_CODES[stateCode]) {
-          setEwayData(prev => ({ ...prev, fromStateCode: stateCode }));
-        }
       }
     }
   }, [businessProfile]);
@@ -303,10 +311,44 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         .eq('business_id', businessId);
       
       if (seriesError) throw seriesError;
-      if (series) {
-        setInvoiceSeries(series);
-        if (series.length > 0) setSelectedSeriesId(series[0].id);
+      
+      let finalSeries = series || [];
+      if (finalSeries.length === 0) {
+        // Create default INV- series
+        const { data: newSeries, error: createError } = await supabase
+          .from('invoice_series')
+          .insert([{
+            business_id: businessId,
+            name: 'INV-0000000001',
+            prefix: 'INV-',
+            current_number: 1
+          }])
+          .select()
+          .single();
+        
+        if (!createError && newSeries) {
+          finalSeries = [newSeries];
+        }
       }
+      
+      setInvoiceSeries(finalSeries);
+      if (finalSeries.length > 0) {
+        // Prefer INV- series as default
+        const invSeries = finalSeries.find(s => s.prefix === 'INV-');
+        if (invSeries) {
+          setSelectedSeriesId(invSeries.id);
+        } else {
+          setSelectedSeriesId(finalSeries[0].id);
+        }
+      }
+
+      const { data: trans, error: transError } = await supabase
+        .from('transporters')
+        .select('*')
+        .eq('business_id', businessId);
+      
+      if (transError) throw transError;
+      if (trans) setTransporters(trans);
     } catch (error: any) {
       console.error('Error fetching initial data:', error);
       alert('Failed to load data: ' + error.message);
@@ -337,7 +379,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');
       
-      const prompt = "Extract invoice details: invoice number, customer name, customer phone, customer email, customer gst, customer address line 1, customer address line 2, customer city, customer pincode, items (name, quantity, price, gst, product code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress1: string, customerAddress2: string, customerCity: string, customerPincode: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, productCode: string }] }";
+      const prompt = "Extract invoice details: invoice number, customer name, customer phone, customer email, customer gst, customer address line 1, customer address line 2, customer city, customer pincode, items (name, quantity, price, gst, hsn code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress1: string, customerAddress2: string, customerCity: string, customerPincode: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, hsnCode: string }] }";
 
       let extractedText = '';
 
@@ -413,11 +455,34 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           const data = JSON.parse(jsonMatch[0]);
           
           if (data.invoiceNumber) {
-            setInvoiceNumber(data.invoiceNumber);
+            const currentSeries = invoiceSeries.find(s => s.id === selectedSeriesId);
+            let finalScannedInvoiceNumber = data.invoiceNumber;
+            if (currentSeries && !data.invoiceNumber.startsWith(currentSeries.prefix)) {
+              finalScannedInvoiceNumber = `${currentSeries.prefix}${data.invoiceNumber}`;
+            }
+
+            // Check if invoice number already exists
+            const { data: existingInvoice } = await supabase
+              .from('invoices')
+              .select('id')
+              .eq('business_id', profile?.business_id)
+              .eq('invoice_number', finalScannedInvoiceNumber)
+              .maybeSingle();
+
+            if (existingInvoice) {
+              // If it exists, use the next number from current series
+              const series = currentSeries || invoiceSeries.find(s => s.prefix === 'INV-') || invoiceSeries[0];
+              if (series) {
+                finalScannedInvoiceNumber = formatSeriesNumber(series);
+                setSelectedSeriesId(series.id);
+              }
+            }
+            
+            setInvoiceNumber(finalScannedInvoiceNumber);
             setIsScannedInvoiceNumberFound(true);
             
             // Extract prefix and number more intelligently (e.g., SN-001 -> SN-, 001; INV/100 -> INV/, 100)
-            const numberMatch = data.invoiceNumber.match(/^(.*?)([0-9]+)$/);
+            const numberMatch = finalScannedInvoiceNumber.match(/^(.*?)([0-9]+)$/);
             let scannedPrefix = '';
             let scannedNumber = 1;
             
@@ -425,12 +490,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               scannedPrefix = numberMatch[1];
               scannedNumber = parseInt(numberMatch[2]);
             } else {
-              scannedPrefix = data.invoiceNumber;
+              scannedPrefix = finalScannedInvoiceNumber;
             }
             
             // Clean up prefix if it's just the whole string (no numeric part at end)
-            if (!scannedPrefix && data.invoiceNumber) {
-              scannedPrefix = data.invoiceNumber;
+            if (!scannedPrefix && finalScannedInvoiceNumber) {
+              scannedPrefix = finalScannedInvoiceNumber;
             }
 
             let matchingSeries = invoiceSeries.find(s => s.prefix === scannedPrefix);
@@ -456,7 +521,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 } else if (newSeries) {
                   matchingSeries = newSeries;
                   // Check if default series exists and remove it
-                  const defaultSeries = invoiceSeries.find(s => s.name === 'INV-000001' && s.current_number === 1);
+                  const defaultSeries = invoiceSeries.find(s => s.name === 'INV-0000000001' && s.current_number === 1);
                   if (defaultSeries) {
                     await supabase.from('invoice_series').delete().eq('id', defaultSeries.id);
                     setInvoiceSeries(prev => [...prev.filter(s => s.id !== defaultSeries.id), newSeries]);
@@ -568,9 +633,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             
             for (const item of data.items) {
               const itemName = item.name || 'Custom Item';
-              const itemSku = item.productCode || '';
+              const itemHsnCode = item.hsnCode || item.productCode || '';
               
-              let product = currentProducts.find(p => p.name.toLowerCase() === itemName.toLowerCase() || (itemSku && p.sku === itemSku));
+              let product = currentProducts.find(p => p.name.toLowerCase() === itemName.toLowerCase() || (itemHsnCode && p.hsn_code === itemHsnCode));
               
               if (!product) {
                 // Create new product
@@ -583,7 +648,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     price: item.rate || 0,
                     gst_rate: item.gstRate || 18,
                     stock: 0,
-                    sku: itemSku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                    sku: `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                    hsn_code: itemHsnCode,
                     category: 'Uncategorized'
                   }])
                   .select()
@@ -729,7 +795,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     const itemDiscountTotal = items.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.rate) || 0) * ((Number(item.discount) || 0) / 100)), 0);
     const subtotal = rawSubtotal - itemDiscountTotal;
     
-    const gstTotal = items.reduce((sum, item) => {
+    // Calculate GST based on item-level discounted amounts
+    const gstTotalBeforeInvoiceDiscount = items.reduce((sum, item) => {
       const baseAmount = (Number(item.quantity) || 0) * (Number(item.rate) || 0);
       const itemDiscountAmount = baseAmount * ((Number(item.discount) || 0) / 100);
       const amountAfterDiscount = baseAmount - itemDiscountAmount;
@@ -743,24 +810,47 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       invoiceDiscountAmount = discount;
     }
 
+    // Reduce GST proportionally by the invoice discount ratio
+    const discountRatio = subtotal > 0 ? (invoiceDiscountAmount / subtotal) : 0;
+    const gstTotal = gstTotalBeforeInvoiceDiscount * (1 - discountRatio);
+
     const totalDiscount = itemDiscountTotal + invoiceDiscountAmount;
     const taxableAmount = subtotal - invoiceDiscountAmount;
 
     // GST Bifurcation Logic
-    const bState = (ewayData.fromStateCode || businessProfile?.gst_number?.substring(0, 2) || '').toString().trim().padStart(2, '0');
-    const cState = (customer.stateCode || '').toString().trim().padStart(2, '0');
+    const getBusinessStateCode = () => {
+      if (businessProfile?.gst_number) {
+        return businessProfile.gst_number.substring(0, 2);
+      }
+      if (businessProfile?.state) {
+        const stateEntry = Object.entries(STATE_CODES).find(([code, name]) => 
+          name.toLowerCase() === businessProfile.state.toLowerCase()
+        );
+        if (stateEntry) return stateEntry[0];
+      }
+      return '';
+    };
+
+    const bState = getBusinessStateCode().toString().trim().padStart(2, '0');
+    const cState = (customer.stateCode || '').toString().trim().substring(0, 2).padStart(2, '0');
     
     // Default to Intra-state (CGST/SGST) if no customer state is provided
     // Only Inter-state if both states are provided, valid, and they are different
     const isInterState = cState !== '00' && cState !== '' && bState !== '00' && bState !== '' && bState !== cState;
     
-    const cgstAmount = gstTotal / 2;
-    const sgstAmount = gstTotal / 2;
+    const isEwayEnabled = ewaySettings?.ewayBillEnabled && (
+      isInterState 
+        ? (ewaySettings.interStateEnabled ?? true) 
+        : (ewaySettings.intraStateEnabled ?? true)
+    );
+    const ewayThreshold = isInterState ? (ewaySettings?.ewayThreshold || 50000) : (ewaySettings?.intraStateThreshold || 100000);
+    
+    const cgstAmount = isInterState ? 0 : gstTotal / 2;
+    const sgstAmount = isInterState ? 0 : gstTotal / 2;
     const igstAmount = isInterState ? gstTotal : 0;
     
-    // Sum all components as requested by the user ("add same % in IGST as well", "total amount not showing correctly")
-    const totalGstAmount = cgstAmount + sgstAmount + igstAmount;
-    const finalTotal = subtotal + totalGstAmount - invoiceDiscountAmount;
+    const totalGstAmount = isInterState ? igstAmount : (cgstAmount + sgstAmount);
+    const finalTotal = taxableAmount + totalGstAmount;
     
     const gstRates = [...new Set(items.map(i => Number(i.gstRate) || 0))].filter(r => r > 0);
     const isSingleRate = gstRates.length === 1;
@@ -779,6 +869,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       sgstAmount,
       igstAmount,
       isInterState,
+      isEwayEnabled,
+      ewayThreshold,
       totalGstRate,
       isSingleRate,
       businessState: bState ? STATE_CODES[bState] : '',
@@ -799,6 +891,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     sgstAmount,
     igstAmount,
     isInterState,
+    isEwayEnabled,
+    ewayThreshold,
     totalGstRate,
     isSingleRate,
     businessState,
@@ -827,14 +921,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       return;
     }
 
-    if (ewaySettings?.ewayBillEnabled && total > 50000) {
+    if (isEwayEnabled && total > ewayThreshold) {
       if (!customer.address1 || !customer.address2 || !customer.city || !customer.pincode || !customer.stateCode) {
         setModal({ isOpen: true, title: 'E-way Bill Error', message: 'Address Line 1, Address Line 2, City, Pincode, and State Code are mandatory for E-way bills.', type: 'error' });
         return;
       }
       
-      if (!ewayData.transporterId || !ewayData.transporterName || !ewayData.transDocNo || !ewayData.transDocDate || !ewayData.vehicleNo || !ewayData.fromStateCode || !customer.stateCode || !ewayData.transDistance) {
-        setModal({ isOpen: true, title: 'E-way Bill Error', message: 'All E-way Bill Details are mandatory for invoices exceeding ₹50,000.', type: 'error' });
+      if (!ewayData.transporterId || !ewayData.transporterName || !ewayData.transDocNo || !ewayData.transDocDate || !ewayData.vehicleNo || !customer.stateCode || !ewayData.transDistance) {
+        setModal({ isOpen: true, title: 'E-way Bill Error', message: `All E-way Bill Details are mandatory for invoices exceeding ₹${ewayThreshold.toLocaleString()}.`, type: 'error' });
         return;
       }
       
@@ -956,7 +1050,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           payment_mode: finalPaymentMode,
           notes,
           terms,
-          created_by: user?.id
+          created_by: user?.id,
+          supply_type: ewayData.supplyType,
+          sub_supply_type: ewayData.subSupplyType
         }])
         .select()
         .single();
@@ -1048,29 +1144,41 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       }
 
       // Save E-way bill data if enabled and applicable
-      if (ewaySettings?.ewayBillEnabled && total > 50000) {
-        const fromState = parseInt(ewayData.fromStateCode) || 0;
+      if (isEwayEnabled && total > ewayThreshold) {
+        const fromState = parseInt(businessProfile?.gst_number?.substring(0, 2)) || 0;
         const toState = parseInt(customer.stateCode) || 0;
-        const isEwayInterState = fromState !== toState;
         
-        localStorage.setItem(`eway_data_${invoice.id}`, JSON.stringify({
-          ...ewayData,
-          invoiceId: invoice.id,
-          invoiceNumber: finalInvoiceNumber,
-          totalValue: taxableAmount,
-          cgstValue: isEwayInterState ? 0 : cgstAmount,
-          sgstValue: isEwayInterState ? 0 : sgstAmount,
-          igstValue: isEwayInterState ? gstTotal : 0,
-          cessValue: 0,
-          totInvValue: total,
-          docDate: new Date().toISOString().split('T')[0],
-          toAddr1: customer.address1 || '',
-          toAddr2: customer.address2 || '',
-          toPlace: customer.city || '',
-          toPincode: parseInt(customer.pincode) || 0,
-          toStateCode: toState,
-          fromStateCode: fromState
-        }));
+        await supabase
+          .from('eway_bills')
+          .insert([{
+            business_id: businessId,
+            invoice_id: invoice.id,
+            supply_type: ewayData.supplyType,
+            sub_supply_type: ewayData.subSupplyType,
+            transaction_type: ewayData.transactionType,
+            trans_mode: ewayData.transMode,
+            trans_distance: ewayData.transDistance,
+            transporter_name: ewayData.transporterName,
+            transporter_id: ewayData.transporterId,
+            trans_doc_no: ewayData.transDocNo,
+            trans_doc_date: ewayData.transDocDate || null,
+            vehicle_no: ewayData.vehicleNo,
+            vehicle_type: ewayData.vehicleType,
+            total_value: taxableAmount,
+            cgst_value: cgstAmount,
+            sgst_value: sgstAmount,
+            igst_amount: igstAmount,
+            cess_value: 0,
+            tot_non_advol_val: ewayData.TotNonAdvolVal,
+            oth_value: ewayData.OthValue,
+            tot_inv_value: total,
+            to_addr1: customer.address1 || '',
+            to_addr2: customer.address2 || '',
+            to_place: customer.city || '',
+            to_pincode: parseInt(customer.pincode) || 0,
+            to_state_code: toState,
+            from_state_code: fromState
+          }]);
       }
 
       // Save data for download and generate PDF
@@ -1083,6 +1191,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         payment_mode: finalPaymentMode,
         items: items.map(item => ({
           name: item.name,
+          sku: item.sku,
           quantity: Number(item.quantity) || 0,
           rate: Number(item.rate) || 0,
           gstRate: Number(item.gstRate) || 0,
@@ -1095,6 +1204,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         sgst_amount: sgstAmount,
         igst_amount: igstAmount,
         is_inter_state: isInterState,
+        eway_bill_no: ewayData.ewayBillNo,
         billing_state: businessState,
         customer_state: customerState,
         customer_state_code: customer.stateCode,
@@ -1178,19 +1288,73 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         isOpen={quickAdd.isOpen} 
         type={quickAdd.type} 
         onClose={() => setQuickAdd({ ...quickAdd, isOpen: false })}
-        onAdd={(data) => {
+        onAdd={async (data) => {
+          const businessId = profile?.business_id;
+          if (!businessId) {
+            setModal({ isOpen: true, title: 'Error', message: 'Business ID not found. Please check your profile.', type: 'error' });
+            return;
+          }
+
           if (quickAdd.type === 'customer') {
-            setCustomer(prev => ({ 
-              ...prev, 
-              name: data.name || '', 
-              phone: data.phone || '',
-              address1: data.address1 || '',
-              address2: data.address2 || '',
-              city: data.city || '',
-              pincode: data.pincode || ''
-            }));
+            try {
+              const { data: newCustomer, error } = await supabase
+                .from('customers')
+                .insert([{
+                  business_id: businessId,
+                  created_by: user?.id,
+                  name: data.name,
+                  phone: data.phone,
+                  address1: data.address1,
+                  address2: data.address2,
+                  city: data.city,
+                  pincode: data.pincode
+                }])
+                .select()
+                .single();
+
+              if (error) throw error;
+              
+              setCustomers(prev => [...prev, newCustomer]);
+              setCustomer({
+                id: newCustomer.id,
+                name: newCustomer.name || '',
+                phone: newCustomer.phone || '',
+                gst: newCustomer.gstin || '',
+                address1: newCustomer.address1 || '',
+                address2: newCustomer.address2 || '',
+                city: newCustomer.city || '',
+                pincode: newCustomer.pincode || '',
+                stateCode: '' // Will be updated if GSTIN is provided later
+              });
+            } catch (error: any) {
+              setModal({ isOpen: true, title: 'Error', message: error.message || 'Failed to add customer', type: 'error' });
+            }
           } else {
-            setProducts(prev => [...prev, { ...data, id: Date.now().toString(), stock: 0, sku: 'NEW', gst_rate: 18 }]);
+            try {
+              const { data: newProduct, error } = await supabase
+                .from('products')
+                .insert([{
+                  business_id: businessId,
+                  created_by: user?.id,
+                  name: data.name,
+                  sku: data.sku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                  hsn_code: data.hsn_code || data.sku,
+                  category: data.category || 'Uncategorized',
+                  gst_rate: Number(data.gst_rate) || 18,
+                  purchase_price: Number(data.purchase_price) || 0,
+                  price: Number(data.price) || 0,
+                  stock: Number(data.stock) || 0,
+                  min_stock: Number(data.min_stock) || 5
+                }])
+                .select()
+                .single();
+
+              if (error) throw error;
+              
+              setProducts(prev => [...prev, newProduct]);
+            } catch (error: any) {
+              setModal({ isOpen: true, title: 'Error', message: error.message || 'Failed to add product', type: 'error' });
+            }
           }
         }}
       />
@@ -1374,7 +1538,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 {/* Customer Address Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {ewaySettings?.ewayBillEnabled && total > 50000 && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && total > ewayThreshold && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Building, Street, etc."
@@ -1384,7 +1548,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {ewaySettings?.ewayBillEnabled && total > 50000 && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {isEwayEnabled && total > ewayThreshold && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Area, Locality, etc."
@@ -1394,7 +1558,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">City {ewaySettings?.ewayBillEnabled && total > 50000 && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">City {isEwayEnabled && total > ewayThreshold && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="City"
@@ -1405,7 +1569,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pincode {ewaySettings?.ewayBillEnabled && total > 50000 && <span className="text-red-500">*</span>}</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && total > ewayThreshold && <span className="text-red-500">*</span>}</label>
                       <input 
                         type="text" 
                         placeholder="Pincode"
@@ -1419,7 +1583,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">State Code {ewaySettings?.ewayBillEnabled && total > 50000 && <span className="text-red-500">*</span>}</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && total > ewayThreshold && <span className="text-red-500">*</span>}</label>
                       <select
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all text-slate-900 font-medium"
                         value={customer.stateCode || ''}
@@ -1478,7 +1642,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       </select>
                     </div>
                     <div className="md:col-span-4 space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Product Code</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Product/HSN Code</label>
                       <input 
                         type="text" 
                         placeholder="SKU"
@@ -1499,7 +1663,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         onChange={e => updateNewItem('quantity', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
                     </div>
-                    <div className="md:col-span-3 space-y-1.5">
+                    <div className="md:col-span-4 space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rate</label>
                       <input 
                         type="number" 
@@ -1519,14 +1683,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         onChange={e => updateNewItem('discount', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
                     </div>
-                    <div className="md:col-span-3 space-y-1.5">
+                    <div className="md:col-span-2 space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GST %</label>
                       <select 
                         className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all text-slate-900 font-medium"
                         value={newItem.gstRate === '' ? '' : newItem.gstRate}
                         onChange={e => updateNewItem('gstRate', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       >
-                        <option value="">Select GST</option>
                         <option value={0}>0%</option>
                         <option value={5}>5%</option>
                         <option value={12}>12%</option>
@@ -1537,9 +1700,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="md:col-span-2 flex items-end">
                       <button 
                         onClick={addItem}
-                        className="w-full py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold flex items-center justify-center hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                        className="w-full py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                       >
-                        <Plus size={18} className="mr-2" /> Add Item
+                        <Plus size={16} className="mr-1" /> Add
                       </button>
                     </div>
                   </div>
@@ -1550,7 +1713,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <thead className="text-[10px] text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
                         <tr>
                           <th className="px-4 py-3 font-bold">Item Description</th>
-                          <th className="px-4 py-3 font-bold">Product Code</th>
+                          <th className="px-4 py-3 font-bold">Product/HSN Code</th>
                           <th className="px-4 py-3 font-bold text-center">Qty</th>
                           <th className="px-4 py-3 font-bold text-right">Price</th>
                           <th className="px-4 py-3 font-bold text-center">Disc.</th>
@@ -1621,13 +1784,23 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 </div>
 
                 {/* E-way Bill Section */}
-                {ewaySettings?.ewayBillEnabled && total > 50000 && (
+                {isEwayEnabled && total > ewayThreshold && (
                   <div className="mt-8 pt-6 border-t border-slate-100">
                     <div className="flex items-center space-x-2 mb-4">
                       <Package size={18} className="text-indigo-600" />
-                      <h3 className="text-sm font-bold text-slate-900">E-way Bill Details (Mandatory &gt; ₹50,000)</h3>
+                      <h3 className="text-sm font-bold text-slate-900">E-way Bill Details (Mandatory &gt; ₹{ewayThreshold.toLocaleString()})</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">E-way Bill Number</label>
+                        <input 
+                          type="text" 
+                          placeholder="12-digit E-way Bill No."
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm transition-all"
+                          value={ewayData.ewayBillNo}
+                          onChange={e => setEwayData({...ewayData, ewayBillNo: e.target.value})}
+                        />
+                      </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transaction Type</label>
                         <select 
@@ -1639,6 +1812,36 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <option value={2}>2 - Bill To - Ship To</option>
                           <option value={3}>3 - Bill From - Dispatch From</option>
                           <option value={4}>4 - Combination of 2 and 3</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Supply Type</label>
+                        <select 
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm transition-all"
+                          value={ewayData.supplyType}
+                          onChange={e => setEwayData({...ewayData, supplyType: e.target.value})}
+                        >
+                          <option value="O">O - Outward</option>
+                          <option value="I">I - Inward</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sub Supply Type</label>
+                        <select 
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm transition-all"
+                          value={ewayData.subSupplyType}
+                          onChange={e => setEwayData({...ewayData, subSupplyType: e.target.value})}
+                        >
+                          <option value="1">1 - Supply</option>
+                          <option value="2">2 - Import</option>
+                          <option value="3">3 - Export</option>
+                          <option value="4">4 - Job Work</option>
+                          <option value="5">5 - For Own Use</option>
+                          <option value="6">6 - SKD/CKD</option>
+                          <option value="7">7 - Recipient Not Known</option>
+                          <option value="8">8 - Exhibition or Fairs</option>
+                          <option value="9">9 - Line Sales</option>
+                          <option value="10">10 - Others</option>
                         </select>
                       </div>
                       <div className="space-y-1.5">
@@ -1662,6 +1865,27 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           value={ewayData.transDistance}
                           onChange={e => setEwayData({...ewayData, transDistance: parseInt(e.target.value) || 0})}
                         />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Transporter</label>
+                        <select 
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm transition-all"
+                          onChange={e => {
+                            const trans = transporters.find(t => t.id === e.target.value);
+                            if (trans) {
+                              setEwayData({
+                                ...ewayData,
+                                transporterId: trans.transporter_id || '',
+                                transporterName: trans.name || ''
+                              });
+                            }
+                          }}
+                        >
+                          <option value="">-- Select Transporter --</option>
+                          {transporters.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transporter ID</label>
@@ -1720,17 +1944,22 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Business State Code</label>
-                        <select
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">TotNonAdvolVal</label>
+                        <input 
+                          type="number" 
                           className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm transition-all"
-                          value={ewayData.fromStateCode}
-                          onChange={e => setEwayData({...ewayData, fromStateCode: e.target.value})}
-                        >
-                          <option value="">Select State</option>
-                          {Object.entries(STATE_CODES).map(([code, name]) => (
-                            <option key={code} value={code}>{code} - {name}</option>
-                          ))}
-                        </select>
+                          value={ewayData.TotNonAdvolVal}
+                          onChange={e => setEwayData({...ewayData, TotNonAdvolVal: parseFloat(e.target.value) || 0})}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Other Value</label>
+                        <input 
+                          type="number" 
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm transition-all"
+                          value={ewayData.OthValue}
+                          onChange={e => setEwayData({...ewayData, OthValue: parseFloat(e.target.value) || 0})}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1760,23 +1989,23 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <span className="font-bold text-slate-900">{formatCurrency(taxableAmount)}</span>
                   </div>
                   
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">CGST {isSingleRate ? `(${totalGstRate / 2}%)` : ''}</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(cgstAmount)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">SGST {isSingleRate ? `(${totalGstRate / 2}%)` : ''}</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(sgstAmount)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">IGST {isSingleRate ? `(${isInterState ? totalGstRate : 0}%)` : ''}</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(igstAmount)}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-sm border-t border-slate-50 pt-2">
-                    <span className="text-slate-500 font-medium">Subtotal GST</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(gstTotal)}</span>
-                  </div>
+                  {!isInterState ? (
+                    <>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">CGST {isSingleRate ? `(${totalGstRate / 2}%)` : 'Variable%'}</span>
+                        <span className="font-bold text-slate-900">{formatCurrency(cgstAmount)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">SGST {isSingleRate ? `(${totalGstRate / 2}%)` : 'Variable%'}</span>
+                        <span className="font-bold text-slate-900">{formatCurrency(sgstAmount)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500 font-medium">IGST {isSingleRate ? `(${totalGstRate}%)` : 'Variable%'}</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(igstAmount)}</span>
+                    </div>
+                  )}
                   
                   {/* Discount Section */}
                   {/* Discount Section removed as requested */}
@@ -1932,64 +2161,56 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       />
       
       {/* Scanning Overlay */}
-      <AnimatePresence>
-        {isScanning && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white p-10 rounded-[32px] shadow-2xl flex flex-col items-center max-w-sm w-full mx-4"
-            >
-              <div className="relative w-32 h-32 mb-8">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <circle
-                    className="text-slate-100"
-                    cx="18" cy="18" r="16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                  />
-                  <motion.circle
-                    className="text-primary"
-                    cx="18" cy="18" r="16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeDasharray="100"
-                    initial={{ strokeDashoffset: 100 }}
-                    animate={{ strokeDashoffset: 100 - processingProgress }}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-primary">
-                  {processingProgress}%
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">AI is Analyzing</h3>
-              <p className="text-slate-500 text-center text-sm leading-relaxed">
-                We're extracting items and customer details from your invoice. Please wait...
-              </p>
-              
-              <div className="mt-8 w-full space-y-2">
-                <div className="flex items-center space-x-3 text-xs text-emerald-500 font-bold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>OCR Processing...</span>
-                </div>
-                <div className="flex items-center space-x-3 text-xs text-slate-300 font-bold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                  <span>Entity Extraction...</span>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Drawer
+        isOpen={isScanning}
+        onClose={() => setIsScanning(false)}
+        title="AI Invoice Scanning"
+        icon={<Loader2 className="animate-spin" size={18} />}
+        maxWidth="max-w-none"
+      >
+        <div className="flex flex-col items-center justify-center h-full py-12">
+          <div className="relative w-32 h-32 mb-8">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle
+                className="text-slate-100"
+                cx="18" cy="18" r="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
+              <motion.circle
+                className="text-primary"
+                cx="18" cy="18" r="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeDasharray="100"
+                initial={{ strokeDashoffset: 100 }}
+                animate={{ strokeDashoffset: 100 - processingProgress }}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-primary">
+              {processingProgress}%
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">AI is Analyzing</h3>
+          <p className="text-slate-500 text-center text-sm leading-relaxed max-w-xs">
+            We're extracting items and customer details from your invoice. Please wait...
+          </p>
+          
+          <div className="mt-8 w-full max-w-xs space-y-2">
+            <div className="flex items-center space-x-3 text-xs text-emerald-500 font-bold">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>OCR Processing...</span>
+            </div>
+            <div className="flex items-center space-x-3 text-xs text-slate-300 font-bold">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+              <span>Entity Extraction...</span>
+            </div>
+          </div>
+        </div>
+      </Drawer>
 
       <datalist id="customer-list">
         {customers.map(c => (

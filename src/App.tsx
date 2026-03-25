@@ -8,6 +8,7 @@ import CreateInvoice from './pages/CreateInvoice';
 import Invoices from './pages/Invoices';
 import Inventory from './pages/Inventory';
 import Customers from './pages/Customers';
+import Transporters from './pages/Transporters';
 import Suppliers from './pages/Suppliers';
 import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
@@ -15,8 +16,10 @@ import GSTReports from './pages/GSTReports';
 import AdminPanel from './pages/AdminPanel';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
+import Support from './pages/Support';
 import TaxTools from './pages/TaxTools';
 import ITRDataEntry from './pages/ITRDataEntry';
+import ITRReport from './pages/ITRReport';
 import Expenses from './pages/Expenses';
 // import Grow from './pages/Grow';
 import { useAuth } from './contexts/AuthContext';
@@ -87,6 +90,7 @@ export default function App() {
           <Route path="invoices/new" element={<CreateInvoice />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="transporters" element={<Transporters />} />
           <Route path="suppliers" element={<Suppliers />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="expenses" element={<Expenses />} />
@@ -95,8 +99,10 @@ export default function App() {
           <Route path="gst" element={<TaxTools type="gst" />} />
           <Route path="itr" element={<TaxTools type="itr" />} />
           <Route path="itr-data-entry" element={<ITRDataEntry />} />
+          <Route path="itr-report" element={<AdminRoute><ITRReport /></AdminRoute>} />
           <Route path="eway-bill" element={<TaxTools type="eway" />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="support" element={<Support />} />
           {/* <Route path="grow" element={<Grow />} /> */}
           <Route path="settings" element={<Settings />} />
           <Route path="admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />

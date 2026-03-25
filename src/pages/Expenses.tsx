@@ -6,6 +6,7 @@ import { formatCurrency, getDateRange, FilterType, cn } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
 import { ConfirmModal } from '../components/ConfirmModal';
+import Drawer from '../components/Drawer';
 import { motion, AnimatePresence } from 'motion/react';
 
 const CATEGORIES = [
@@ -406,103 +407,89 @@ export default function Expenses() {
       </div>
 
       {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">{editingExpense ? 'Edit Expense' : 'Add New Expense'}</h2>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Record your business expenditure details.</p>
-                </div>
-                <button 
-                  onClick={() => setShowAddModal(false)}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg transition-all"
-                >
-                  <Plus size={18} className="text-slate-400 rotate-45" />
-                </button>
+      <Drawer
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title={editingExpense ? 'Edit Expense' : 'Add New Expense'}
+        icon={<Receipt size={18} />}
+        maxWidth="max-w-none"
+        footer={
+          <button 
+            type="submit" 
+            form="expense-form"
+            disabled={isSubmitting}
+            className="w-full py-2.5 bg-primary text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <Loader2 className="animate-spin mr-2" size={16} />
+            ) : editingExpense ? 'Update Expense' : 'Save Expense'}
+          </button>
+        }
+      >
+        <div className="p-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start space-x-2 text-red-600 text-xs">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          <form id="expense-form" onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Date</label>
+                <input 
+                  type="date" 
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
+                  value={formData.date}
+                  onChange={e => setFormData({...formData, date: e.target.value})}
+                />
               </div>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start space-x-2 text-red-600 text-xs">
-                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                  <p>{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Date</label>
-                    <input 
-                      type="date" 
-                      required
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
-                      value={formData.date}
-                      onChange={e => setFormData({...formData, date: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Category</label>
-                    <select 
-                      required
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
-                      value={formData.category}
-                      onChange={e => setFormData({...formData, category: e.target.value})}
-                    >
-                      {CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Amount</label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      required
-                      className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
-                      placeholder="0.00"
-                      value={formData.amount}
-                      onChange={e => setFormData({...formData, amount: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Description</label>
-                  <textarea 
-                    rows={3}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all resize-none"
-                    placeholder="What was this expense for?"
-                    value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Category</label>
+                <select 
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
+                  value={formData.category}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
+                >
+                  <option value="">Select Category</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Amount</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">₹</span>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    required
+                    className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
+                    placeholder="0.00"
+                    value={formData.amount}
+                    onChange={e => setFormData({...formData, amount: e.target.value})}
                   />
                 </div>
+              </div>
+            </div>
 
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50 mt-2"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="animate-spin mr-2" size={16} />
-                  ) : editingExpense ? 'Update Expense' : 'Save Expense'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Description</label>
+              <textarea 
+                rows={3}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all resize-none"
+                placeholder="What was this expense for?"
+                value={formData.description}
+                onChange={e => setFormData({...formData, description: e.target.value})}
+              />
+            </div>
+          </form>
+        </div>
+      </Drawer>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

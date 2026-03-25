@@ -23,6 +23,8 @@ import { generateProfitLossExcel } from '../lib/excelGenerator';
 import { generateGST1Zip } from '../lib/zipGenerator';
 import { generateITRJson, validateITRData } from '../lib/itrGenerator';
 
+import { generateEwayJSON } from '../lib/ewayGenerator';
+
 type ToolType = 'gst' | 'itr' | 'eway';
 
 export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
@@ -158,9 +160,8 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
       reports: [
-        { id: 'eway_json', name: 'E-Way Bill Data', format: 'CSV', status: 'Ready' },
-        { id: 'consignor', name: 'Consignor Details', format: 'CSV', status: 'Ready' },
-        { id: 'transporter', name: 'Transporter Log', format: 'CSV', status: 'Ready' },
+        { id: 'eway_json', name: 'E-Way Bill Bulk Generation', format: 'JSON', status: 'Ready' },
+        { id: 'eway_csv', name: 'E-Way Bill Register', format: 'CSV', status: 'Ready' },
       ]
     }
   };
@@ -271,6 +272,101 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         
         setDownloadingReport(null);
         return; // Exit early since we handled the download
+      } else if (type === 'eway') {
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('*, customers(*), invoice_items(*, products(*))')
+          .eq('business_id', businessId);
+
+        const { data: ewayBills } = await supabase
+          .from('eway_bills')
+          .select('*')
+          .eq('business_id', businessId);
+
+        if (reportId === 'eway_json') {
+          const { data: businessProfile } = await supabase
+            .from('business_profiles')
+            .select('*')
+            .eq('id', businessId)
+            .single();
+
+          const ewayJson = generateEwayJSON(invoices || [], businessProfile || profile, ewayBills || []);
+          
+          if (ewayJson.billLists.length === 0) {
+            alert("No pending invoices found for E-Way Bill generation.\n\nMake sure you have created invoices with E-Way Bill details enabled, and that they don't already have an E-Way Bill Number assigned.");
+            setDownloadingReport(null);
+            return;
+          }
+
+          const blob = new Blob([JSON.stringify(ewayJson, null, 2)], { type: 'application/json' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', `EWAY_BULK_${new Date().toISOString().split('T')[0]}.json`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          setDownloadingReport(null);
+          return;
+        } else if (reportId === 'eway_csv') {
+          // Flatten items to match the Government Excel Utility format
+          dataToExport = [];
+          (invoices || []).forEach(inv => {
+            const ewayData = (ewayBills || []).find(eb => eb.invoice_id === inv.id);
+            if (!ewayData && !inv.eway_bill_no) return; // Skip invoices that don't have/need e-way bills
+            
+            const docDate = new Date(inv.date);
+            const formattedDocDate = `${String(docDate.getDate()).padStart(2, '0')}/${String(docDate.getMonth() + 1).padStart(2, '0')}/${docDate.getFullYear()}`;
+            
+            const transDocDate = ewayData.transDocDate ? new Date(ewayData.transDocDate) : null;
+            const formattedTransDocDate = transDocDate ? `${String(transDocDate.getDate()).padStart(2, '0')}/${String(transDocDate.getMonth() + 1).padStart(2, '0')}/${transDocDate.getFullYear()}` : '';
+
+            (inv.invoice_items || []).forEach((item: any) => {
+              const gstRate = item.products?.gst_rate || 0;
+              const isInterState = inv.is_inter_state;
+
+              dataToExport.push({
+                'Supply Type': ewayData.supplyType || 'O',
+                'Sub Supply Type': ewayData.subSupplyType || '1',
+                'Document Type': 'INV',
+                'Document No': inv.invoice_number,
+                'Document Date': formattedDocDate,
+                'Other Party GSTIN': inv.customers?.gstin || 'URP',
+                'Other Party Name': inv.customers?.name || 'Walk-in',
+                'Dispatch From / Ship To - Address 1': inv.customers?.address || '',
+                'Dispatch From / Ship To - Address 2': '',
+                'Dispatch From / Ship To - Place': inv.customers?.city || '',
+                'Dispatch From / Ship To - Pincode': inv.customers?.pincode || '',
+                'Dispatch From / Ship To - State': inv.customers?.state || '',
+                'Product Name': item.products?.name || 'Product',
+                'Description': item.products?.description || '',
+                'HSN': item.products?.hsn_code || '',
+                'Quantity': item.quantity,
+                'Unit': 'NOS',
+                'Taxable Value': item.total_price,
+                'CGST Rate': !isInterState ? gstRate / 2 : 0,
+                'SGST Rate': !isInterState ? gstRate / 2 : 0,
+                'IGST Rate': isInterState ? gstRate : 0,
+                'CESS Rate': 0,
+                'Total Taxable Value': inv.subtotal || 0,
+                'CGST Amount': inv.cgst_amount || 0,
+                'SGST Amount': inv.sgst_amount || 0,
+                'IGST Amount': inv.igst_amount || 0,
+                'CESS Amount': 0,
+                'Transporter ID': ewayData.transporterId || '',
+                'Transporter Name': ewayData.transporterName || '',
+                'Transporter Doc No': ewayData.transDocNo || '',
+                'Transporter Doc Date': formattedTransDocDate,
+                'Vehicle No': ewayData.vehicleNo || '',
+                'Vehicle Type': ewayData.vehicleType || 'R',
+                'Trans Mode': ewayData.transMode || '1',
+                'Distance': ewayData.transDistance || '0'
+              });
+            });
+          });
+        }
       } else {
         dataToExport = [{ report: reportName, status: 'Generated', date: new Date().toISOString() }];
       }

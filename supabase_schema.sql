@@ -79,6 +79,9 @@
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS state TEXT;
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS city TEXT;
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS pincode TEXT;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS address1 TEXT;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS address2 TEXT;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS aadhar_number TEXT;
 
     -- 3. CUSTOMERS
     CREATE TABLE IF NOT EXISTS customers (
@@ -169,6 +172,8 @@
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS terms TEXT;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date DATE;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS supply_type TEXT DEFAULT 'O';
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sub_supply_type TEXT DEFAULT '1';
 
     -- 5.1 INVOICE SERIES
     CREATE TABLE IF NOT EXISTS invoice_series (
@@ -721,3 +726,65 @@
         bucket_id = 'global-logos' 
         AND public.is_super_admin()
     );
+
+    -- 18. TRANSPORTERS
+    CREATE TABLE IF NOT EXISTS transporters (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID REFERENCES business_profiles(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        transporter_id TEXT NOT NULL, -- GSTIN/ID
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        created_at TIMESTAMPTZ DEFAULT now(),
+        updated_at TIMESTAMPTZ DEFAULT now()
+    );
+
+    ALTER TABLE transporters ENABLE ROW LEVEL SECURITY;
+
+    CREATE POLICY "Users can manage their transporters" ON transporters
+        FOR ALL USING (
+            public.can_access_business(business_id)
+        );
+
+    -- 19. EWAY BILLS
+    CREATE TABLE IF NOT EXISTS eway_bills (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE,
+        business_id UUID REFERENCES business_profiles(id) ON DELETE CASCADE,
+        eway_bill_no TEXT,
+        transporter_id TEXT, -- GSTIN or ID
+        transporter_name TEXT,
+        trans_mode TEXT, -- 1: Road, 2: Rail, 3: Air, 4: Ship
+        trans_distance INTEGER,
+        trans_doc_no TEXT,
+        trans_doc_date DATE,
+        vehicle_no TEXT,
+        vehicle_type TEXT, -- R: Regular, O: Over Dimensional Cargo
+        supply_type TEXT,
+        sub_supply_type TEXT,
+        transaction_type INTEGER DEFAULT 1, -- 1: Regular, 2: Bill To - Ship To, 3: Bill From - Dispatch From, 4: Combination of 2 and 3
+        total_value DECIMAL(12,2) DEFAULT 0,
+        cgst_value DECIMAL(12,2) DEFAULT 0,
+        sgst_value DECIMAL(12,2) DEFAULT 0,
+        igst_amount DECIMAL(12,2) DEFAULT 0,
+        cess_value DECIMAL(12,2) DEFAULT 0,
+        tot_non_advol_val DECIMAL(12,2) DEFAULT 0,
+        oth_value DECIMAL(12,2) DEFAULT 0,
+        tot_inv_value DECIMAL(12,2) DEFAULT 0,
+        to_addr1 TEXT,
+        to_addr2 TEXT,
+        to_place TEXT,
+        to_pincode INTEGER,
+        to_state_code INTEGER,
+        from_state_code INTEGER,
+        created_at TIMESTAMPTZ DEFAULT now(),
+        updated_at TIMESTAMPTZ DEFAULT now()
+    );
+
+    ALTER TABLE eway_bills ENABLE ROW LEVEL SECURITY;
+
+    CREATE POLICY "Users can manage their eway bills" ON eway_bills
+        FOR ALL USING (
+            public.can_access_business(business_id)
+        );

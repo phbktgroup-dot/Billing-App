@@ -18,7 +18,8 @@ export default function BusinessSetup() {
   const [formData, setFormData] = useState({
     businessName: '',
     ownerName: '',
-    address: '',
+    address1: '',
+    address2: '',
     city: '',
     state: '',
     pincode: '',
@@ -147,7 +148,8 @@ export default function BusinessSetup() {
           user_id: user.id,
           name: formData.businessName,
           owner_name: formData.ownerName,
-          address: formData.address,
+          address1: formData.address1,
+          address2: formData.address2,
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
@@ -179,7 +181,7 @@ export default function BusinessSetup() {
           .from('invoice_series')
           .insert([{
             business_id: business.id,
-            name: 'INV-000001',
+            name: 'INV-0000000001',
             prefix: 'INV-',
             current_number: 1
           }]);
@@ -292,16 +294,30 @@ export default function BusinessSetup() {
 
             {/* Contact Info */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">Business Address</label>
+              <label className="text-xs font-semibold text-slate-700">Address Line 1</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-2.5 text-slate-400" size={14} />
-                <textarea 
+                <input 
+                  type="text"
                   required
-                  rows={2}
-                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all resize-none"
-                  placeholder="123 Business Park, Sector 5..."
-                  value={formData.address}
-                  onChange={e => setFormData({...formData, address: e.target.value})}
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  placeholder="Flat/Door/Block No., Building Name"
+                  value={formData.address1}
+                  onChange={e => setFormData({...formData, address1: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Address Line 2</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                <input 
+                  type="text"
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                  placeholder="Road, Street, Area, Locality"
+                  value={formData.address2}
+                  onChange={e => setFormData({...formData, address2: e.target.value})}
                 />
               </div>
             </div>

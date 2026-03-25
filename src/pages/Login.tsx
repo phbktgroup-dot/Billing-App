@@ -11,6 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<'email' | 'otp' | 'password'>('email');
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -44,6 +45,22 @@ export default function Login() {
     try {
       let result;
       
+      if (isSignUp) {
+        result = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: email.split('@')[0]
+            }
+          }
+        });
+        if (result.error) throw result.error;
+        setSuccessMsg('Account created successfully! You can now login.');
+        setIsSignUp(false);
+        return;
+      }
+
       const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
@@ -183,7 +200,7 @@ export default function Login() {
           <div className="flex items-center space-x-2 mb-3">
             <ShieldCheck className="text-primary" size={20} />
             <h2 className="text-lg font-bold text-slate-900">
-              {isForgotPassword ? 'Reset Password' : 'Secure Login'}
+              {isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Secure Login'}
             </h2>
           </div>
 
@@ -377,9 +394,25 @@ export default function Login() {
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 ) : (
-                  <span>Login to Dashboard</span>
+                  <span>
+                    {isSignUp ? 'Create Account' : 'Login to Dashboard'}
+                  </span>
                 )}
               </button>
+
+              <div className="text-center">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setError(null);
+                    setSuccessMsg(null);
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-900"
+                >
+                  {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                </button>
+              </div>
             </form>
           )}
 

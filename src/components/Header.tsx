@@ -302,7 +302,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               )}
               <button onClick={() => { navigate('/support'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                 <HelpCircle size={16} />
-                <span>Help/Support</span>
+                <span>Help & Support</span>
               </button>
               <div className="h-[1px] bg-slate-100 my-1"></div>
               {isImpersonating && (
