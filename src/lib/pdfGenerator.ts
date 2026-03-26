@@ -165,21 +165,21 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   // Buyer Details
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Buyer details :", 12, 50);
-  doc.text(invoice.customer_name || "Optimus OE Solutions India Pvt. Ltd, Pune", 12, 56);
+  doc.text("Buyer details :", 12, 48);
+  doc.text(invoice.customer_name || "Optimus OE Solutions India Pvt. Ltd, Pune", 12, 53);
   
   if (invoice.customer_address) {
     doc.setFontSize(9.5);
     doc.setFont("helvetica", "normal");
     const splitAddress = doc.splitTextToSize(invoice.customer_address, 85);
-    doc.text(splitAddress, 12, 60);
+    doc.text(splitAddress, 12, 57);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
   }
   
-  doc.text("GSTIN      :", 12, 76);
+  doc.text("GSTIN      :", 12, 72);
   doc.setFont("helvetica", "normal");
-  doc.text(invoice.customer_gstin || "", 35, 76);
+  doc.text(invoice.customer_gstin || "", 35, 72);
   
   // Right side
   doc.setFont("helvetica", "bold");

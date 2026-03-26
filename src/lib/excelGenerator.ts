@@ -1,5 +1,13 @@
 import * as XLSX from 'xlsx';
 
+export const generateGSTExcel = (data: any[], reportName: string) => {
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+  
+  XLSX.writeFile(workbook, `${reportName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+};
+
 export const generateProfitLossExcel = (data: any, business: { name: string }) => {
   const worksheetData = [
     ['Profit and Loss Ledger'],

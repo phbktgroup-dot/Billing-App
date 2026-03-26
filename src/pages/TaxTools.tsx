@@ -19,7 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { generateProfitLossExcel } from '../lib/excelGenerator';
+import { generateProfitLossExcel, generateGSTExcel } from '../lib/excelGenerator';
 import { generateGST1Zip } from '../lib/zipGenerator';
 import { generateITRJson, validateITRData } from '../lib/itrGenerator';
 import { STATE_CODES } from '../constants/stateCodes';
@@ -121,9 +121,11 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   const businessId = profile?.business_id;
 
   React.useEffect(() => {
-    if (businessId && type === 'itr') {
+    if (businessId) {
       fetchFinancialData();
-      loadPortalDocs();
+      if (type === 'itr') {
+        loadPortalDocs();
+      }
     }
   }, [businessId, type, filterType, customRange, day, year]);
 
@@ -225,10 +227,10 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       color: 'text-blue-600',
       bg: 'bg-blue-50',
       reports: [
-        { id: 'gstr1', name: 'GSTR-1 (Sales)', format: 'CSV', status: 'Ready' },
-        { id: 'gstr3b', name: 'GSTR-3B (Summary)', format: 'CSV', status: 'Ready' },
-        { id: 'hsn', name: 'HSN Summary', format: 'CSV', status: 'Ready' },
-        { id: 'itc', name: 'Input Tax Credit (ITC)', format: 'CSV', status: 'Needs Review' },
+        { id: 'gstr1', name: 'GSTR-1 (Sales)', format: 'Excel', status: 'Ready' },
+        { id: 'gstr3b', name: 'GSTR-3B (Summary)', format: 'Excel', status: 'Ready' },
+        { id: 'hsn', name: 'HSN Summary', format: 'Excel', status: 'Ready' },
+        { id: 'itc', name: 'Input Tax Credit (ITC)', format: 'Excel', status: 'Needs Review' },
       ]
     },
     itr: {
@@ -301,19 +303,27 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         if (reportId === 'gstr1') {
           let query = supabase
             .from('invoices')
-            .select('invoice_number, date, customer_name, customer_gstin, total, tax_amount')
+            .select('invoice_number, date, total, tax_amount, customers(name, gstin)')
             .eq('business_id', businessId);
-          if (startDate) query = query.gte('date', startDate);
-          if (endDate) query = query.lte('date', endDate);
+          if (startDate) query = query.gte('date', startDate.toISOString());
+          if (endDate) query = query.lte('date', endDate.toISOString());
           const { data } = await query;
-          dataToExport = data || [];
+          dataToExport = (data || []).map((inv: any) => ({
+            'Invoice Number': inv.invoice_number,
+            'Date': inv.date ? new Date(inv.date).toLocaleDateString() : '',
+            'Customer Name': inv.customers?.name || '',
+            'Customer GSTIN': inv.customers?.gstin || '',
+            'Taxable Value': (inv.total - (inv.tax_amount || 0)).toFixed(2),
+            'Tax Amount': (inv.tax_amount || 0).toFixed(2),
+            'Total Value': (inv.total || 0).toFixed(2)
+          }));
         } else if (reportId === 'hsn') {
           let query = supabase
             .from('invoice_items')
             .select('products(name, sku, gst_rate), quantity, total_price, invoices!inner(date, business_id)')
             .eq('invoices.business_id', businessId);
-          if (startDate) query = query.gte('invoices.date', startDate);
-          if (endDate) query = query.lte('invoices.date', endDate);
+          if (startDate) query = query.gte('invoices.date', startDate.toISOString());
+          if (endDate) query = query.lte('invoices.date', endDate.toISOString());
           const { data } = await query.limit(100);
           
           // Flatten data
@@ -324,6 +334,35 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             quantity: item.quantity,
             total_value: item.total_price
           }));
+        } else if (reportId === 'gstr3b') {
+          let invoicesQuery = supabase.from('invoices').select('total, tax_amount').eq('business_id', businessId);
+          if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate.toISOString());
+          if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate.toISOString());
+          const { data: invoices } = await invoicesQuery;
+
+          let purchasesQuery = supabase.from('purchases').select('total_amount, tax_amount').eq('business_id', businessId);
+          if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate.toISOString());
+          if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate.toISOString());
+          const { data: purchases } = await purchasesQuery;
+
+          dataToExport = [{
+            report: 'GSTR-3B',
+            total_outward_supplies: invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0,
+            total_outward_tax: invoices?.reduce((sum, inv) => sum + (inv.tax_amount || 0), 0) || 0,
+            total_inward_supplies: purchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0,
+            total_inward_tax: purchases?.reduce((sum, p) => sum + (p.tax_amount || 0), 0) || 0,
+          }];
+        } else if (reportId === 'itc') {
+          let purchasesQuery = supabase.from('purchases').select('total_amount, tax_amount, date').eq('business_id', businessId);
+          if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate.toISOString());
+          if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate.toISOString());
+          const { data: purchases } = await purchasesQuery;
+
+          dataToExport = (purchases || []).map((p: any) => ({
+            date: p.date,
+            total_amount: p.total_amount,
+            tax_amount: p.tax_amount,
+          }));
         } else {
           // Mock data for others
           dataToExport = [{ report: reportName, status: 'Generated', date: new Date().toISOString() }];
@@ -331,18 +370,18 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       } else if (type === 'itr') {
         // Fetch financial data to populate ITR forms
         let invoicesQuery = supabase.from('invoices').select('total').eq('business_id', businessId);
-        if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate);
-        if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate);
+        if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate.toISOString());
+        if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate.toISOString());
         const { data: invoices } = await invoicesQuery;
           
         let purchasesQuery = supabase.from('purchases').select('total_amount').eq('business_id', businessId);
-        if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate);
-        if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate);
+        if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate.toISOString());
+        if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate.toISOString());
         const { data: purchases } = await purchasesQuery;
           
         let expensesQuery = supabase.from('expenses').select('amount').eq('business_id', businessId);
-        if (startDate) expensesQuery = expensesQuery.gte('date', startDate);
-        if (endDate) expensesQuery = expensesQuery.lte('date', endDate);
+        if (startDate) expensesQuery = expensesQuery.gte('date', startDate.toISOString());
+        if (endDate) expensesQuery = expensesQuery.lte('date', endDate.toISOString());
         const { data: expenses } = await expensesQuery;
 
         const totalSales = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
@@ -491,7 +530,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       }
 
       if (format === 'Excel') {
-        generateProfitLossExcel({ totalSales: dataToExport.length }, { name: reportName });
+        console.log("Data to export for report:", reportId, dataToExport);
+        if (dataToExport.length === 0) {
+          alert("No data available for this report in the selected date range.");
+          setDownloadingReport(null);
+          return;
+        }
+        generateGSTExcel(dataToExport, reportName);
       } else if (format === 'ZIP' && reportId === 'gstr1') {
         const csvContent = `GSTIN/UIN of Recipient,Receiver Name,Invoice Number,Invoice date,Invoice Value,Place Of Supply,Reverse Charge,Applicable % of Tax Rate,Invoice Type,E-Commerce GSTIN,Rate,Taxable Value,Cess Amount
 27ABYFA9090M1ZD,,CR/9571,1-Feb-2026,60901.00,27-Maharashtra,N,0.00,Regular B2B,,5.00,58001.31,0.00
@@ -696,23 +741,9 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                         {downloadingReport === report.id ? (
                           <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
                         ) : (
-                          <Download size={18} />
+                          report.format === 'Excel' ? <FileSpreadsheet size={18} className="text-emerald-600" /> : <Download size={18} />
                         )}
                       </button>
-                      {type !== 'itr' && (
-                        <button 
-                          onClick={() => handleDownloadReport(report.id, report.name, 'Excel')}
-                          disabled={downloadingReport === report.id}
-                          className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-600 transition-all disabled:opacity-50 shadow-sm"
-                          title="Download Excel"
-                        >
-                          {downloadingReport === report.id ? (
-                            <div className="w-5 h-5 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
-                          ) : (
-                            <FileArchive size={18} />
-                          )}
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>

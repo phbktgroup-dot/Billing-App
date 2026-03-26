@@ -40,7 +40,6 @@ const menuItems = [
   { icon: Receipt, label: 'Expenses', path: '/expenses' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst-reports' },
-  { icon: Calculator, label: 'Tax Tools', path: '/gst' },
   { icon: FileCheck, label: 'E-Way Bill', path: '/eway-bill' },
   { icon: FileText, label: 'ITR Report', path: '/itr-report', adminOnly: true },
   { icon: PieChart, label: 'Analytics', path: '/analytics' },
