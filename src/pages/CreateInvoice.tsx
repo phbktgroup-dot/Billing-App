@@ -73,7 +73,7 @@ interface CreateInvoiceProps {
 export default function CreateInvoice({ isModal = false, onClose }: CreateInvoiceProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [items, setItems] = useState<LineItem[]>([]);
   const [customer, setCustomer] = useState({ id: '', name: '', phone: '', gst: '', address1: '', address2: '', city: '', pincode: '', stateCode: '' });
   const [newItem, setNewItem] = useState<LineItem>({ id: '', productId: '', name: '', hsnCode: '', quantity: '', rate: '', gstRate: '', discount: '', amount: '' });
@@ -177,7 +177,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
     const invoiceData = {
       invoice_number: currentInvoiceNumber,
-      date: new Date().toISOString(),
+      date: new Date(day).toISOString(),
       customer_name: customer.name || 'Walk-in Customer',
       customer_gstin: customer.gst,
       customer_address: [customer.address1, customer.address2, [customer.city, customer.pincode].filter(Boolean).join(', ')].filter(Boolean).join('\n'),
@@ -187,6 +187,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       due_date: dueDate,
       items: items.map(item => ({
         name: item.name,
+        hsnCode: item.hsnCode,
         quantity: Number(item.quantity) || 0,
         rate: Number(item.rate) || 0,
         gstRate: Number(item.gstRate) || 0,
@@ -967,7 +968,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           customer_id: customerId,
           invoice_series_id: selectedSeriesId || null,
           invoice_number: finalInvoiceNumber,
-          date: new Date().toISOString().split('T')[0],
+          date: day,
           subtotal: taxableAmount,
           discount: totalDiscount,
           discount_percentage: discountType === 'percentage' ? discount : 0,
@@ -1153,7 +1154,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       };
 
       // Generate and download PDF
-      await generateInvoicePDF(invoiceDataForPdf, businessProfile);
+      await refreshProfile();
+      await generateInvoicePDF(invoiceDataForPdf, profile?.business_profiles);
       
       setSavedInvoiceData(null);
 
@@ -1491,8 +1493,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="date" 
                         className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
-                        value={new Date().toISOString().split('T')[0]}
-                        readOnly
+                        value={day}
+                        onChange={e => setDay(e.target.value)}
                       />
                     </div>
                   </div>

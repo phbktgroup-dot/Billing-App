@@ -17,7 +17,7 @@ export interface InvoiceData {
   due_date?: string;
   items: {
     name: string;
-    sku?: string;
+    hsnCode?: string;
     quantity: number;
     rate: number;
     gstRate?: number;
@@ -207,7 +207,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setFont("helvetica", "bold");
   doc.text("S.N.", 15, 98, { align: 'center' });
   doc.text("Description of Goods", 57.5, 98, { align: 'center' });
-  doc.text("Product Code", 112.5, 98, { align: 'center' });
+  doc.text("HSN Code", 112.5, 98, { align: 'center' });
   doc.text("Qty.", 140, 98, { align: 'center' });
   doc.text("Price", 162.5, 98, { align: 'center' });
   doc.text("Amount\n(Rs.)", 187.5, 96, { align: 'center' });
@@ -218,7 +218,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   invoice.items.forEach((item, index) => {
     doc.text((index + 1).toString(), 15, currentY, { align: 'center' });
     doc.text(item.name, 22, currentY);
-    doc.text(item.sku || "-", 112.5, currentY, { align: 'center' });
+    doc.text(item.hsnCode || "-", 112.5, currentY, { align: 'center' });
     doc.text(item.quantity.toString(), 140, currentY, { align: 'center' });
     doc.text(item.rate.toFixed(2), 173, currentY, { align: 'right' });
     doc.text((item.quantity * item.rate).toFixed(2), 198, currentY, { align: 'right' });
