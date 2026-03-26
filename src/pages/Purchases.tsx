@@ -824,6 +824,24 @@ Return as JSON format: {
           const data = JSON.parse(jsonMatch[0]);
           
           // Prepare scanned data for review
+          const items = (data.items || []).map((item: any) => {
+            const qty = Number(item.quantity) || 1;
+            const rate = Number(item.rate) || 0;
+            const cgst = Number(item.cgst) || 0;
+            const sgst = Number(item.sgst) || 0;
+            const igst = Number(item.igst) || 0;
+            return {
+              particular: item.particular || item.name || 'Unknown Item',
+              hsn: item.hsn || '',
+              quantity: qty,
+              rate: rate,
+              cgst: cgst,
+              sgst: sgst,
+              igst: igst,
+              amount: (qty * rate) + cgst + sgst + igst,
+            };
+          });
+
           setScannedData({
             supplier: {
               name: data.supplierName || data.supplier_name || '',
@@ -838,27 +856,11 @@ Return as JSON format: {
               const d = new Date(data.date);
               return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
             })(),
-            cgstTotal: data.cgstTotal || data.totalCgst || 0,
-            sgstTotal: data.sgstTotal || data.totalSgst || 0,
-            igstTotal: data.igstTotal || data.totalIgst || 0,
-            totalAmount: data.totalAmount || 0,
-            items: (data.items || []).map((item: any) => {
-              const qty = Number(item.quantity) || 1;
-              const rate = Number(item.rate) || 0;
-              const cgst = Number(item.cgst) || 0;
-              const sgst = Number(item.sgst) || 0;
-              const igst = Number(item.igst) || 0;
-              return {
-                particular: item.particular || item.name || 'Unknown Item',
-                hsn: item.hsn || '',
-                quantity: qty,
-                rate: rate,
-                cgst: cgst,
-                sgst: sgst,
-                igst: igst,
-                amount: (qty * rate) + cgst + sgst + igst,
-              };
-            })
+            cgstTotal: items.reduce((sum, item) => sum + item.cgst, 0),
+            sgstTotal: items.reduce((sum, item) => sum + item.sgst, 0),
+            igstTotal: items.reduce((sum, item) => sum + item.igst, 0),
+            totalAmount: items.reduce((sum, item) => sum + item.amount, 0),
+            items: items
           });
           
           setShowScannedReview(true);
