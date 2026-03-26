@@ -139,8 +139,8 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   // Line 2: Address 2
   doc.text(business?.address2 || "", 105, 28, { align: 'center' });
   
-  // Line 3: City, State, Pincode
-  const line3 = [business?.city, business?.state, business?.pincode ? `PIN: ${business.pincode}` : ''].filter(Boolean).join(', ');
+  // Line 3: City and Pincode
+  const line3 = [business?.city, business?.pincode ? `PIN: ${business.pincode}` : ''].filter(Boolean).join(', ');
   doc.text(line3 || "", 105, 31, { align: 'center' });
 
   doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 34, { align: 'center' });

@@ -511,6 +511,9 @@
         upload_date DATE DEFAULT CURRENT_DATE,
         subtotal DECIMAL(12,2) DEFAULT 0,
         tax_amount DECIMAL(12,2) DEFAULT 0,
+        cgst_amount DECIMAL(12,2) DEFAULT 0,
+        sgst_amount DECIMAL(12,2) DEFAULT 0,
+        igst_amount DECIMAL(12,2) DEFAULT 0,
         total_amount DECIMAL(12,2) DEFAULT 0,
         status TEXT DEFAULT 'paid' CHECK (status IN ('paid', 'pending', 'cancelled')),
         notes TEXT,
@@ -520,6 +523,9 @@
     -- Ensure columns exist if table was created earlier
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS subtotal DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS cgst_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS sgst_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS igst_amount DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS total_amount DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS bill_date DATE DEFAULT CURRENT_DATE;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS upload_date DATE DEFAULT CURRENT_DATE;
@@ -555,6 +561,9 @@
         quantity INTEGER NOT NULL,
         unit_price DECIMAL(12,2) NOT NULL,
         gst_rate DECIMAL(5,2) DEFAULT 18,
+        cgst DECIMAL(12,2) DEFAULT 0,
+        sgst DECIMAL(12,2) DEFAULT 0,
+        igst DECIMAL(12,2) DEFAULT 0,
         amount DECIMAL(12,2) DEFAULT 0,
         total_price DECIMAL(12,2) DEFAULT 0, -- Keep for backward compatibility
         created_at TIMESTAMPTZ DEFAULT now()
@@ -562,6 +571,9 @@
 
     -- Ensure columns exist if table was created earlier
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS gst_rate DECIMAL(5,2) DEFAULT 18;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS cgst DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS sgst DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS igst DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS amount DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS total_price DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS hsn_code TEXT;

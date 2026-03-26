@@ -203,7 +203,7 @@ export default function Purchases() {
                             onChange={e => {
                               const newItems = [...editedData.items];
                               newItems[idx].quantity = Number(e.target.value);
-                              newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate;
+                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
                               setEditedData({...editedData, items: newItems});
                             }}
                           />
@@ -346,6 +346,7 @@ export default function Purchases() {
     setLoading(true);
     try {
       const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+      console.log('Fetching purchases for range:', startDate.toISOString(), 'to', endDate.toISOString());
 
       const { data, error } = await supabase
         .from('purchases')
@@ -361,12 +362,15 @@ export default function Purchases() {
         .order('date', { ascending: false });
 
       if (error) {
+        console.error('Supabase error fetching purchases:', error);
         const localPurchases = JSON.parse(localStorage.getItem(`purchases_${businessId}`) || '[]');
         setPurchases(localPurchases);
       } else if (data) {
+        console.log('Fetched purchases count:', data.length);
         setPurchases(data);
       }
     } catch (error) {
+      console.error('Error in fetchPurchases:', error);
       const localPurchases = JSON.parse(localStorage.getItem(`purchases_${businessId}`) || '[]');
       setPurchases(localPurchases);
     } finally {
@@ -441,6 +445,8 @@ export default function Purchases() {
         invoice_number: formData.invoice_number,
         date: formData.bill_date,
         bill_date: formData.bill_date,
+        subtotal: formData.total_amount - (formData.cgst_total + formData.sgst_total + formData.igst_total),
+        tax_amount: formData.cgst_total + formData.sgst_total + formData.igst_total,
         total_amount: formData.total_amount,
         cgst_amount: formData.cgst_total,
         sgst_amount: formData.sgst_total,
@@ -449,6 +455,8 @@ export default function Purchases() {
         notes: formData.notes + (formData.upload_date ? `\nUpload Date: ${formData.upload_date}` : ''),
         created_by: profile?.id
       };
+
+      console.log('Saving purchase data:', purchaseData);
 
       // 2. Save Purchase
       let purchaseId = '';
@@ -716,11 +724,11 @@ export default function Purchases() {
 - supplier address
 - invoice number
 - date
-- items (array of: { particular: string, hsn: string, quantity: number, rate: number, cgst: number, sgst: number, igst: number, amount: number })
+- items (array of: { particular: string, hsn: string, quantity: number, rate: number, cgst: number, sgst: number, igst: number, amount: number (including GST) })
 - total CGST
 - total SGST
 - total IGST
-- total amount
+- total amount (including all taxes)
 
 Return as JSON format: { 
   supplierName: string, 
@@ -834,16 +842,23 @@ Return as JSON format: {
             sgstTotal: data.sgstTotal || data.totalSgst || 0,
             igstTotal: data.igstTotal || data.totalIgst || 0,
             totalAmount: data.totalAmount || 0,
-            items: (data.items || []).map((item: any) => ({
-              particular: item.particular || item.name || 'Unknown Item',
-              hsn: item.hsn || '',
-              quantity: Number(item.quantity) || 1,
-              rate: Number(item.rate) || 0,
-              cgst: Number(item.cgst) || 0,
-              sgst: Number(item.sgst) || 0,
-              igst: Number(item.igst) || 0,
-              amount: Number(item.amount) || 0,
-            }))
+            items: (data.items || []).map((item: any) => {
+              const qty = Number(item.quantity) || 1;
+              const rate = Number(item.rate) || 0;
+              const cgst = Number(item.cgst) || 0;
+              const sgst = Number(item.sgst) || 0;
+              const igst = Number(item.igst) || 0;
+              return {
+                particular: item.particular || item.name || 'Unknown Item',
+                hsn: item.hsn || '',
+                quantity: qty,
+                rate: rate,
+                cgst: cgst,
+                sgst: sgst,
+                igst: igst,
+                amount: (qty * rate) + cgst + sgst + igst,
+              };
+            })
           });
           
           setShowScannedReview(true);
@@ -1123,56 +1138,56 @@ Return as JSON format: {
                   </div>
                   <div className="space-y-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Supplier Name *</label>
+                      <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Supplier Name *</label>
                       <input 
                         type="text" 
                         required
                         placeholder="Enter supplier name"
-                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                        className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all"
                         value={formData.supplier_name}
                         onChange={e => setFormData({...formData, supplier_name: e.target.value})}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">GST Number</label>
+                        <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">GST Number</label>
                         <input 
                           type="text" 
                           placeholder="GSTIN"
                           maxLength={15}
-                          className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all uppercase"
+                          className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all uppercase"
                           value={formData.supplier_gstin}
                           onChange={e => setFormData({...formData, supplier_gstin: e.target.value.toUpperCase()})}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone</label>
+                        <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Phone</label>
                         <input 
                           type="text" 
                           placeholder="Contact"
                           maxLength={10}
-                          className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                          className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all"
                           value={formData.supplier_phone}
                           onChange={e => setFormData({...formData, supplier_phone: e.target.value.replace(/\D/g, '')})}
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                      <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Email</label>
                       <input 
                         type="email" 
                         placeholder="Email address"
-                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                        className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all"
                         value={formData.supplier_email}
                         onChange={e => setFormData({...formData, supplier_email: e.target.value})}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Address</label>
+                      <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Address</label>
                       <textarea 
                         rows={2}
                         placeholder="Full address"
-                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all resize-none"
+                        className="w-full px-4 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all resize-none"
                         value={formData.supplier_address}
                         onChange={e => setFormData({...formData, supplier_address: e.target.value})}
                       ></textarea>
@@ -1183,21 +1198,21 @@ Return as JSON format: {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Info</h3>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Invoice Number *</label>
+                    <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Invoice Number *</label>
                     <input 
                       type="text" 
                       required
-                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                      className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all"
                       value={formData.invoice_number}
                       onChange={e => setFormData({...formData, invoice_number: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bill Date *</label>
+                    <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Bill Date *</label>
                     <input 
                       type="date" 
                       required
-                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                      className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all"
                       value={formData.bill_date}
                       onChange={e => setFormData({...formData, bill_date: e.target.value})}
                     />
@@ -1216,10 +1231,10 @@ Return as JSON format: {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment & Notes</h3>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status *</label>
+                    <label className="block text-sm font-bold text-slate-500 uppercase mb-1.5">Status *</label>
                     <select 
                       required
-                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                      className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base transition-all"
                       value={formData.status}
                       onChange={e => setFormData({...formData, status: e.target.value})}
                     >
@@ -1248,7 +1263,7 @@ Return as JSON format: {
                     type="button"
                     onClick={() => setFormData({
                       ...formData, 
-                      items: [...formData.items, { particular: '', hsn: '', quantity: 1, rate: 0, amount: 0, product_id: null }]
+                      items: [...formData.items, { particular: '', hsn: '', quantity: 1, rate: 0, cgst: 0, sgst: 0, igst: 0, amount: 0, product_id: null }]
                     })}
                     className="text-[10px] font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-all flex items-center"
                   >
@@ -1434,7 +1449,10 @@ Return as JSON format: {
                                 setFormData({
                                   ...formData, 
                                   items: newItems,
-                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0),
+                                  cgst_total: newItems.reduce((sum, i) => sum + (i.cgst || 0), 0),
+                                  sgst_total: newItems.reduce((sum, i) => sum + (i.sgst || 0), 0),
+                                  igst_total: newItems.reduce((sum, i) => sum + (i.igst || 0), 0)
                                 });
                               }}
                               className="p-1 text-slate-300 hover:text-red-500 transition-colors"
@@ -1549,10 +1567,10 @@ Return as JSON format: {
                 invoice_number: finalData.invoiceNumber,
                 bill_date: finalData.date,
                 upload_date: new Date().toISOString().split('T')[0],
-                total_amount: finalData.items.reduce((sum: number, i: any) => sum + i.amount, 0),
-                cgst_total: finalData.items.reduce((sum: number, i: any) => sum + (i.cgst || 0), 0),
-                sgst_total: finalData.items.reduce((sum: number, i: any) => sum + (i.sgst || 0), 0),
-                igst_total: finalData.items.reduce((sum: number, i: any) => sum + (i.igst || 0), 0),
+                total_amount: finalData.items.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0),
+                cgst_total: finalData.items.reduce((sum: number, i: any) => sum + Number(i.cgst || 0), 0),
+                sgst_total: finalData.items.reduce((sum: number, i: any) => sum + Number(i.sgst || 0), 0),
+                igst_total: finalData.items.reduce((sum: number, i: any) => sum + Number(i.igst || 0), 0),
                 status: 'paid',
                 notes: 'Scanned via AI',
                 items: finalData.items.map((item: any) => {
