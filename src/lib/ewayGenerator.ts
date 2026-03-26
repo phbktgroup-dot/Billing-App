@@ -74,13 +74,13 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
 
       return {
         userGstin: businessProfile?.gst_number || '',
-        supplyType: ewayData.supplyType || 'O',
-        subSupplyType: parseInt(ewayData.subSupplyType) || 1,
-        subSupplyDesc: ewayData.subSupplyDesc || '',
+        supplyType: ewayData.supply_type || ewayData.supplyType || 'O',
+        subSupplyType: parseInt(ewayData.sub_supply_type || ewayData.subSupplyType) || 1,
+        subSupplyDesc: ewayData.sub_supply_desc || ewayData.subSupplyDesc || '',
         docType: "INV",
-        docNo: inv.invoice_number,
+        docNo: inv.invoice_number ? inv.invoice_number.replace(/^[0/\-]+/, '') || inv.invoice_number : '',
         docDate: formattedDocDate,
-        transType: parseInt(ewayData.transactionType) || 1,
+        transType: parseInt(ewayData.transaction_type || ewayData.transactionType) || 1,
         fromGstin: businessProfile?.gst_number || '',
         fromTrdName: businessProfile?.name || '',
         fromAddr1: businessProfile?.address1 || '',
@@ -92,7 +92,7 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
         toGstin: inv.customers?.gstin || 'URP',
         toTrdName: inv.customers?.name || '',
         toAddr1: inv.customers?.address || '',
-        toAddr2: ewayData.toAddr2 || '',
+        toAddr2: ewayData.to_addr2 || ewayData.toAddr2 || '',
         toPlace: inv.customers?.city || '',
         toPincode: parseInt(inv.customers?.pincode) || 0,
         toStateCode: toStateCode,
@@ -101,21 +101,21 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
         cgstValue: !isInterState ? Number(inv.cgst_amount) || 0 : 0,
         sgstValue: !isInterState ? Number(inv.sgst_amount) || 0 : 0,
         igstValue: isInterState ? Number(inv.igst_amount) || 0 : 0,
-        cessValue: Number(ewayData.cessValue) || 0,
-        TotNonAdvolVal: Number(ewayData.TotNonAdvolVal) || 0,
-        OthValue: Number(ewayData.OthValue) || 0,
+        cessValue: Number(ewayData.cess_value || ewayData.cessValue) || 0,
+        TotNonAdvolVal: Number(ewayData.tot_non_advol_val || ewayData.TotNonAdvolVal) || 0,
+        OthValue: Number(ewayData.oth_value || ewayData.OthValue) || 0,
         totInvValue: Number(inv.total) || 0,
-        transMode: parseInt(ewayData.transMode) || 1,
-        transDistance: parseInt(ewayData.transDistance) || 0,
-        transporterName: ewayData.transporterName || '',
-        transporterId: ewayData.transporterId || '',
-        transDocNo: ewayData.transDocNo || '',
-        transDocDate: ewayData.transDocDate ? (() => {
-          const d = new Date(ewayData.transDocDate);
+        transMode: parseInt(ewayData.trans_mode || ewayData.transMode) || 1,
+        transDistance: parseInt(ewayData.trans_distance || ewayData.transDistance) || 0,
+        transporterName: ewayData.transporter_name || ewayData.transporterName || '',
+        transporterId: ewayData.transporter_id || ewayData.transporterId || '',
+        transDocNo: ewayData.trans_doc_no || ewayData.transDocNo || '',
+        transDocDate: (ewayData.trans_doc_date || ewayData.transDocDate) ? (() => {
+          const d = new Date(ewayData.trans_doc_date || ewayData.transDocDate);
           return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
         })() : '',
-        vehicleNo: ewayData.vehicleNo || '',
-        vehicleType: ewayData.vehicleType || 'R',
+        vehicleNo: ewayData.vehicle_no || ewayData.vehicleNo || '',
+        vehicleType: ewayData.vehicle_type || ewayData.vehicleType || 'R',
         mainHsnCode: mainHsnCode,
         itemList
       };

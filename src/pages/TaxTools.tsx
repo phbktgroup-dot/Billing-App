@@ -22,8 +22,73 @@ import { useAuth } from '../contexts/AuthContext';
 import { generateProfitLossExcel } from '../lib/excelGenerator';
 import { generateGST1Zip } from '../lib/zipGenerator';
 import { generateITRJson, validateITRData } from '../lib/itrGenerator';
+import { STATE_CODES } from '../constants/stateCodes';
 
 import { generateEwayJSON } from '../lib/ewayGenerator';
+
+const getSupplyTypeText = (code: string) => {
+  if (code === 'O') return 'Outward';
+  if (code === 'I') return 'Inward';
+  return 'Outward';
+};
+
+const getSubSupplyTypeText = (code: string | number) => {
+  const map: Record<string, string> = {
+    '1': 'Supply',
+    '2': 'Import',
+    '3': 'Export',
+    '4': 'Job Work',
+    '5': 'For Own Use',
+    '6': 'Job work Returns',
+    '7': 'Sales Return',
+    '8': 'Others',
+    '9': 'SKD/CKD/Lots',
+    '10': 'Line Sales',
+    '11': 'Recipient Not Known',
+    '12': 'Exhibition or Fairs'
+  };
+  return map[String(code)] || 'Supply';
+};
+
+const getTransactionTypeText = (code: string | number) => {
+  const map: Record<string, string> = {
+    '1': 'Regular',
+    '2': 'Bill To - Ship To',
+    '3': 'Bill From - Dispatch From',
+    '4': 'Combination of 2 and 3'
+  };
+  return map[String(code)] || 'Regular';
+};
+
+const getTransModeText = (code: string | number) => {
+  const map: Record<string, string> = {
+    '1': 'Road',
+    '2': 'Rail',
+    '3': 'Air',
+    '4': 'Ship'
+  };
+  return map[String(code)] || 'Road';
+};
+
+const getVehicleTypeText = (code: string) => {
+  if (code === 'R') return 'Regular';
+  if (code === 'O') return 'ODC';
+  return 'Regular';
+};
+
+const getStateName = (stateStr: string | undefined, gstin: string | undefined) => {
+  if (gstin && gstin.length >= 2) {
+    const code = gstin.substring(0, 2);
+    if (STATE_CODES[code]) return STATE_CODES[code].toUpperCase();
+  }
+  if (stateStr) {
+    if (!isNaN(Number(stateStr)) && STATE_CODES[stateStr]) {
+      return STATE_CODES[stateStr].toUpperCase();
+    }
+    return stateStr.toUpperCase();
+  }
+  return '';
+};
 
 type ToolType = 'gst' | 'itr' | 'eway';
 
@@ -311,6 +376,12 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           setDownloadingReport(null);
           return;
         } else if (reportId === 'eway_csv') {
+          const { data: businessProfile } = await supabase
+            .from('business_profiles')
+            .select('*')
+            .eq('id', businessId)
+            .single();
+
           // Flatten items to match the Government Excel Utility format
           dataToExport = [];
           (invoices || []).forEach(inv => {
@@ -320,49 +391,58 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             const docDate = new Date(inv.date);
             const formattedDocDate = `${String(docDate.getDate()).padStart(2, '0')}/${String(docDate.getMonth() + 1).padStart(2, '0')}/${docDate.getFullYear()}`;
             
-            const transDocDate = ewayData.transDocDate ? new Date(ewayData.transDocDate) : null;
+            const transDocDate = (ewayData.trans_doc_date || ewayData.transDocDate) ? new Date(ewayData.trans_doc_date || ewayData.transDocDate) : null;
             const formattedTransDocDate = transDocDate ? `${String(transDocDate.getDate()).padStart(2, '0')}/${String(transDocDate.getMonth() + 1).padStart(2, '0')}/${transDocDate.getFullYear()}` : '';
 
             (inv.invoice_items || []).forEach((item: any) => {
-              const gstRate = item.products?.gst_rate || 0;
+              const gstRate = item.products?.gst_rate || item.gst_rate || 0;
               const isInterState = inv.is_inter_state;
 
               dataToExport.push({
-                'Supply Type': ewayData.supplyType || 'O',
-                'Sub Supply Type': ewayData.subSupplyType || '1',
-                'Document Type': 'INV',
-                'Document No': inv.invoice_number,
-                'Document Date': formattedDocDate,
-                'Other Party GSTIN': inv.customers?.gstin || 'URP',
-                'Other Party Name': inv.customers?.name || 'Walk-in',
-                'Dispatch From / Ship To - Address 1': inv.customers?.address || '',
-                'Dispatch From / Ship To - Address 2': '',
-                'Dispatch From / Ship To - Place': inv.customers?.city || '',
-                'Dispatch From / Ship To - Pincode': inv.customers?.pincode || '',
-                'Dispatch From / Ship To - State': inv.customers?.state || '',
-                'Product Name': item.products?.name || 'Product',
-                'Description': item.products?.description || '',
+                'Supply Type': getSupplyTypeText(ewayData.supply_type || ewayData.supplyType || 'O'),
+                'Sub Type': getSubSupplyTypeText(ewayData.sub_supply_type || ewayData.subSupplyType || '1'),
+                'Doc Type': 'Tax Invoice',
+                'Doc No': inv.invoice_number ? inv.invoice_number.replace(/^[0/\-]+/, '') || inv.invoice_number : '',
+                'Doc Date': formattedDocDate,
+                'Transaction Type': getTransactionTypeText(ewayData.transaction_type || ewayData.transactionType || '1'),
+                'From_OtherPartyName': businessProfile?.name || '',
+                'From_GSTIN': businessProfile?.gst_number || '',
+                'From_Address1': businessProfile?.address1 || '',
+                'From_Address2': businessProfile?.address2 || '',
+                'From_Place': businessProfile?.city || '',
+                'Dispatch_PinCode': businessProfile?.pincode || '',
+                'Bill From_State': getStateName(businessProfile?.state, businessProfile?.gst_number),
+                'Dispatch From_State': getStateName(businessProfile?.state, businessProfile?.gst_number),
+                'To_OtherPartyName': inv.customers?.name || 'Walk-in',
+                'To_GSTIN': inv.customers?.gstin || 'URP',
+                'To_Address1': inv.customers?.address || '',
+                'To_Address2': ewayData.to_addr2 || ewayData.toAddr2 || '',
+                'To_Place': inv.customers?.city || '',
+                'Ship To_Pin Code': inv.customers?.pincode || '',
+                'Bill To_State': getStateName(inv.customers?.state || inv.customer_state_code, inv.customers?.gstin),
+                'Ship To_State': getStateName(inv.customers?.state || inv.customer_state_code, inv.customers?.gstin),
+                'Product': item.products?.name || 'Product',
+                'Description': item.products?.description || item.products?.name || 'Product',
                 'HSN': item.products?.hsn_code || '',
-                'Quantity': item.quantity,
-                'Unit': 'NOS',
-                'Taxable Value': item.total_price,
-                'CGST Rate': !isInterState ? gstRate / 2 : 0,
-                'SGST Rate': !isInterState ? gstRate / 2 : 0,
-                'IGST Rate': isInterState ? gstRate : 0,
-                'CESS Rate': 0,
-                'Total Taxable Value': inv.subtotal || 0,
-                'CGST Amount': inv.cgst_amount || 0,
-                'SGST Amount': inv.sgst_amount || 0,
-                'IGST Amount': inv.igst_amount || 0,
+                'Unit': item.products?.unit || 'NOS',
+                'Qty': item.quantity,
+                'Assessable Value': item.total_price,
+                'Tax Rate (S+C+I+Cess+Cess Non Advol)': gstRate,
+                'CGST Amount': !isInterState ? (item.total_price * gstRate / 200).toFixed(2) : 0,
+                'SGST Amount': !isInterState ? (item.total_price * gstRate / 200).toFixed(2) : 0,
+                'IGST Amount': isInterState ? (item.total_price * gstRate / 100).toFixed(2) : 0,
                 'CESS Amount': 0,
-                'Transporter ID': ewayData.transporterId || '',
-                'Transporter Name': ewayData.transporterName || '',
-                'Transporter Doc No': ewayData.transDocNo || '',
-                'Transporter Doc Date': formattedTransDocDate,
-                'Vehicle No': ewayData.vehicleNo || '',
-                'Vehicle Type': ewayData.vehicleType || 'R',
-                'Trans Mode': ewayData.transMode || '1',
-                'Distance': ewayData.transDistance || '0'
+                'CESS Non Advol Amount': 0,
+                'Others': 0,
+                'Total Invoice Value': inv.total || 0,
+                'Trans Mode': getTransModeText(ewayData.trans_mode || ewayData.transMode || '1'),
+                'Distance (Km)': ewayData.trans_distance || ewayData.transDistance || '0',
+                'Trans Name': ewayData.transporter_name || ewayData.transporterName || '',
+                'Trans ID': ewayData.transporter_id || ewayData.transporterId || '',
+                'Trans DocNo': ewayData.trans_doc_no || ewayData.transDocNo || '',
+                'Trans Date': formattedTransDocDate,
+                'Vehicle No': ewayData.vehicle_no || ewayData.vehicleNo || '',
+                'Vehicle Type': getVehicleTypeText(ewayData.vehicle_type || ewayData.vehicleType || 'R')
               });
             });
           });

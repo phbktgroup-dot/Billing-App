@@ -441,9 +441,23 @@ app.post("/api/scan", async (req, res) => {
 
     res.json({ text: response.text });
   } catch (error: any) {
-    console.error("Scan API Error:", error.message);
+    let errorMessage = error.message || "An error occurred during scanning";
+    
+    // Try to parse the error message if it's a JSON string
+    try {
+      if (errorMessage.startsWith('{')) {
+        const parsed = JSON.parse(errorMessage);
+        if (parsed.error && parsed.error.message) {
+          errorMessage = parsed.error.message;
+        }
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+
+    console.error("Scan API Error:", errorMessage);
     res.status(error.status || 500).json({ 
-      error: error.message || "An error occurred during scanning",
+      error: errorMessage,
       details: error.details || []
     });
   }
