@@ -55,7 +55,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       title={title}
       icon={<AlertTriangle size={18} className={cn(confirmVariant === 'danger' ? "text-red-600" : confirmVariant === 'success' ? "text-emerald-600" : "text-primary")} />}
       footer={footer}
-      maxWidth="max-w-md"
+      maxWidth="max-w-sm"
     >
       <div className="py-4">
         <p className="text-slate-600 text-sm">{message}</p>

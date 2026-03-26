@@ -5,6 +5,7 @@
   --color-secondary: #8b5cf6; /* Violet */
   --color-accent: #10b981; /* Emerald */
   --color-background-soft: #f8fafc; /* Slate 50 */
+  --sidebar-width: 280px;
 }
 
 @layer base {

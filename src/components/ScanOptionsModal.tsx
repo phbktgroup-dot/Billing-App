@@ -27,7 +27,7 @@ export default function ScanOptionsModal({ onClose, onFileSelect }: ScanOptionsM
       title="Scan Invoice"
       icon={<Scan size={18} />}
       footer={footer}
-      maxWidth="max-w-none"
+      fullScreen={true}
     >
       <div className="flex flex-col items-center justify-center py-8">
         <div className="text-center mb-8">

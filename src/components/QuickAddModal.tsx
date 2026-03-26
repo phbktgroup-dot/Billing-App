@@ -57,7 +57,7 @@ export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAdd
       title={`Add New ${type === 'customer' ? 'Customer' : 'Product'}`}
       icon={type === 'customer' ? <UserPlus size={18} /> : <Package size={18} />}
       footer={footer}
-      maxWidth="max-w-none"
+      fullScreen={true}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {type === 'customer' ? (

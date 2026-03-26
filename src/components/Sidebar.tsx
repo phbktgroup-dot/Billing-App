@@ -92,6 +92,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     ? 'mobileOpen' 
     : (windowWidth < 1024 ? 'mobileClosed' : (isCollapsed ? 'collapsed' : 'expanded'));
 
+  useEffect(() => {
+    const width = (windowWidth >= 1024) 
+      ? (isCollapsed ? '80px' : '280px')
+      : '0px';
+    document.documentElement.style.setProperty('--sidebar-width', width);
+  }, [isCollapsed, windowWidth]);
+
   return (
     <>
       {/* Mobile Overlay */}

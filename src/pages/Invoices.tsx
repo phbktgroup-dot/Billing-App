@@ -28,6 +28,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
 import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
+import Drawer from '../components/Drawer';
 import { DateFilter } from '../components/DateFilter';
 import { STATE_CODES } from '../constants/stateCodes';
 
@@ -636,25 +637,23 @@ export default function Invoices() {
         </div>
       </div>
       {/* Preview Modal */}
-      {previewInvoice && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-base text-slate-900">Invoice Preview: {previewInvoice.invoice_number}</h3>
-              <button onClick={() => setPreviewInvoice(null)} className="text-slate-400 hover:text-slate-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="text-center py-12 text-slate-500">
-                <FileText size={48} className="mx-auto mb-4 opacity-20" />
-                <p className="text-xs">PDF Preview for {previewInvoice.invoice_number}</p>
-                <p className="text-[11px] mt-2">This would show the generated PDF.</p>
-              </div>
+      <Drawer
+        isOpen={!!previewInvoice}
+        onClose={() => setPreviewInvoice(null)}
+        title={previewInvoice ? `Invoice Preview: ${previewInvoice.invoice_number}` : 'Invoice Preview'}
+        icon={<FileText size={18} />}
+        fullScreen={true}
+      >
+        {previewInvoice && (
+          <div className="p-6">
+            <div className="text-center py-12 text-slate-500">
+              <FileText size={48} className="mx-auto mb-4 opacity-20" />
+              <p className="text-xs">PDF Preview for {previewInvoice.invoice_number}</p>
+              <p className="text-[11px] mt-2">This would show the generated PDF.</p>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Drawer>
       <ConfirmModal
         isOpen={deleteModalOpen}
         title={isBulkDelete ? "Bulk Delete Invoices" : "Delete Invoice"}

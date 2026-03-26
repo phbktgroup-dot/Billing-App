@@ -524,7 +524,7 @@ export default function Inventory() {
         onClose={() => setIsBulkEditModalOpen(false)}
         title={`Bulk Edit (${selectedProducts.length} items)`}
         icon={<Edit size={18} />}
-        maxWidth="max-w-none"
+        fullScreen={true}
         footer={
           <>
             <button 
@@ -607,7 +607,7 @@ export default function Inventory() {
         onClose={() => setIsModalOpen(false)}
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
         icon={<Package size={18} />}
-        maxWidth="max-w-none"
+        fullScreen={true}
         footer={
           <>
             <button 
@@ -740,7 +740,7 @@ export default function Inventory() {
         onClose={() => setShowStockHistory(false)}
         title="Recent Stock Movements"
         icon={<ArrowUpDown size={16} />}
-        maxWidth="max-w-none"
+        fullScreen={true}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.length === 0 ? (

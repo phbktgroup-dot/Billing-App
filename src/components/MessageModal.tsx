@@ -27,7 +27,7 @@ export default function MessageModal({ isOpen, onClose, title, message, type }: 
       title={title}
       icon={type === 'success' ? <CheckCircle className="text-emerald-500" size={18} /> : <AlertCircle className="text-red-500" size={18} />}
       footer={footer}
-      maxWidth="max-w-md"
+      maxWidth="max-w-sm"
     >
       <div className="py-4">
         <p className="text-slate-600 text-sm">{message}</p>

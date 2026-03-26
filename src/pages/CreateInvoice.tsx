@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import ScanOptionsModal from '../components/ScanOptionsModal';
+import Drawer from '../components/Drawer';
 import { 
   Plus, 
   Trash2, 
@@ -111,6 +112,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   const [showScannedReview, setShowScannedReview] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [showSeriesList, setShowSeriesList] = useState(false);
+  const [showCustomerList, setShowCustomerList] = useState(false);
   const [isScannedInvoiceNumberFound, setIsScannedInvoiceNumberFound] = useState(false);
   const [includeEwayBill, setIncludeEwayBill] = useState(false);
 
@@ -1329,7 +1331,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="relative">
                       <input 
                         type="text"
-                        className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[9px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={invoiceNumber}
                         onFocus={() => setShowSeriesList(true)}
                         onBlur={() => {
@@ -1404,8 +1406,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="text" 
                         placeholder="Search or enter name"
-                        className="w-full pl-7 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.name || ''}
+                        onFocus={() => setShowCustomerList(true)}
+                        onBlur={() => {
+                          setTimeout(() => setShowCustomerList(false), 200);
+                        }}
                         onChange={e => {
                           const val = e.target.value;
                           handleCustomerChange('name', val);
@@ -1426,8 +1432,56 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                             handleCustomerChange('id', '');
                           }
                         }}
-                        list="customer-list"
                       />
+                      
+                      {/* Custom Customer Dropdown */}
+                      {showCustomerList && customers.length > 0 && (
+                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl transition-all max-h-48 overflow-y-auto">
+                          <div className="p-1">
+                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50">
+                              Select Customer
+                            </div>
+                            {customers
+                              .filter(c => c.name.toLowerCase().includes((customer.name || '').toLowerCase()))
+                              .map(c => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between group"
+                                  onClick={() => {
+                                    setCustomer({
+                                      id: c.id,
+                                      name: c.name,
+                                      phone: c.phone || '',
+                                      gst: c.gstin || '',
+                                      address1: c.address1 || c.address || '',
+                                      address2: c.address2 || '',
+                                      city: c.city || '',
+                                      pincode: c.pincode || '',
+                                      stateCode: c.state ? (Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === c.state.toLowerCase() || code === c.state)?.[0] || '') : ''
+                                    });
+                                    setShowCustomerList(false);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-900 group-hover:text-primary transition-colors">{c.name}</span>
+                                    {c.phone && <span className="text-[8px] text-slate-500 font-medium">{c.phone}</span>}
+                                  </div>
+                                  {c.gstin && (
+                                    <span className="text-[7px] font-bold text-slate-400 bg-slate-50 px-1 py-0.5 rounded group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                                      {c.gstin}
+                                    </span>
+                                  )}
+                                </button>
+                              ))}
+                            {customers.filter(c => c.name.toLowerCase().includes((customer.name || '').toLowerCase())).length === 0 && (
+                              <div className="px-2 py-3 text-center">
+                                <p className="text-[9px] text-slate-400 font-medium italic">No matching customers</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-0.5">
@@ -1436,7 +1490,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input 
                         type="date" 
-                        className="w-full pl-7 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={new Date().toISOString().split('T')[0]}
                         readOnly
                       />
@@ -1450,7 +1504,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         type="text" 
                         placeholder="Contact"
                         maxLength={10}
-                        className="w-full pl-7 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.phone || ''}
                         onChange={e => {
                           const val = e.target.value.replace(/\D/g, '');
@@ -1465,7 +1519,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       type="text" 
                       placeholder="GSTIN"
                       maxLength={15}
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] uppercase text-slate-900 placeholder-slate-400 font-medium"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] uppercase text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.gst || ''}
                       onChange={e => handleCustomerChange('gst', e.target.value.toUpperCase())}
                     />
@@ -1479,7 +1533,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="Building, Street, etc."
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.address1 || ''}
                       onChange={e => handleCustomerChange('address1', e.target.value)}
                     />
@@ -1489,7 +1543,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="Area, Locality, etc."
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.address2 || ''}
                       onChange={e => handleCustomerChange('address2', e.target.value)}
                     />
@@ -1499,7 +1553,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="City"
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.city || ''}
                       onChange={e => handleCustomerChange('city', e.target.value)}
                     />
@@ -1511,7 +1565,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         type="text" 
                         placeholder="Pincode"
                         maxLength={6}
-                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.pincode || ''}
                         onChange={e => {
                           const val = e.target.value.replace(/\D/g, '');
@@ -1522,7 +1576,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                       <select
-                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={customer.stateCode || ''}
                         onChange={e => handleCustomerChange('stateCode', e.target.value)}
                       >
@@ -1584,7 +1638,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         type="text" 
                         placeholder="SKU"
                         readOnly
-                        className="w-full px-2 py-1.5 bg-slate-200/50 border border-slate-200 rounded-lg outline-none text-[11px] transition-all text-slate-600 font-bold"
+                        className="w-full px-2 py-1.5 bg-slate-200/50 border border-slate-200 rounded-lg outline-none text-[11px] transition-all text-slate-600 font-bold placeholder:text-[11px]"
                         value={newItem.sku || ''}
                       />
                     </div>
@@ -1595,7 +1649,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="number" 
                         placeholder="0"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={newItem.quantity === '' ? '' : newItem.quantity}
                         onChange={e => updateNewItem('quantity', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
@@ -1605,7 +1659,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="number" 
                         placeholder="0.00"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={newItem.rate === '' ? '' : newItem.rate}
                         onChange={e => updateNewItem('rate', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
@@ -1615,7 +1669,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="number" 
                         placeholder="0"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={newItem.discount === '' || newItem.discount === undefined ? '' : newItem.discount}
                         onChange={e => updateNewItem('discount', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
@@ -1760,7 +1814,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <input 
                             type="text" 
                             placeholder="12-digit E-way Bill No."
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all placeholder:text-[11px]"
                             value={ewayData.ewayBillNo}
                             onChange={e => setEwayData({...ewayData, ewayBillNo: e.target.value})}
                           />
@@ -2162,7 +2216,19 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
           setItems(finalData.items);
           if (finalData.invoiceNumber) {
-            setInvoiceNumber(finalData.invoiceNumber);
+            const scannedInvoiceNumber = finalData.invoiceNumber;
+            const matchingSeries = invoiceSeries.find(s => s.prefix && scannedInvoiceNumber.startsWith(s.prefix));
+            
+            if (matchingSeries) {
+              setInvoiceNumber(scannedInvoiceNumber);
+              setSelectedSeriesId(matchingSeries.id);
+            } else {
+              setInvoiceNumber(`INV-${scannedInvoiceNumber}`);
+              const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
+              if (invSeries) {
+                setSelectedSeriesId(invSeries.id);
+              }
+            }
             setIsScannedInvoiceNumberFound(true);
           }
           setShowScannedReview(false);
@@ -2230,11 +2296,32 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         )}
       </AnimatePresence>
 
-      <datalist id="customer-list">
-        {customers.map(c => (
-          <option key={c.id} value={c.name} />
-        ))}
-      </datalist>
+      {/* Saving Overlay */}
+      <AnimatePresence>
+        {isSaving && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-xs w-full mx-4"
+            >
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">Saving Invoice</h3>
+              <p className="text-slate-500 text-center text-[11px] font-medium">
+                Please wait while we secure your data...
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -2260,146 +2347,15 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
     }
   }, [data]);
 
-  if (!isOpen || !editedData) return null;
-
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-      >
-        <div className="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h3 className="text-base font-black text-slate-900">Review Scanned Data</h3>
-            <p className="text-[9px] text-slate-500 font-medium">Verify and adjust extracted information</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
-            <X size={16} className="text-slate-400" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-3 space-y-4">
-          {/* Customer Section */}
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-primary">
-                <UserPlus size={14} strokeWidth={2.5} />
-                <h4 className="text-[11px] font-bold uppercase tracking-wider">Customer Information</h4>
-              </div>
-              {!editedData.customer.id && (
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Customer</span>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              <div className="space-y-0.5">
-                <label className="text-[8px] font-bold text-slate-500 uppercase">Name</label>
-                <input 
-                  type="text" 
-                  className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
-                  value={editedData.customer.name}
-                  onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, name: e.target.value } })}
-                />
-              </div>
-              <div className="space-y-0.5">
-                <label className="text-[8px] font-bold text-slate-500 uppercase">Phone</label>
-                <input 
-                  type="text" 
-                  className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
-                  value={editedData.customer.phone}
-                  onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, phone: e.target.value } })}
-                />
-              </div>
-              <div className="space-y-0.5">
-                <label className="text-[8px] font-bold text-slate-500 uppercase">GSTIN</label>
-                <input 
-                  type="text" 
-                  className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
-                  value={editedData.customer.gst}
-                  onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, gst: e.target.value } })}
-                />
-              </div>
-              <div className="space-y-0.5 md:col-span-2 lg:col-span-3">
-                <label className="text-[8px] font-bold text-slate-500 uppercase">Address</label>
-                <input 
-                  type="text" 
-                  className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
-                  value={editedData.customer.address1}
-                  onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, address1: e.target.value } })}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Items Section */}
-          <section className="space-y-2">
-            <div className="flex items-center space-x-2 text-primary">
-              <Package size={14} strokeWidth={2.5} />
-              <h4 className="text-[11px] font-bold uppercase tracking-wider">Scanned Items</h4>
-            </div>
-            <div className="border border-slate-100 rounded-xl overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase">Particular</th>
-                    <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-16 text-center">Qty</th>
-                    <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-20">Rate</th>
-                    <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-24 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {editedData.items.map((item: any, idx: number) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-2 py-1.5">
-                        <input 
-                          type="text" 
-                          className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0"
-                          value={item.name}
-                          onChange={e => {
-                            const newItems = [...editedData.items];
-                            newItems[idx].name = e.target.value;
-                            setEditedData({ ...editedData, items: newItems });
-                          }}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input 
-                          type="number" 
-                          className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0 text-center"
-                          value={item.quantity}
-                          onChange={e => {
-                            const newItems = [...editedData.items];
-                            newItems[idx].quantity = Number(e.target.value);
-                            newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate * (1 + (newItems[idx].gstRate || 18) / 100);
-                            setEditedData({ ...editedData, items: newItems });
-                          }}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input 
-                          type="number" 
-                          className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0"
-                          value={item.rate}
-                          onChange={e => {
-                            const newItems = [...editedData.items];
-                            newItems[idx].rate = Number(e.target.value);
-                            newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate * (1 + (newItems[idx].gstRate || 18) / 100);
-                            setEditedData({ ...editedData, items: newItems });
-                          }}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5 text-right text-[11px] font-black text-primary">
-                        {formatCurrency(item.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end space-x-2">
+    <Drawer
+      isOpen={isOpen && !!editedData}
+      onClose={onClose}
+      title="Review Scanned Data"
+      icon={<Scan size={18} />}
+      fullScreen={true}
+      footer={
+        <>
           <button 
             onClick={onClose}
             className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-[11px] font-bold hover:bg-slate-100 transition-all"
@@ -2412,8 +2368,128 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
           >
             Add to Invoice
           </button>
-        </div>
-      </motion.div>
-    </div>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {/* Customer Section */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-primary">
+              <UserPlus size={14} strokeWidth={2.5} />
+              <h4 className="text-[11px] font-bold uppercase tracking-wider">Customer Information</h4>
+            </div>
+            {!editedData.customer.id && (
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Customer</span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-bold text-slate-500 uppercase">Name</label>
+              <input 
+                type="text" 
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                value={editedData.customer.name}
+                onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, name: e.target.value } })}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-bold text-slate-500 uppercase">Phone</label>
+              <input 
+                type="text" 
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                value={editedData.customer.phone}
+                onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, phone: e.target.value } })}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-bold text-slate-500 uppercase">GSTIN</label>
+              <input 
+                type="text" 
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                value={editedData.customer.gst}
+                onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, gst: e.target.value } })}
+              />
+            </div>
+            <div className="space-y-0.5 md:col-span-2 lg:col-span-3">
+              <label className="text-[8px] font-bold text-slate-500 uppercase">Address</label>
+              <input 
+                type="text" 
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                value={editedData.customer.address1}
+                onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, address1: e.target.value } })}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Items Section */}
+        <section className="space-y-2">
+          <div className="flex items-center space-x-2 text-primary">
+            <Package size={14} strokeWidth={2.5} />
+            <h4 className="text-[11px] font-bold uppercase tracking-wider">Scanned Items</h4>
+          </div>
+          <div className="border border-slate-100 rounded-xl overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase">Particular</th>
+                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-16 text-center">Qty</th>
+                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-20">Rate</th>
+                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-24 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {editedData.items.map((item: any, idx: number) => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2 py-1.5">
+                      <input 
+                        type="text" 
+                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0"
+                        value={item.name}
+                        onChange={e => {
+                          const newItems = [...editedData.items];
+                          newItems[idx].name = e.target.value;
+                          setEditedData({ ...editedData, items: newItems });
+                        }}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input 
+                        type="number" 
+                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0 text-center"
+                        value={item.quantity}
+                        onChange={e => {
+                          const newItems = [...editedData.items];
+                          newItems[idx].quantity = Number(e.target.value);
+                          newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate * (1 + (newItems[idx].gstRate || 18) / 100);
+                          setEditedData({ ...editedData, items: newItems });
+                        }}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input 
+                        type="number" 
+                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0"
+                        value={item.rate}
+                        onChange={e => {
+                          const newItems = [...editedData.items];
+                          newItems[idx].rate = Number(e.target.value);
+                          newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate * (1 + (newItems[idx].gstRate || 18) / 100);
+                          setEditedData({ ...editedData, items: newItems });
+                        }}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-right text-[11px] font-black text-primary">
+                      {formatCurrency(item.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </Drawer>
   );
-}
+};
