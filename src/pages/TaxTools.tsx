@@ -16,13 +16,15 @@ import {
   FileUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateProfitLossExcel } from '../lib/excelGenerator';
 import { generateGST1Zip } from '../lib/zipGenerator';
 import { generateITRJson, validateITRData } from '../lib/itrGenerator';
 import { STATE_CODES } from '../constants/stateCodes';
+import { DateFilter } from '../components/DateFilter';
+import PageHeader from '../components/PageHeader';
 
 import { generateEwayJSON } from '../lib/ewayGenerator';
 
@@ -106,6 +108,15 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     netProfit: 0
   });
 
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
   const businessId = profile?.business_id;
 
   React.useEffect(() => {
@@ -113,7 +124,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       fetchFinancialData();
       loadPortalDocs();
     }
-  }, [businessId, type]);
+  }, [businessId, type, filterType, customRange, day, year]);
 
   const loadPortalDocs = () => {
     if (!businessId) return;
@@ -158,11 +169,28 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
 
   const fetchFinancialData = async () => {
     if (!businessId) return;
+    const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+    
     try {
+      let invoicesQuery = supabase.from('invoices').select('total, date').eq('business_id', businessId);
+      let purchasesQuery = supabase.from('purchases').select('total_amount, date').eq('business_id', businessId);
+      let expensesQuery = supabase.from('expenses').select('amount, date').eq('business_id', businessId);
+
+      if (startDate) {
+        invoicesQuery = invoicesQuery.gte('date', startDate.toISOString());
+        purchasesQuery = purchasesQuery.gte('date', startDate.toISOString());
+        expensesQuery = expensesQuery.gte('date', startDate.toISOString());
+      }
+      if (endDate) {
+        invoicesQuery = invoicesQuery.lte('date', endDate.toISOString());
+        purchasesQuery = purchasesQuery.lte('date', endDate.toISOString());
+        expensesQuery = expensesQuery.lte('date', endDate.toISOString());
+      }
+
       const [invoicesRes, purchasesRes, expensesRes] = await Promise.all([
-        supabase.from('invoices').select('total').eq('business_id', businessId),
-        supabase.from('purchases').select('total_amount').eq('business_id', businessId),
-        supabase.from('expenses').select('amount').eq('business_id', businessId)
+        invoicesQuery,
+        purchasesQuery,
+        expensesQuery
       ]);
 
       const totalSales = invoicesRes.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
@@ -265,20 +293,27 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     setDownloadingReport(reportId);
     try {
       let dataToExport: any[] = [];
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
 
       // Fetch actual data based on report type
       if (type === 'gst') {
         if (reportId === 'gstr1') {
-          const { data } = await supabase
+          let query = supabase
             .from('invoices')
             .select('invoice_number, date, customer_name, customer_gstin, total, tax_amount')
             .eq('business_id', businessId);
+          if (startDate) query = query.gte('date', startDate);
+          if (endDate) query = query.lte('date', endDate);
+          const { data } = await query;
           dataToExport = data || [];
         } else if (reportId === 'hsn') {
-          const { data } = await supabase
+          let query = supabase
             .from('invoice_items')
-            .select('products(name, sku, gst_rate), quantity, total_price')
-            .limit(100);
+            .select('products(name, sku, gst_rate), quantity, total_price, invoices!inner(date, business_id)')
+            .eq('invoices.business_id', businessId);
+          if (startDate) query = query.gte('invoices.date', startDate);
+          if (endDate) query = query.lte('invoices.date', endDate);
+          const { data } = await query.limit(100);
           
           // Flatten data
           dataToExport = (data || []).map((item: any) => ({
@@ -294,20 +329,20 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         }
       } else if (type === 'itr') {
         // Fetch financial data to populate ITR forms
-        const { data: invoices } = await supabase
-          .from('invoices')
-          .select('total')
-          .eq('business_id', businessId);
+        let invoicesQuery = supabase.from('invoices').select('total').eq('business_id', businessId);
+        if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate);
+        if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate);
+        const { data: invoices } = await invoicesQuery;
           
-        const { data: purchases } = await supabase
-          .from('purchases')
-          .select('total_amount')
-          .eq('business_id', businessId);
+        let purchasesQuery = supabase.from('purchases').select('total_amount').eq('business_id', businessId);
+        if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate);
+        if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate);
+        const { data: purchases } = await purchasesQuery;
           
-        const { data: expenses } = await supabase
-          .from('expenses')
-          .select('amount')
-          .eq('business_id', businessId);
+        let expensesQuery = supabase.from('expenses').select('amount').eq('business_id', businessId);
+        if (startDate) expensesQuery = expensesQuery.gte('date', startDate);
+        if (endDate) expensesQuery = expensesQuery.lte('date', endDate);
+        const { data: expenses } = await expensesQuery;
 
         const totalSales = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
         const totalPurchases = purchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
@@ -338,10 +373,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         setDownloadingReport(null);
         return; // Exit early since we handled the download
       } else if (type === 'eway') {
-        const { data: invoices } = await supabase
+        let invoicesQuery = supabase
           .from('invoices')
           .select('*, customers(*), invoice_items(*, products(*))')
           .eq('business_id', businessId);
+        if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate);
+        if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate);
+        const { data: invoices } = await invoicesQuery;
 
         const { data: ewayBills } = await supabase
           .from('eway_bills')
@@ -530,8 +568,12 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   const handleGenerateAll = async () => {
     setIsGenerating(true);
     try {
-      // Just download the first available report as a demo of "Export All"
-      await handleDownloadReport(current.reports[0].id, current.reports[0].name, current.reports[0].format);
+      // Download all available reports for the current tool
+      for (const report of current.reports) {
+        await handleDownloadReport(report.id, report.name, report.format);
+        // Small delay to prevent browser blocking multiple downloads
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -540,17 +582,28 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className={cn("p-4 rounded-2xl", current.bg, current.color)}>
-            <current.icon size={32} />
+      <PageHeader
+        title={
+          <div className="flex items-center space-x-3">
+            <div className={cn("p-2 rounded-xl", current.bg, current.color)}>
+              <current.icon size={24} />
+            </div>
+            <span>{current.title}</span>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">{current.title}</h1>
-            <p className="text-slate-500">{current.description}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3">
+        }
+        description={current.description}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+          />
           <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center">
             <Info size={18} className="mr-2" />
             Help Guide
@@ -573,7 +626,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             Export All Data
           </button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Reports List */}
@@ -581,52 +634,61 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           <div className="glass-card overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-900">Available Reports</h3>
-              <span className="text-xs font-bold text-slate-400 uppercase">FY 2025-26</span>
+              <span className="text-xs font-bold text-slate-400 uppercase">
+                {filterType === 'thisYear' ? `FY ${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
+              </span>
             </div>
             <div className="divide-y divide-slate-100">
               {current.reports.map((report, i) => (
                 <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                      <FileSpreadsheet size={20} />
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                      <FileSpreadsheet size={24} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{report.name}</p>
-                      <p className="text-xs text-slate-500">Format: {report.format}</p>
+                      <p className="text-base font-bold text-slate-900">{report.name}</p>
+                      <div className="flex items-center space-x-3 mt-1">
+                        <span className="text-xs text-slate-500 flex items-center">
+                          <FileText size={12} className="mr-1" />
+                          {report.format}
+                        </span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span className="text-xs text-slate-500">Updated 2h ago</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-6">
                     <span className={cn(
-                      "flex items-center text-[10px] font-bold uppercase px-2 py-1 rounded-lg",
+                      "flex items-center text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
                       report.status === 'Ready' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
                     )}>
                       {report.status === 'Ready' ? <CheckCircle2 size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
                       {report.status}
                     </span>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                       <button 
                         onClick={() => handleDownloadReport(report.id, report.name, report.format)}
                         disabled={downloadingReport === report.id}
-                        className="text-slate-400 hover:text-primary transition-colors disabled:opacity-50"
+                        className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all disabled:opacity-50 shadow-sm"
                         title={`Download ${report.format}`}
                       >
                         {downloadingReport === report.id ? (
                           <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
                         ) : (
-                          <Download size={20} />
+                          <Download size={18} />
                         )}
                       </button>
                       {type !== 'itr' && (
                         <button 
                           onClick={() => handleDownloadReport(report.id, report.name, 'Excel')}
                           disabled={downloadingReport === report.id}
-                          className="text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                          className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-600 transition-all disabled:opacity-50 shadow-sm"
                           title="Download Excel"
                         >
                           {downloadingReport === report.id ? (
                             <div className="w-5 h-5 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
                           ) : (
-                            <FileText size={20} />
+                            <FileArchive size={18} />
                           )}
                         </button>
                       )}
@@ -746,7 +808,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             <div className="glass-card p-6 border-primary/20 bg-primary/5">
               <h4 className="font-bold text-slate-900 mb-4 flex items-center">
                 <Calculator size={18} className="mr-2 text-primary" />
-                Tax Estimation (FY 25-26)
+                Tax Estimation
               </h4>
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-sm">
@@ -789,6 +851,52 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           </div>
 
           <div className="glass-card p-6">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+              <Calculator size={18} className="mr-2 text-primary" />
+              Tax Calendar
+            </h4>
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 flex-shrink-0 text-xs font-bold">
+                  20
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900">GSTR-3B Filing</p>
+                  <p className="text-[10px] text-slate-500">Monthly return deadline</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 flex-shrink-0 text-xs font-bold">
+                  11
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900">GSTR-1 Filing</p>
+                  <p className="text-[10px] text-slate-500">Sales return deadline</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0 text-xs font-bold">
+                  15
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900">TDS Payment</p>
+                  <p className="text-[10px] text-slate-500">Monthly deposit deadline</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
+            <h4 className="font-bold text-slate-900 mb-3 flex items-center">
+              <FileCheck size={18} className="mr-2 text-primary" />
+              Pro Tax Tip
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed italic">
+              "Always reconcile your GSTR-2B with your purchase register before claiming ITC to avoid notices from the tax department."
+            </p>
+          </div>
+
+          <div className="glass-card p-6">
             <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
             <div className="space-y-2">
               <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
@@ -804,6 +912,43 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                 <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* How it Works Section - Best Design Improvement */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+          <Info size={24} className="mr-2 text-primary" />
+          How {current.title} Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+              <span className="font-bold">01</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Select Period</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Use the date filter at the top to select the specific month, year, or custom range for your reports.
+            </p>
+          </div>
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
+              <span className="font-bold">02</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Verify Data</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Check the status of each report. "Ready" means all required data is available for the selected period.
+            </p>
+          </div>
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+              <span className="font-bold">03</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Download & File</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Download your reports in CSV or JSON format and upload them directly to the government portal.
+            </p>
           </div>
         </div>
       </div>

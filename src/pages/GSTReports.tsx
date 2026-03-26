@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Download, FileText, PieChart, Table as TableIcon, Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { 
+  Download, 
+  FileText, 
+  PieChart, 
+  Table as TableIcon, 
+  Loader2, 
+  AlertCircle, 
+  CheckCircle2, 
+  Clock,
+  Calculator,
+  ArrowRight,
+  FileCheck,
+  Info
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import PageHeader from '../components/PageHeader';
@@ -987,10 +1000,22 @@ export default function GSTReports() {
     );
   };
 
+  const totalTaxable = invoices.reduce((sum, inv) => sum + (inv.subtotal || 0), 0);
+  const totalOutputTax = invoices.reduce((sum, inv) => sum + (inv.tax_amount || 0), 0);
+  const totalInputTax = purchases.reduce((sum, pur) => sum + (pur.tax_amount || 0), 0);
+  const netGstPayable = Math.max(0, totalOutputTax - totalInputTax);
+
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="GST Compliance Reports" 
+        title={
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <FileCheck size={24} />
+            </div>
+            <span>GST Compliance Reports</span>
+          </div>
+        }
         description="Generate and download GSTR-1, GSTR-3B, and GSTR-2A reports for filing."
       >
         <div className="flex items-center space-x-3">
@@ -1014,36 +1039,155 @@ export default function GSTReports() {
         </div>
       </PageHeader>
 
-      {/* Tabs */}
-      <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-fit">
-        {(['GSTR-1', 'GSTR-3B', 'GSTR-2A'] as GSTReportType[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-[11px] font-bold transition-all",
-              activeTab === tab 
-                ? "bg-white text-primary shadow-sm" 
-                : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 space-y-6">
+          {/* Tabs */}
+          <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-fit">
+            {(['GSTR-1', 'GSTR-3B', 'GSTR-2A'] as GSTReportType[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-[11px] font-bold transition-all",
+                  activeTab === tab 
+                    ? "bg-white text-primary shadow-sm" 
+                    : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="glass-card p-12 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
+              <p className="text-slate-500 text-xs font-medium">Generating report data...</p>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'GSTR-1' && renderGSTR1Analysis()}
+              {activeTab === 'GSTR-3B' && renderGSTR3B()}
+              {activeTab === 'GSTR-2A' && renderGSTR2A()}
+            </>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <div className="glass-card p-6 border-primary/20 bg-primary/5">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+              <Calculator size={18} className="mr-2 text-primary" />
+              GST Summary
+            </h4>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Output Tax</span>
+                <span className="font-bold text-slate-900">{formatCurrency(totalOutputTax)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Input Tax (ITC)</span>
+                <span className="font-bold text-emerald-600">{formatCurrency(totalInputTax)}</span>
+              </div>
+              <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                <span className="font-bold text-slate-900">Net Payable</span>
+                <span className="text-xl font-bold text-primary">{formatCurrency(netGstPayable)}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 italic">
+                *Estimated based on current period data. Final liability depends on portal reconciliation.
+              </p>
+            </div>
+          </div>
+
+          <div className="glass-card p-6">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+              <Clock size={18} className="mr-2 text-primary" />
+              GST Calendar
+            </h4>
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 flex-shrink-0 text-xs font-bold">
+                  11
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900">GSTR-1</p>
+                  <p className="text-[10px] text-slate-500">Monthly sales return</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 flex-shrink-0 text-xs font-bold">
+                  20
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900">GSTR-3B</p>
+                  <p className="text-[10px] text-slate-500">Monthly payment return</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
+            <h4 className="font-bold text-slate-900 mb-3 flex items-center">
+              <FileCheck size={18} className="mr-2 text-primary" />
+              Pro Tip
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed italic">
+              "Download the GSTR-2A report and compare it with your purchase invoices to ensure you are claiming the correct ITC."
+            </p>
+          </div>
+
+          <div className="glass-card p-6">
+            <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
+            <div className="space-y-2">
+              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                Reconcile ITC
+                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+              </button>
+              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                View HSN Summary
+                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="glass-card p-12 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
-          <p className="text-slate-500 text-xs font-medium">Generating report data...</p>
+      {/* How it Works Section */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+          <Info size={24} className="mr-2 text-primary" />
+          How GST Reporting Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+              <span className="font-bold">01</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Sync Invoices</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Ensure all your sales and purchase invoices are entered for the selected period.
+            </p>
+          </div>
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
+              <span className="font-bold">02</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Verify Analysis</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Review the GSTR-1 and GSTR-3B summaries to verify taxable values and tax amounts.
+            </p>
+          </div>
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+              <span className="font-bold">03</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Download ZIP</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Download the reports as ZIP containing CSV files ready for the GST Offline Tool.
+            </p>
+          </div>
         </div>
-      ) : (
-        <>
-          {activeTab === 'GSTR-1' && renderGSTR1Analysis()}
-          {activeTab === 'GSTR-3B' && renderGSTR3B()}
-          {activeTab === 'GSTR-2A' && renderGSTR2A()}
-        </>
-      )}
+      </div>
     </div>
   );
 }

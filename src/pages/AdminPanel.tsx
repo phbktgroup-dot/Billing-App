@@ -955,11 +955,11 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Add User Modal */}
       <Drawer
         isOpen={showAddUser}
         onClose={() => setShowAddUser(false)}
         title="Create New User"
+        maxWidth="max-w-2xl"
         icon={<UserPlus size={18} />}
         footer={
           <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
@@ -982,63 +982,86 @@ export default function AdminPanel() {
       >
         <div className="p-6">
           <form onSubmit={handleCreateUser} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
-              <input 
-                type="text" 
-                required
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
-                placeholder="Jane Smith"
-                value={newUser.name}
-                onChange={e => setNewUser({...newUser, name: e.target.value})}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Users size={14} />
+                  </div>
+                  <input 
+                    type="text" 
+                    required
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all placeholder:text-slate-400" 
+                    placeholder="Jane Smith"
+                    value={newUser.name}
+                    onChange={e => setNewUser({...newUser, name: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Mail size={14} />
+                  </div>
+                  <input 
+                    type="email" 
+                    required
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all placeholder:text-slate-400" 
+                    placeholder="jane@phbkt.com"
+                    value={newUser.email}
+                    onChange={e => setNewUser({...newUser, email: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Key size={14} />
+                  </div>
+                  <input 
+                    type="password" 
+                    required
+                    minLength={6}
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all placeholder:text-slate-400" 
+                    placeholder="••••••••"
+                    value={newUser.password}
+                    onChange={e => setNewUser({...newUser, password: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Role</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Shield size={14} />
+                  </div>
+                  <select 
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all appearance-none"
+                    value={newUser.role}
+                    onChange={e => setNewUser({...newUser, role: e.target.value})}
+                  >
+                    {getRoleOptions().map(role => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                    <MoreVertical size={14} className="rotate-90" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email Address</label>
-              <input 
-                type="email" 
-                required
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
-                placeholder="jane@phbkt.com"
-                value={newUser.email}
-                onChange={e => setNewUser({...newUser, email: e.target.value})}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Password</label>
-              <input 
-                type="password" 
-                required
-                minLength={6}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
-                placeholder="••••••••"
-                value={newUser.password}
-                onChange={e => setNewUser({...newUser, password: e.target.value})}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Role</label>
-              <select 
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                value={newUser.role}
-                onChange={e => setNewUser({...newUser, role: e.target.value})}
-              >
-                {getRoleOptions().map(role => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </form>
-      </div>
-    </Drawer>
+          </form>
+        </div>
+      </Drawer>
 
-      {/* Edit User Modal */}
       <Drawer
         isOpen={!!editingUser}
         onClose={() => setEditingUser(null)}
         title="Edit User"
+        maxWidth="max-w-2xl"
         icon={<Edit2 size={18} />}
         footer={
           <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
@@ -1062,43 +1085,61 @@ export default function AdminPanel() {
         {editingUser && (
           <div className="p-6">
             <form onSubmit={handleUpdateUser} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all" 
-                  value={editingUser.name}
-                  onChange={e => setEditingUser({...editingUser, name: e.target.value})}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <Users size={14} />
+                    </div>
+                    <input 
+                      type="text" 
+                      required
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all placeholder:text-slate-400" 
+                      value={editingUser.name}
+                      onChange={e => setEditingUser({...editingUser, name: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email Address</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <Mail size={14} />
+                    </div>
+                    <input 
+                      type="email" 
+                      disabled
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-500 cursor-not-allowed" 
+                      value={editingUser.email}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Role</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <Shield size={14} />
+                    </div>
+                    <select 
+                      className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all appearance-none"
+                      value={editingUser.role}
+                      onChange={e => setEditingUser({...editingUser, role: e.target.value})}
+                    >
+                      {getRoleOptions().map(role => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                      <MoreVertical size={14} className="rotate-90" />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Email Address</label>
-                <input 
-                  type="email" 
-                  disabled
-                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-[10px] text-slate-500 cursor-not-allowed" 
-                  value={editingUser.email}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Role</label>
-                <select 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
-                  value={editingUser.role}
-                  onChange={e => setEditingUser({...editingUser, role: e.target.value})}
-                >
-                  {getRoleOptions().map(role => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-    </Drawer>
+            </form>
+          </div>
+        )}
+      </Drawer>
 
       {/* Add Notification Modal */}
       <Drawer

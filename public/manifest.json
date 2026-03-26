@@ -1,7 +1,7 @@
 {
-  "name": "PHBKT Group Limited",
-  "short_name": "PHBKT",
-  "description": "Enterprise Business Management Suite",
+  "name": "Billing pro+",
+  "short_name": "Billing pro+",
+  "description": "Professional Billing and Management Suite",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   PlusCircle, 
@@ -21,7 +21,8 @@ import {
   ChevronRight,
   X,
   Receipt,
-  HelpCircle
+  HelpCircle,
+  Menu
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -59,6 +60,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showTopMenu, setShowTopMenu] = useState(false);
+  const topMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (topMenuRef.current && !topMenuRef.current.contains(event.target as Node)) {
+        setShowTopMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
@@ -120,38 +133,39 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           !isOpen && "lg:translate-x-0"
         )}
       >
-        {/* Logo Section */}
+        {/* Logo Section / Top Left Menu */}
         <div className={cn(
-          "h-20 flex items-center border-b border-slate-100 transition-all duration-300",
+          "h-20 flex items-center border-b border-slate-100 transition-all duration-300 relative",
           (isCollapsed && !isOpen) ? "justify-center px-0" : "justify-between px-6"
-        )}>
-          <div className={cn(
-            "flex items-center overflow-hidden transition-all duration-300",
-            (isCollapsed && !isOpen) ? "justify-center" : "gap-3"
-          )}>
-            {settingsLoading ? (
-              <div className="w-10 h-10 bg-slate-100 rounded-xl animate-pulse shrink-0" />
-            ) : appSettings?.logo_url ? (
-              <img 
-                src={appSettings.logo_url} 
-                alt="Logo" 
-                className="w-10 h-10 object-contain rounded-xl shrink-0"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0">
-                P
-              </div>
-            )}
-            {(!isCollapsed || isOpen) && (
-              <motion.span 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="font-bold text-sm text-primary truncate"
-              >
-                {appSettings?.app_name || 'PHBKT Billing Pro+'}
-              </motion.span>
-            )}
+        )} ref={topMenuRef}>
+          <div className="flex items-center">
+            <button 
+              onClick={() => setShowTopMenu(!showTopMenu)}
+              className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              <Menu size={20} />
+            </button>
+
+            <AnimatePresence>
+              {showTopMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="absolute top-full left-4 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 z-[100] p-2 overflow-hidden"
+                >
+                  {['File', 'Edit', 'View', 'Help'].map((item) => (
+                    <button
+                      key={item}
+                      className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors group"
+                    >
+                      <span>{item}</span>
+                      <ChevronRight size={14} className="text-slate-400 group-hover:text-primary transition-colors" />
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           
           {/* Mobile Close Button */}

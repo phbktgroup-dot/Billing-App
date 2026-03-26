@@ -11,13 +11,16 @@ import {
   Table as TableIcon,
   ChevronRight,
   Plus,
-  Trash2
+  Trash2,
+  Calculator,
+  Info
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { cn, getDateRange } from '../lib/utils';
+import PageHeader from '../components/PageHeader';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
-import { cn } from '../lib/utils';
 
 type TabType = 'balance-sheet' | 'annexure-a' | 'annexure-b' | 'profit-loss';
 
@@ -261,6 +264,23 @@ export default function ITRReport() {
     if (y.length === 2) return (num + 1).toString().padStart(2, '0');
     return (num + 1).toString();
   }).join('-');
+
+  const financialYears = [
+    '2022-23',
+    '2023-24',
+    '2024-25',
+    '2025-26',
+    '2026-27',
+    '2027-28'
+  ];
+
+  const getAssessmentYear = (fy: string) => {
+    return fy.split('-').map(y => {
+      const num = parseInt(y);
+      if (y.length === 2) return (num + 1).toString().padStart(2, '0');
+      return (num + 1).toString();
+    }).join('-');
+  };
 
   const displayDate = `31.03.${financialYear.split('-')[1].length === 2 ? '20' + financialYear.split('-')[1] : financialYear.split('-')[1]}`;
 
@@ -784,295 +804,362 @@ export default function ITRReport() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <FileText className="text-primary" />
-            ITR Financial Report
-          </h1>
-          <div className="flex items-center gap-4 mt-1">
-            <p className="text-slate-500 text-sm">
-              Assessment Year {assessmentYear}
-            </p>
-            <div className="flex items-center gap-2 no-print">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">F.Y.</span>
-              <select
-                value={financialYear}
-                onChange={(e) => handleFYChange(e.target.value)}
-                className="text-xs font-bold text-primary bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {fyRange.map(fy => (
-                  <option key={fy} value={fy}>{fy}</option>
-                ))}
-              </select>
+      <PageHeader
+        title={
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <FileText size={24} />
+            </div>
+            <div className="flex flex-col">
+              <span>ITR Financial Report</span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Year:</span>
+                <select 
+                  value={financialYear} 
+                  onChange={(e) => handleFYChange(e.target.value)}
+                  className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer border-b border-slate-200 hover:border-primary transition-colors"
+                >
+                  {financialYears.map(fy => (
+                    <option key={fy} value={fy}>
+                      AY {getAssessmentYear(fy)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 no-print">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status:</span>
-            <select 
-              value={status} 
-              onChange={(e) => setStatus(e.target.value)}
-              className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer"
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => downloadExcel('all')}
+              disabled={loading}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
             >
-              <option value="Individual">Individual</option>
-              <option value="HUF">HUF</option>
-              <option value="Firm">Firm</option>
-              <option value="Company">Company</option>
-            </select>
+              <FileSpreadsheet size={18} className="mr-2 text-emerald-600" />
+              Excel
+            </button>
+            <button 
+              onClick={() => downloadPDF('all')}
+              disabled={loading}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+            >
+              <Download size={18} className="mr-2 text-red-600" />
+              PDF
+            </button>
           </div>
-          <button
-            onClick={() => downloadExcel('single')}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-          >
-            <FileSpreadsheet size={18} />
-            Excel
-          </button>
-          <button
-            onClick={() => downloadPDF('single')}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Download size={18} />
-            )}
-            PDF
-          </button>
+        </div>
+      </PageHeader>
+
+      <div className="space-y-6">
+        {/* Main Content */}
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm no-print">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status:</span>
+                <select 
+                  value={status} 
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer"
+                >
+                  <option value="Individual">Individual</option>
+                  <option value="HUF">HUF</option>
+                  <option value="Firm">Firm</option>
+                  <option value="Company">Company</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+              {(['balance-sheet', 'annexure-a', 'annexure-b', 'profit-loss'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "px-4 py-2 text-xs font-bold rounded-lg transition-all",
+                    activeTab === tab
+                      ? "bg-white text-primary shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6 print-container">
+            <div className="p-8 overflow-x-auto print-content">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="min-w-[800px] space-y-8"
+                >
+                  {/* Common Header for all tabs */}
+                  <div className="text-center space-y-1 no-print-inputs">
+                    <input 
+                      type="text" 
+                      value={businessName} 
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      className="text-xl font-bold text-slate-900 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-center uppercase"
+                    />
+                    {activeTab === 'balance-sheet' || activeTab === 'profit-loss' ? (
+                      <input 
+                        type="text" 
+                        value={fullAddress} 
+                        onChange={(e) => setFullAddress(e.target.value)}
+                        className="text-sm text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-center uppercase"
+                      />
+                    ) : (
+                      <p className="text-sm font-bold text-slate-900">{activeTab === 'annexure-a' ? 'ANNEXURE-A' : 'ANNEXURE-B'}</p>
+                    )}
+                    <div className="flex justify-center">
+                      <input 
+                        type="text" 
+                        value={activeTab === 'balance-sheet' ? `BALANCE SHEET AS AT ${asAtDate}` : 
+                               activeTab === 'annexure-a' ? `CAPITAL ACCOUNT AS AT ${asAtDate}` :
+                               activeTab === 'annexure-b' ? `DEPRECIATION SCHEDULE AS AT ${asAtDate}` :
+                               `PROFIT & LOSS ACCOUNT FOR THE YEAR ENDED ${asAtDate}`}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (activeTab === 'balance-sheet' && val.startsWith('BALANCE SHEET AS AT ')) setAsAtDate(val.replace('BALANCE SHEET AS AT ', ''));
+                          else if (activeTab === 'annexure-a' && val.startsWith('CAPITAL ACCOUNT AS AT ')) setAsAtDate(val.replace('CAPITAL ACCOUNT AS AT ', ''));
+                          else if (activeTab === 'annexure-b' && val.startsWith('DEPRECIATION SCHEDULE AS AT ')) setAsAtDate(val.replace('DEPRECIATION SCHEDULE AS AT ', ''));
+                          else if (activeTab === 'profit-loss' && val.startsWith('PROFIT & LOSS ACCOUNT FOR THE YEAR ENDED ')) setAsAtDate(val.replace('PROFIT & LOSS ACCOUNT FOR THE YEAR ENDED ', ''));
+                        }}
+                        className="text-md font-bold text-slate-800 mt-4 underline decoration-2 underline-offset-4 uppercase bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-center w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tab Content */}
+                  {activeTab === 'balance-sheet' && (
+                    <EditableTable 
+                      headers={bsHeaders}
+                      data={bsData}
+                      onChange={(r, c, v) => {
+                        handleDataChange(setBsData, r, c, v, bsHeaders.length);
+                      }}
+                      onAddRow={() => setBsData([...bsData, Array(bsHeaders.length).fill('')])}
+                      onDeleteRow={(i) => setBsData(bsData.filter((_, idx) => idx !== i))}
+                      onInsertRow={(i) => handleInsertRow(setBsData, i, bsHeaders.length)}
+                      onAddColumn={(i) => handleAddColumn(setBsHeaders, setBsData, i)}
+                      onDeleteColumn={(i) => handleDeleteColumn(setBsHeaders, setBsData, i)}
+                      onHeaderChange={(i, v) => handleHeaderChange(setBsHeaders, i, v)}
+                    />
+                  )}
+                  {activeTab === 'annexure-a' && (
+                    <EditableTable 
+                      headers={annexAHeaders}
+                      data={annexAData}
+                      onChange={(r, c, v) => {
+                        handleDataChange(setAnnexAData, r, c, v, annexAHeaders.length);
+                      }}
+                      onAddRow={() => setAnnexAData([...annexAData, Array(annexAHeaders.length).fill('')])}
+                      onDeleteRow={(i) => setAnnexAData(annexAData.filter((_, idx) => idx !== i))}
+                      onInsertRow={(i) => handleInsertRow(setAnnexAData, i, annexAHeaders.length)}
+                      onAddColumn={(i) => handleAddColumn(setAnnexAHeaders, setAnnexAData, i)}
+                      onDeleteColumn={(i) => handleDeleteColumn(setAnnexAHeaders, setAnnexAData, i)}
+                      onHeaderChange={(i, v) => handleHeaderChange(setAnnexAHeaders, i, v)}
+                    />
+                  )}
+                  {activeTab === 'annexure-b' && (
+                    <EditableTable 
+                      headers={annexBHeaders}
+                      data={annexBData}
+                      onChange={(r, c, v) => {
+                        handleDataChange(setAnnexBData, r, c, v, annexBHeaders.length);
+                      }}
+                      onAddRow={() => setAnnexBData([...annexBData, Array(annexBHeaders.length).fill('')])}
+                      onDeleteRow={(i) => setAnnexBData(annexBData.filter((_, idx) => idx !== i))}
+                      onInsertRow={(i) => handleInsertRow(setAnnexBData, i, annexBHeaders.length)}
+                      onAddColumn={(i) => handleAddColumn(setAnnexBHeaders, setAnnexBData, i)}
+                      onDeleteColumn={(i) => handleDeleteColumn(setAnnexBHeaders, setAnnexBData, i)}
+                      onHeaderChange={(i, v) => handleHeaderChange(setAnnexBHeaders, i, v)}
+                    />
+                  )}
+                  {activeTab === 'profit-loss' && (
+                    <EditableTable 
+                      headers={plHeaders}
+                      data={plData}
+                      onChange={(r, c, v) => {
+                        handleDataChange(setPlData, r, c, v, plHeaders.length);
+                      }}
+                      onAddRow={() => setPlData([...plData, Array(plHeaders.length).fill('')])}
+                      onDeleteRow={(i) => setPlData(plData.filter((_, idx) => idx !== i))}
+                      onInsertRow={(i) => handleInsertRow(setPlData, i, plHeaders.length)}
+                      onAddColumn={(i) => handleAddColumn(setPlHeaders, setPlData, i)}
+                      onDeleteColumn={(i) => handleDeleteColumn(setPlHeaders, setPlData, i)}
+                      onHeaderChange={(i, v) => handleHeaderChange(setPlHeaders, i, v)}
+                    />
+                  )}
+
+                  {/* Disclaimer */}
+                  <div className="mt-4 text-[11px] text-slate-700 leading-relaxed no-print-inputs">
+                    <textarea 
+                      value={disclaimer} 
+                      onChange={(e) => setDisclaimer(e.target.value)}
+                      className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none resize-none"
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Common Footer */}
+                  <div className="pt-12 grid grid-cols-2 gap-12 text-sm no-print-inputs">
+                    <div className="space-y-12">
+                      <div className="flex items-center gap-1">
+                        <input 
+                          type="text" 
+                          value={signatoryPrefix} 
+                          onChange={(e) => setSignatoryPrefix(e.target.value)}
+                          className="font-bold w-12 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none uppercase"
+                        />
+                        <input 
+                          type="text" 
+                          value={firmName} 
+                          onChange={(e) => setFirmName(e.target.value)}
+                          className="font-bold w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none uppercase"
+                        />
+                        <span className="font-bold">.</span>
+                      </div>
+                      <div className="space-y-1">
+                        <input 
+                          type="text" 
+                          value={auditorName} 
+                          onChange={(e) => setAuditorName(e.target.value)}
+                          className="font-bold w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
+                        />
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-slate-500">(</span>
+                          <input 
+                            type="text" 
+                            value={auditorTitle} 
+                            onChange={(e) => setAuditorTitle(e.target.value)}
+                            className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
+                          />
+                          <span className="text-xs text-slate-500">.)</span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-4">
+                          <span className="text-xs text-slate-500 whitespace-nowrap">PLACE :</span>
+                          <input 
+                            type="text" 
+                            value={place} 
+                            onChange={(e) => setPlace(e.target.value)}
+                            className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-slate-500 whitespace-nowrap">DATE :</span>
+                          <input 
+                            type="text" 
+                            value={reportDate} 
+                            onChange={(e) => setReportDate(e.target.value)}
+                            className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-12 text-right">
+                      <input 
+                        type="text" 
+                        value={businessName} 
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        className="font-bold w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
+                      />
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-end gap-1">
+                          <input 
+                            type="text" 
+                            value={proprietorPrefix} 
+                            onChange={(e) => setProprietorPrefix(e.target.value)}
+                            className="font-bold w-10 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
+                          />
+                          <input 
+                            type="text" 
+                            value={proprietorName} 
+                            onChange={(e) => setProprietorName(e.target.value)}
+                            className="font-bold bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
+                          />
+                          <span className="font-bold">.</span>
+                        </div>
+                        <input 
+                          type="text" 
+                          value={proprietorLabel} 
+                          onChange={(e) => setProprietorLabel(e.target.value)}
+                          className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-4 mt-8 no-print">
+            <button 
+              onClick={() => downloadExcel('single')}
+              disabled={loading}
+              className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+            >
+              <FileSpreadsheet size={20} className="mr-2 text-emerald-600" />
+              Download Current (Excel)
+            </button>
+            <button 
+              onClick={() => downloadPDF('single')}
+              disabled={loading}
+              className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+            >
+              <Download size={20} className="mr-2 text-red-600" />
+              Download Current (PDF)
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white p-1 rounded-2xl border border-slate-200 flex flex-wrap gap-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
-            className={cn(
-              "flex-1 min-w-[120px] py-2.5 px-4 rounded-xl text-xs font-bold transition-all",
-              activeTab === tab.id 
-                ? "bg-primary text-white shadow-md shadow-primary/20" 
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content Area */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6 print-container">
-        <div className="p-8 overflow-x-auto print-content">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="min-w-[800px] space-y-8"
-            >
-              {/* Common Header for all tabs */}
-              <div className="text-center space-y-1 no-print-inputs">
-                <input 
-                  type="text" 
-                  value={businessName} 
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  className="text-xl font-bold text-slate-900 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-center uppercase"
-                />
-                {activeTab === 'balance-sheet' || activeTab === 'profit-loss' ? (
-                  <input 
-                    type="text" 
-                    value={fullAddress} 
-                    onChange={(e) => setFullAddress(e.target.value)}
-                    className="text-sm text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-center uppercase"
-                  />
-                ) : (
-                  <p className="text-sm font-bold text-slate-900">{activeTab === 'annexure-a' ? 'ANNEXURE-A' : 'ANNEXURE-B'}</p>
-                )}
-                <div className="flex justify-center">
-                  <input 
-                    type="text" 
-                    value={activeTab === 'balance-sheet' ? `BALANCE SHEET AS AT ${asAtDate}` : 
-                           activeTab === 'annexure-a' ? `CAPITAL ACCOUNT AS AT ${asAtDate}` :
-                           activeTab === 'annexure-b' ? `DEPRECIATION SCHEDULE AS AT ${asAtDate}` :
-                           `PROFIT & LOSS ACCOUNT FOR THE YEAR ENDED ${asAtDate}`}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (activeTab === 'balance-sheet' && val.startsWith('BALANCE SHEET AS AT ')) setAsAtDate(val.replace('BALANCE SHEET AS AT ', ''));
-                      else if (activeTab === 'annexure-a' && val.startsWith('CAPITAL ACCOUNT AS AT ')) setAsAtDate(val.replace('CAPITAL ACCOUNT AS AT ', ''));
-                      else if (activeTab === 'annexure-b' && val.startsWith('DEPRECIATION SCHEDULE AS AT ')) setAsAtDate(val.replace('DEPRECIATION SCHEDULE AS AT ', ''));
-                      else if (activeTab === 'profit-loss' && val.startsWith('PROFIT & LOSS ACCOUNT FOR THE YEAR ENDED ')) setAsAtDate(val.replace('PROFIT & LOSS ACCOUNT FOR THE YEAR ENDED ', ''));
-                    }}
-                    className="text-md font-bold text-slate-800 mt-4 underline decoration-2 underline-offset-4 uppercase bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-center w-full"
-                  />
-                </div>
-              </div>
-
-              {/* Tab Content */}
-              {activeTab === 'balance-sheet' && (
-                <EditableTable 
-                  headers={bsHeaders}
-                  data={bsData}
-                  onChange={(r, c, v) => {
-                    handleDataChange(setBsData, r, c, v, bsHeaders.length);
-                  }}
-                  onAddRow={() => setBsData([...bsData, Array(bsHeaders.length).fill('')])}
-                  onDeleteRow={(i) => setBsData(bsData.filter((_, idx) => idx !== i))}
-                  onInsertRow={(i) => handleInsertRow(setBsData, i, bsHeaders.length)}
-                  onAddColumn={(i) => handleAddColumn(setBsHeaders, setBsData, i)}
-                  onDeleteColumn={(i) => handleDeleteColumn(setBsHeaders, setBsData, i)}
-                  onHeaderChange={(i, v) => handleHeaderChange(setBsHeaders, i, v)}
-                />
-              )}
-              {activeTab === 'annexure-a' && (
-                <EditableTable 
-                  headers={annexAHeaders}
-                  data={annexAData}
-                  onChange={(r, c, v) => {
-                    handleDataChange(setAnnexAData, r, c, v, annexAHeaders.length);
-                  }}
-                  onAddRow={() => setAnnexAData([...annexAData, Array(annexAHeaders.length).fill('')])}
-                  onDeleteRow={(i) => setAnnexAData(annexAData.filter((_, idx) => idx !== i))}
-                  onInsertRow={(i) => handleInsertRow(setAnnexAData, i, annexAHeaders.length)}
-                  onAddColumn={(i) => handleAddColumn(setAnnexAHeaders, setAnnexAData, i)}
-                  onDeleteColumn={(i) => handleDeleteColumn(setAnnexAHeaders, setAnnexAData, i)}
-                  onHeaderChange={(i, v) => handleHeaderChange(setAnnexAHeaders, i, v)}
-                />
-              )}
-              {activeTab === 'annexure-b' && (
-                <EditableTable 
-                  headers={annexBHeaders}
-                  data={annexBData}
-                  onChange={(r, c, v) => {
-                    handleDataChange(setAnnexBData, r, c, v, annexBHeaders.length);
-                  }}
-                  onAddRow={() => setAnnexBData([...annexBData, Array(annexBHeaders.length).fill('')])}
-                  onDeleteRow={(i) => setAnnexBData(annexBData.filter((_, idx) => idx !== i))}
-                  onInsertRow={(i) => handleInsertRow(setAnnexBData, i, annexBHeaders.length)}
-                  onAddColumn={(i) => handleAddColumn(setAnnexBHeaders, setAnnexBData, i)}
-                  onDeleteColumn={(i) => handleDeleteColumn(setAnnexBHeaders, setAnnexBData, i)}
-                  onHeaderChange={(i, v) => handleHeaderChange(setAnnexBHeaders, i, v)}
-                />
-              )}
-              {activeTab === 'profit-loss' && (
-                <EditableTable 
-                  headers={plHeaders}
-                  data={plData}
-                  onChange={(r, c, v) => {
-                    handleDataChange(setPlData, r, c, v, plHeaders.length);
-                  }}
-                  onAddRow={() => setPlData([...plData, Array(plHeaders.length).fill('')])}
-                  onDeleteRow={(i) => setPlData(plData.filter((_, idx) => idx !== i))}
-                  onInsertRow={(i) => handleInsertRow(setPlData, i, plHeaders.length)}
-                  onAddColumn={(i) => handleAddColumn(setPlHeaders, setPlData, i)}
-                  onDeleteColumn={(i) => handleDeleteColumn(setPlHeaders, setPlData, i)}
-                  onHeaderChange={(i, v) => handleHeaderChange(setPlHeaders, i, v)}
-                />
-              )}
-
-              {/* Disclaimer */}
-              <div className="mt-4 text-[11px] text-slate-700 leading-relaxed no-print-inputs">
-                <textarea 
-                  value={disclaimer} 
-                  onChange={(e) => setDisclaimer(e.target.value)}
-                  className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none resize-none"
-                  rows={2}
-                />
-              </div>
-
-              {/* Common Footer */}
-              <div className="pt-12 grid grid-cols-2 gap-12 text-sm no-print-inputs">
-                <div className="space-y-12">
-                  <div className="flex items-center gap-1">
-                    <input 
-                      type="text" 
-                      value={signatoryPrefix} 
-                      onChange={(e) => setSignatoryPrefix(e.target.value)}
-                      className="font-bold w-12 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none uppercase"
-                    />
-                    <input 
-                      type="text" 
-                      value={firmName} 
-                      onChange={(e) => setFirmName(e.target.value)}
-                      className="font-bold w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none uppercase"
-                    />
-                    <span className="font-bold">.</span>
-                  </div>
-                  <div className="space-y-1">
-                    <input 
-                      type="text" 
-                      value={auditorName} 
-                      onChange={(e) => setAuditorName(e.target.value)}
-                      className="font-bold w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
-                    />
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-slate-500">(</span>
-                      <input 
-                        type="text" 
-                        value={auditorTitle} 
-                        onChange={(e) => setAuditorTitle(e.target.value)}
-                        className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
-                      />
-                      <span className="text-xs text-slate-500">.)</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-4">
-                      <span className="text-xs text-slate-500 whitespace-nowrap">PLACE :</span>
-                      <input 
-                        type="text" 
-                        value={place} 
-                        onChange={(e) => setPlace(e.target.value)}
-                        className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-slate-500 whitespace-nowrap">DATE :</span>
-                      <input 
-                        type="text" 
-                        value={reportDate} 
-                        onChange={(e) => setReportDate(e.target.value)}
-                        className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-12 text-right">
-                  <input 
-                    type="text" 
-                    value={businessName} 
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="font-bold w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
-                  />
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-end gap-1">
-                      <input 
-                        type="text" 
-                        value={proprietorPrefix} 
-                        onChange={(e) => setProprietorPrefix(e.target.value)}
-                        className="font-bold w-10 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
-                      />
-                      <input 
-                        type="text" 
-                        value={proprietorName} 
-                        onChange={(e) => setProprietorName(e.target.value)}
-                        className="font-bold bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
-                      />
-                      <span className="font-bold">.</span>
-                    </div>
-                    <input 
-                      type="text" 
-                      value={proprietorLabel} 
-                      onChange={(e) => setProprietorLabel(e.target.value)}
-                      className="text-xs text-slate-500 w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-primary outline-none text-right uppercase"
-                    />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+      {/* How it Works Section */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+          <Info size={24} className="mr-2 text-primary" />
+          How ITR Reporting Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+              <span className="font-bold">01</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Enter Data</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Fill in the Balance Sheet, P&L, and Annexure tables. The system automatically calculates totals and net profit.
+            </p>
+          </div>
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
+              <span className="font-bold">02</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Review Totals</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Verify that your Balance Sheet is balanced and all depreciation rates are correctly applied in Annexure B.
+            </p>
+          </div>
+          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+              <span className="font-bold">03</span>
+            </div>
+            <h4 className="font-bold text-slate-900 mb-2">Export Report</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Download the complete set of financial statements in professional Excel or PDF formats for your records or filing.
+            </p>
+          </div>
         </div>
       </div>
 
