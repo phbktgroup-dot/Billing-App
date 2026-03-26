@@ -171,6 +171,7 @@ export default function Purchases() {
                   <thead>
                     <tr className="bg-slate-50 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
                       <th className="px-2.5 py-1.5">Item Name</th>
+                      <th className="px-2.5 py-1.5 w-12 text-center">HSN</th>
                       <th className="px-2.5 py-1.5 w-12 text-center">Qty</th>
                       <th className="px-2.5 py-1.5 w-16 text-right">Rate</th>
                       <th className="px-2.5 py-1.5 w-16 text-right">CGST</th>
@@ -191,6 +192,19 @@ export default function Purchases() {
                             onChange={e => {
                               const newItems = [...editedData.items];
                               newItems[idx].particular = e.target.value;
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-2.5 py-1.5">
+                          <input 
+                            type="text"
+                            placeholder="HSN"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-center p-0"
+                            value={item.hsn}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].hsn = e.target.value;
                               setEditedData({...editedData, items: newItems});
                             }}
                           />
@@ -724,7 +738,7 @@ export default function Purchases() {
 - supplier address
 - invoice number
 - date
-- items (array of: { particular: string, hsn: string, quantity: number, rate: number, cgst: number, sgst: number, igst: number, amount: number (including GST) })
+- items (array of: { particular: string, hsn: string (Extract ONLY the HSN code. If no HSN code is found, leave empty. Do not put any other product code in this field), quantity: number, rate: number, cgst: number, sgst: number, igst: number, amount: number (including GST) })
 - total CGST
 - total SGST
 - total IGST

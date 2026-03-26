@@ -266,6 +266,7 @@ export default function Inventory() {
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.hsn_code && p.hsn_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -353,7 +354,7 @@ export default function Inventory() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
               <input 
                 type="text" 
-                placeholder="Search by SKU or Product Name..."
+                placeholder="Search by HSN or Product Name..."
                 className="w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-transparent rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -405,7 +406,7 @@ export default function Inventory() {
                   />
                 </th>
                 <th className="px-2.5 py-1.5">Product Details</th>
-                <th className="px-2.5 py-1.5">Product/HSN Code</th>
+                <th className="px-2.5 py-1.5">HSN Code</th>
                 <th className="px-2.5 py-1.5">Category</th>
                 <th className="px-2.5 py-1.5">Date Added</th>
                 <th className="px-2.5 py-1.5">Stock Level</th>
@@ -456,7 +457,7 @@ export default function Inventory() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600 font-medium">{product.sku}</td>
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600 font-medium">{product.hsn_code}</td>
                     <td className="px-2.5 py-1.5 text-[10px] text-slate-600">{product.category}</td>
                     <td className="px-2.5 py-1.5 text-[8px] text-slate-400">
                       {product.created_at ? new Date(product.created_at).toLocaleDateString() : 'N/A'}
@@ -645,14 +646,23 @@ export default function Inventory() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Product/HSN Code</label>
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">SKU</label>
               <input 
-                required
                 type="text" 
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
                 value={formData.sku}
-                onChange={e => setFormData({...formData, sku: e.target.value, hsn_code: e.target.value})}
-                placeholder="e.g. PROD-001 or 8471"
+                onChange={e => setFormData({...formData, sku: e.target.value})}
+                placeholder="e.g. PROD-001"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">HSN Code</label>
+              <input 
+                type="text" 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.hsn_code}
+                onChange={e => setFormData({...formData, hsn_code: e.target.value})}
+                placeholder="e.g. 8471"
               />
             </div>
             <div className="space-y-1">
