@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical } from 'lucide-react';
+import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical, User } from 'lucide-react';
+import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, getDateRange, FilterType, cn } from '../lib/utils';
@@ -60,6 +61,199 @@ export default function Purchases() {
     notes: '',
     items: [] as any[]
   });
+
+  const [showScannedReview, setShowScannedReview] = useState(false);
+  const [scannedData, setScannedData] = useState<{
+    supplier: any;
+    items: any[];
+    invoiceNumber: string;
+    date: string;
+    totalAmount: number;
+  } | null>(null);
+
+  const ScannedReviewModal = ({ data, onClose, onConfirm }: { data: any, onClose: () => void, onConfirm: (finalData: any) => void }) => {
+    const [editedData, setEditedData] = useState(data);
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        >
+          <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 bg-primary/10 text-primary rounded-lg">
+                <Scan size={16} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-xs font-bold text-slate-900">Review Scanned Bill</h2>
+                <p className="text-[9px] text-slate-500 font-medium">Verify and edit the extracted information</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Supplier Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                  <User size={12} className="mr-1.5" /> Supplier Information
+                </h3>
+                {(() => {
+                  const supplierName = editedData.supplier.name;
+                  const existingSupplier = suppliers.find(s => s.name.trim().toLowerCase() === supplierName.trim().toLowerCase());
+                  if (!existingSupplier) {
+                    return <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Supplier</span>;
+                  }
+                  return null;
+                })()}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Supplier Name</label>
+                  <input 
+                    type="text"
+                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium"
+                    value={editedData.supplier.name}
+                    onChange={e => setEditedData({...editedData, supplier: {...editedData.supplier, name: e.target.value}})}
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">GST Number</label>
+                  <input 
+                    type="text"
+                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium uppercase"
+                    value={editedData.supplier.gstin}
+                    onChange={e => setEditedData({...editedData, supplier: {...editedData.supplier, gstin: e.target.value.toUpperCase()}})}
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
+                  <input 
+                    type="text"
+                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium"
+                    value={editedData.invoiceNumber}
+                    onChange={e => setEditedData({...editedData, invoiceNumber: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Bill Date</label>
+                  <input 
+                    type="date"
+                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium"
+                    value={editedData.date}
+                    onChange={e => setEditedData({...editedData, date: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Items Section */}
+            <div className="space-y-2">
+              <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                <Package size={12} className="mr-1.5" /> Items Detected
+              </h3>
+              <div className="border border-slate-100 rounded-xl overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+                      <th className="px-3 py-1.5">Item Name</th>
+                      <th className="px-3 py-1.5 w-16 text-center">Qty</th>
+                      <th className="px-3 py-1.5 w-20 text-right">Rate</th>
+                      <th className="px-3 py-1.5 w-24 text-right">Amount</th>
+                      <th className="px-3 py-1.5 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {editedData.items.map((item: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-3 py-1.5">
+                          <input 
+                            type="text"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-medium p-0"
+                            value={item.particular}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].particular = e.target.value;
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-center p-0"
+                            value={item.quantity}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].quantity = Number(e.target.value);
+                              newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate;
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
+                            value={item.rate}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].rate = Number(e.target.value);
+                              newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate;
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-3 py-1.5 text-right text-[10px] font-black text-primary">
+                          {formatCurrency(item.amount)}
+                        </td>
+                        <td className="px-3 py-1.5 text-right">
+                          <button 
+                            onClick={() => {
+                              const newItems = editedData.items.filter((_: any, i: number) => i !== idx);
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                            className="text-slate-300 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <div className="text-[10px] font-bold text-slate-500">
+              Total: <span className="text-primary ml-1">{formatCurrency(editedData.items.reduce((sum: number, i: any) => sum + i.amount, 0))}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={onClose}
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-all"
+              >
+                Discard
+              </button>
+              <button 
+                onClick={() => onConfirm(editedData)}
+                className="px-4 py-1.5 bg-primary text-white rounded-lg text-[10px] font-black shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                Confirm Details
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (businessId) {
@@ -138,27 +332,33 @@ export default function Purchases() {
 
       // 1. Handle Supplier (Create if new)
       if (!currentSupplierId && formData.supplier_name) {
-        const supplierInsert: any = {
-          business_id: businessId,
-          name: formData.supplier_name,
-          gst_number: formData.supplier_gstin,
-          email: formData.supplier_email,
-          phone: formData.supplier_phone,
-          address: formData.supplier_address,
-          created_by: profile?.id
-        };
+        const existingSupplier = suppliers.find(s => s.name.trim().toLowerCase() === formData.supplier_name.trim().toLowerCase());
         
-        const { data: newSup, error: supError } = await supabase
-          .from('suppliers')
-          .insert([supplierInsert])
-          .select()
-          .single();
-        
-        if (supError) {
-          throw supError;
-        } else if (newSup) {
-          currentSupplierId = newSup.id;
-          setSuppliers(prev => [...prev, newSup]);
+        if (existingSupplier) {
+          currentSupplierId = existingSupplier.id;
+        } else {
+          const supplierInsert: any = {
+            business_id: businessId,
+            name: formData.supplier_name,
+            gst_number: formData.supplier_gstin,
+            email: formData.supplier_email,
+            phone: formData.supplier_phone,
+            address: formData.supplier_address,
+            created_by: profile?.id
+          };
+          
+          const { data: newSup, error: supError } = await supabase
+            .from('suppliers')
+            .insert([supplierInsert])
+            .select()
+            .single();
+          
+          if (supError) {
+            throw supError;
+          } else if (newSup) {
+            currentSupplierId = newSup.id;
+            setSuppliers(prev => [...prev, newSup]);
+          }
         }
       } else if (currentSupplierId) {
         // Update existing supplier details
@@ -234,6 +434,7 @@ export default function Purchases() {
         if (itemsError) throw itemsError;
 
         // Update Inventory
+        let currentProducts = [...products];
         for (const item of formData.items) {
           if (!item.particular) continue;
 
@@ -250,39 +451,70 @@ export default function Purchases() {
                 const { error: updateError } = await supabase
                   .from('products')
                   .update({ 
-                    stock: (product.stock || 0) + item.quantity,
-                    purchase_price: item.rate
+                    stock: (product.stock || 0) + item.quantity
                   })
                   .eq('id', item.product_id);
                 if (updateError) console.error('Error updating product stock:', updateError);
               }
             } else {
-              // Create new product if it doesn't exist
-              const { data: newProd, error: prodError } = await supabase
-                .from('products')
-                .insert([{
-                  business_id: businessId,
-                  name: item.particular,
-                  sku: `SKU-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 1000)}`,
-                  hsn_code: item.hsn,
-                  category: 'General',
-                  purchase_price: item.rate,
-                  price: item.rate * 1.2, // Default 20% markup
-                  stock: item.quantity,
-                  created_by: profile?.id
-                }])
-                .select()
-                .single();
-              
-              if (!prodError && newProd) {
-                // Update the purchase item with the new product_id
+              // Check if product exists by name first
+              const existingProduct = currentProducts.find(p => p.name.trim().toLowerCase() === item.particular.trim().toLowerCase());
+              if (existingProduct) {
+                // Update existing product stock
+                const { data: product, error: fetchError } = await supabase
+                  .from('products')
+                  .select('stock')
+                  .eq('id', existingProduct.id)
+                  .single();
+                
+                if (!fetchError && product) {
+                  const { error: updateError } = await supabase
+                    .from('products')
+                    .update({ 
+                      stock: (product.stock || 0) + item.quantity
+                    })
+                    .eq('id', existingProduct.id);
+                  if (updateError) console.error('Error updating product stock:', updateError);
+                }
+                
+                // Update the purchase item with the existing product_id
                 await supabase
                   .from('purchase_items')
-                  .update({ product_id: newProd.id })
+                  .update({ product_id: existingProduct.id })
                   .eq('purchase_id', purchaseId)
                   .eq('item_name', item.particular);
-              } else if (prodError) {
-                console.error('Error creating new product from purchase:', prodError);
+              } else {
+                // Create new product if it doesn't exist
+                const { data: newProd, error: prodError } = await supabase
+                  .from('products')
+                  .insert([{
+                    business_id: businessId,
+                    name: item.particular,
+                    sku: `SKU-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 1000)}`,
+                    hsn_code: item.hsn,
+                    category: 'General',
+                    purchase_price: item.rate,
+                    price: item.rate * 1.2, // Default 20% markup
+                    stock: item.quantity,
+                    created_by: profile?.id
+                  }])
+                  .select()
+                  .single();
+                
+                if (!prodError && newProd) {
+                  // Update the purchase item with the new product_id
+                  await supabase
+                    .from('purchase_items')
+                    .update({ product_id: newProd.id })
+                    .eq('purchase_id', purchaseId)
+                    .eq('item_name', item.particular);
+                    
+                  // Update local products array
+                  currentProducts.push(newProd);
+                  setProducts(currentProducts);
+                } else if (prodError) {
+                  console.error('Error creating new product from purchase:', prodError);
+                }
               }
             }
           } catch (itemErr) {
@@ -510,88 +742,32 @@ Return as JSON format: {
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
           
-          // Find or create supplier
-          let supplierId = '';
-          const supplierName = data.supplierName || data.supplier_name || '';
-          if (supplierName) {
-            const existingSupplier = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
-            if (existingSupplier) {
-              supplierId = existingSupplier.id;
-            } else {
-              // Create new supplier
-              const supplierInsert: any = {
-                business_id: businessId,
-                name: supplierName,
-                created_by: profile?.id
-              };
-              
-              const supplierGstin = data.supplierGstin || data.supplier_gstin || data.supplierGst || '';
-              if (supplierGstin) {
-                supplierInsert.gst_number = supplierGstin;
-              }
-
-              const { data: newSup, error: supError } = await supabase
-                .from('suppliers')
-                .insert([supplierInsert])
-                .select()
-                .single();
-              
-              if (!supError && newSup) {
-                supplierId = newSup.id;
-                setSuppliers(prev => [...prev, newSup]);
-              } else if (supError && supError.message.includes('column') && supError.message.includes('gst_number')) {
-                // Retry without gst_number if column doesn't exist yet
-                const { data: retrySup } = await supabase
-                  .from('suppliers')
-                  .insert([{
-                    business_id: businessId,
-                    name: supplierName,
-                    created_by: profile?.id
-                  }])
-                  .select()
-                  .single();
-                if (retrySup) {
-                  supplierId = retrySup.id;
-                  setSuppliers(prev => [...prev, retrySup]);
-                }
-              }
-            }
-          }
-
-          setFormData({
-            supplier_id: supplierId,
-            supplier_name: !supplierId ? supplierName : '',
-            supplier_gstin: data.supplierGstin || data.supplier_gstin || data.supplierGst || '',
-            supplier_email: data.supplierEmail || data.supplier_email || '',
-            supplier_phone: data.supplierPhone || data.supplier_phone || '',
-            supplier_address: data.supplierAddress || data.supplier_address || '',
-            invoice_number: data.invoiceNumber || data.invoice_number || `PUR-${Date.now().toString().slice(-6)}`,
-            bill_date: (() => {
+          // Prepare scanned data for review
+          setScannedData({
+            supplier: {
+              name: data.supplierName || data.supplier_name || '',
+              gstin: data.supplierGstin || data.supplier_gstin || data.supplierGst || '',
+              email: data.supplierEmail || data.supplier_email || '',
+              phone: data.supplierPhone || data.supplier_phone || '',
+              address: data.supplierAddress || data.supplier_address || '',
+            },
+            invoiceNumber: data.invoiceNumber || data.invoice_number || `PUR-${Date.now().toString().slice(-6)}`,
+            date: (() => {
               if (!data.date) return new Date().toISOString().split('T')[0];
               const d = new Date(data.date);
               return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
             })(),
-            upload_date: new Date().toISOString().split('T')[0],
-            total_amount: data.totalAmount || 0,
-            status: 'paid',
-            notes: 'Scanned via AI',
-            items: (data.items || []).map((item: any) => {
-              const itemName = item.particular || item.name || 'Unknown Item';
-              // Try to match product
-              const matchedProduct = products.find(p => p.name.toLowerCase() === itemName.toLowerCase());
-              return {
-                particular: itemName,
-                hsn: item.hsn || '',
-                quantity: Number(item.quantity) || 1,
-                rate: Number(item.rate) || 0,
-                amount: Number(item.amount) || 0,
-                product_id: matchedProduct?.id || null
-              };
-            })
+            totalAmount: data.totalAmount || 0,
+            items: (data.items || []).map((item: any) => ({
+              particular: item.particular || item.name || 'Unknown Item',
+              hsn: item.hsn || '',
+              quantity: Number(item.quantity) || 1,
+              rate: Number(item.rate) || 0,
+              amount: Number(item.amount) || 0,
+            }))
           });
           
-          setIsModalOpen(true);
-          setModal({ isOpen: true, title: 'Success', message: 'Bill scanned and details extracted successfully!', type: 'success' });
+          setShowScannedReview(true);
         } else {
           throw new Error("Could not extract structured data from the bill.");
         }
@@ -820,12 +996,12 @@ Return as JSON format: {
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Supplier & Invoice Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Supplier Details</h3>
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier Details</h3>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Select Supplier</label>
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Select Supplier</label>
                     <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                       value={formData.supplier_id}
                       onChange={e => {
                         const selected = suppliers.find(s => s.id === e.target.value);
@@ -846,58 +1022,58 @@ Return as JSON format: {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                  <div className="space-y-2 p-2 bg-primary/5 rounded-xl border border-primary/10">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Supplier Name *</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Supplier Name *</label>
                       <input 
                         type="text" 
                         required
                         placeholder="Enter supplier name"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                         value={formData.supplier_name}
                         onChange={e => setFormData({...formData, supplier_name: e.target.value})}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">GST Number</label>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">GST Number</label>
                         <input 
                           type="text" 
                           placeholder="GSTIN"
                           maxLength={15}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all uppercase"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all uppercase"
                           value={formData.supplier_gstin}
                           onChange={e => setFormData({...formData, supplier_gstin: e.target.value.toUpperCase()})}
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Phone</label>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Phone</label>
                         <input 
                           type="text" 
-                          placeholder="Contact number"
+                          placeholder="Contact"
                           maxLength={10}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                           value={formData.supplier_phone}
                           onChange={e => setFormData({...formData, supplier_phone: e.target.value.replace(/\D/g, '')})}
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Email</label>
                       <input 
                         type="email" 
                         placeholder="Email address"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                         value={formData.supplier_email}
                         onChange={e => setFormData({...formData, supplier_email: e.target.value})}
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Address</label>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Address</label>
                       <textarea 
-                        rows={2}
+                        rows={1}
                         placeholder="Full address"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all resize-none"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all resize-none"
                         value={formData.supplier_address}
                         onChange={e => setFormData({...formData, supplier_address: e.target.value})}
                       ></textarea>
@@ -905,46 +1081,46 @@ Return as JSON format: {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Invoice Info</h3>
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Info</h3>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Invoice Number *</label>
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Invoice Number *</label>
                     <input 
                       type="text" 
                       required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                       value={formData.invoice_number}
                       onChange={e => setFormData({...formData, invoice_number: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bill Date *</label>
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Bill Date *</label>
                     <input 
                       type="date" 
                       required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                       value={formData.bill_date}
                       onChange={e => setFormData({...formData, bill_date: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Upload Date (Today)</label>
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Upload Date</label>
                     <input 
                       type="date" 
                       readOnly
-                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl outline-none text-xs text-slate-500 cursor-not-allowed"
+                      className="w-full px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg outline-none text-[10px] text-slate-500 cursor-not-allowed"
                       value={formData.upload_date}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Payment & Notes</h3>
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment & Notes</h3>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status *</label>
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Status *</label>
                     <select 
                       required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all"
+                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
                       value={formData.status}
                       onChange={e => setFormData({...formData, status: e.target.value})}
                     >
@@ -953,11 +1129,11 @@ Return as JSON format: {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Notes</label>
+                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Notes</label>
                     <textarea 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs transition-all resize-none"
+                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all resize-none"
                       rows={2}
-                      placeholder="Additional information..."
+                      placeholder="Additional info..."
                       value={formData.notes}
                       onChange={e => setFormData({...formData, notes: e.target.value})}
                     ></textarea>
@@ -1165,6 +1341,50 @@ Return as JSON format: {
         message={modal.message}
         type={modal.type}
       />
+
+      {showScannedReview && scannedData && (
+        <ScannedReviewModal 
+          data={scannedData}
+          onClose={() => setShowScannedReview(false)}
+          onConfirm={(finalData) => {
+            // Find or create supplier
+            let supplierId = '';
+            const supplierName = finalData.supplier.name;
+            if (supplierName) {
+              const existingSupplier = suppliers.find(s => s.name.trim().toLowerCase() === supplierName.trim().toLowerCase());
+              if (existingSupplier) {
+                supplierId = existingSupplier.id;
+              }
+            }
+
+            setFormData({
+              supplier_id: supplierId,
+              supplier_name: !supplierId ? supplierName : '',
+              supplier_gstin: finalData.supplier.gstin,
+              supplier_email: finalData.supplier.email,
+              supplier_phone: finalData.supplier.phone,
+              supplier_address: finalData.supplier.address,
+              invoice_number: finalData.invoiceNumber,
+              bill_date: finalData.date,
+              upload_date: new Date().toISOString().split('T')[0],
+              total_amount: finalData.items.reduce((sum: number, i: any) => sum + i.amount, 0),
+              status: 'paid',
+              notes: 'Scanned via AI',
+              items: finalData.items.map((item: any) => {
+                const matchedProduct = products.find(p => p.name.trim().toLowerCase() === item.particular.trim().toLowerCase());
+                return {
+                  ...item,
+                  product_id: matchedProduct?.id || null
+                };
+              })
+            });
+            
+            setShowScannedReview(false);
+            setIsModalOpen(true);
+            setModal({ isOpen: true, title: 'Success', message: 'Bill details confirmed. You can now review and save.', type: 'success' });
+          }}
+        />
+      )}
 
       {isScanning && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
