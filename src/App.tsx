@@ -78,6 +78,21 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App() {
+  const { appSettings } = useAuth();
+
+  useEffect(() => {
+    if (appSettings?.app_name) {
+      document.title = appSettings.app_name;
+    }
+    
+    if (appSettings?.logo_url) {
+      const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+      if (link) {
+        link.href = appSettings.logo_url;
+      }
+    }
+  }, [appSettings]);
+
   return (
     <HashRouter>
       <Routes>

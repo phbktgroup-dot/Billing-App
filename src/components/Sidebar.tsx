@@ -60,24 +60,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
-  const [showTopMenu, setShowTopMenu] = useState(false);
-  const topMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (topMenuRef.current && !topMenuRef.current.contains(event.target as Node)) {
-        setShowTopMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   const filteredMenuItems = menuItems.filter(item => {
     if (!item.adminOnly) return true;
@@ -137,42 +127,53 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className={cn(
           "h-20 flex items-center border-b border-slate-100 transition-all duration-300 relative",
           (isCollapsed && !isOpen) ? "justify-center px-0" : "justify-between px-6"
-        )} ref={topMenuRef}>
-          <div className="flex items-center">
+        )}>
+          <div className="flex items-center gap-3 overflow-hidden">
             <button 
-              onClick={() => setShowTopMenu(!showTopMenu)}
-              className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              onClick={() => {
+                if (windowWidth < 1024) {
+                  onClose?.();
+                } else {
+                  toggleSidebar();
+                }
+              }}
+              className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
             >
-              <Menu size={20} />
+              {appSettings?.logo_url ? (
+                <img 
+                  src={appSettings.logo_url} 
+                  alt="Logo" 
+                  className="w-6 h-6 object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <Menu size={20} />
+              )}
             </button>
 
-            <AnimatePresence>
-              {showTopMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="absolute top-full left-4 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 z-[100] p-2 overflow-hidden"
-                >
-                  {['File', 'Edit', 'View', 'Help'].map((item) => (
-                    <button
-                      key={item}
-                      className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors group"
-                    >
-                      <span>{item}</span>
-                      <ChevronRight size={14} className="text-slate-400 group-hover:text-primary transition-colors" />
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {(!isCollapsed || isOpen) && (
+              <motion.span 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="font-bold text-slate-900 truncate"
+              >
+                {appSettings?.app_name || 'Billing pro+'}
+              </motion.span>
+            )}
           </div>
           
-          {/* Mobile Close Button */}
-          {isOpen && (
+          {/* Close/Toggle Button */}
+          {(!isCollapsed || isOpen) && (
             <button 
-              onClick={onClose}
-              className="lg:hidden p-2 text-slate-400 hover:text-primary transition-colors"
+              onClick={() => {
+                if (windowWidth < 1024) {
+                  onClose?.();
+                } else {
+                  toggleSidebar();
+                }
+              }}
+              className="p-2 text-slate-400 hover:text-primary transition-colors"
+              title={windowWidth < 1024 ? "Close Menu" : "Collapse Sidebar"}
             >
               <X size={20} />
             </button>

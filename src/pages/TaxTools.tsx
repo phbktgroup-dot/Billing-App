@@ -116,6 +116,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   };
   const [day, setDay] = useState<string>(getLocalToday());
   const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [financialYear, setFinancialYear] = useState<string>('2023-24');
 
   const businessId = profile?.business_id;
 
@@ -588,22 +589,42 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             <div className={cn("p-2 rounded-xl", current.bg, current.color)}>
               <current.icon size={24} />
             </div>
-            <span>{current.title}</span>
+            <div className="flex flex-col">
+              <span>{current.title}</span>
+              {type === 'itr' && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Year:</span>
+                  <select 
+                    value={financialYear} 
+                    onChange={(e) => setFinancialYear(e.target.value)}
+                    className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer border-b border-slate-200 hover:border-primary transition-colors"
+                  >
+                    {['2023-24', '2024-25', '2025-26'].map(fy => (
+                      <option key={fy} value={fy}>
+                        AY {fy.split('-')[0].slice(0, 2) + fy.split('-')[1]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
         }
         description={current.description}
       >
         <div className="flex flex-wrap items-center gap-3">
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-          />
+          {type !== 'itr' && (
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+            />
+          )}
           <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center">
             <Info size={18} className="mr-2" />
             Help Guide
@@ -804,30 +825,78 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
 
         {/* Info Panel */}
         <div className="space-y-6">
-          {type === 'itr' && (
-            <div className="glass-card p-6 border-primary/20 bg-primary/5">
-              <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-                <Calculator size={18} className="mr-2 text-primary" />
-                Tax Estimation
-              </h4>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Estimated Net Profit</span>
-                  <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
+          {type !== 'itr' && (
+            <>
+              <div className="glass-card p-6 border-primary/20 bg-primary/5">
+                <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+                  <Calculator size={18} className="mr-2 text-primary" />
+                  Tax Estimation
+                </h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Estimated Net Profit</span>
+                    <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Taxable Income</span>
+                    <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
+                  </div>
+                  <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                    <span className="font-bold text-slate-900">Estimated Tax</span>
+                    <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic">
+                    *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
+                  </p>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Taxable Income</span>
-                  <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
+              </div>
+
+              <div className="glass-card p-6">
+                <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+                  <Calculator size={18} className="mr-2 text-primary" />
+                  Tax Calendar
+                </h4>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 flex-shrink-0 text-xs font-bold">
+                      20
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">GSTR-3B Filing</p>
+                      <p className="text-[10px] text-slate-500">Monthly return deadline</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 flex-shrink-0 text-xs font-bold">
+                      11
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">GSTR-1 Filing</p>
+                      <p className="text-[10px] text-slate-500">Sales return deadline</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0 text-xs font-bold">
+                      15
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">TDS Payment</p>
+                      <p className="text-[10px] text-slate-500">Monthly deposit deadline</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                  <span className="font-bold text-slate-900">Estimated Tax</span>
-                  <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
-                </div>
-                <p className="text-[10px] text-slate-400 italic">
-                  *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
+              </div>
+
+              <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
+                <h4 className="font-bold text-slate-900 mb-3 flex items-center">
+                  <FileCheck size={18} className="mr-2 text-primary" />
+                  Pro Tax Tip
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed italic">
+                  "Always reconcile your GSTR-2B with your purchase register before claiming ITC to avoid notices from the tax department."
                 </p>
               </div>
-            </div>
+            </>
           )}
 
           <div className="glass-card p-6 bg-slate-900 text-white">
@@ -851,52 +920,6 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           </div>
 
           <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-              <Calculator size={18} className="mr-2 text-primary" />
-              Tax Calendar
-            </h4>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 flex-shrink-0 text-xs font-bold">
-                  20
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">GSTR-3B Filing</p>
-                  <p className="text-[10px] text-slate-500">Monthly return deadline</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 flex-shrink-0 text-xs font-bold">
-                  11
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">GSTR-1 Filing</p>
-                  <p className="text-[10px] text-slate-500">Sales return deadline</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0 text-xs font-bold">
-                  15
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">TDS Payment</p>
-                  <p className="text-[10px] text-slate-500">Monthly deposit deadline</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
-            <h4 className="font-bold text-slate-900 mb-3 flex items-center">
-              <FileCheck size={18} className="mr-2 text-primary" />
-              Pro Tax Tip
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed italic">
-              "Always reconcile your GSTR-2B with your purchase register before claiming ITC to avoid notices from the tax department."
-            </p>
-          </div>
-
-          <div className="glass-card p-6">
             <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
             <div className="space-y-2">
               <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
@@ -917,41 +940,43 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       </div>
 
       {/* How it Works Section - Best Design Improvement */}
-      <div className="mt-12">
-        <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
-          <Info size={24} className="mr-2 text-primary" />
-          How {current.title} Works
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
-              <span className="font-bold">01</span>
+      {type !== 'itr' && (
+        <div className="mt-12">
+          <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+            <Info size={24} className="mr-2 text-primary" />
+            How {current.title} Works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+                <span className="font-bold">01</span>
+              </div>
+              <h4 className="font-bold text-slate-900 mb-2">Select Period</h4>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Use the date filter at the top to select the specific month, year, or custom range for your reports.
+              </p>
             </div>
-            <h4 className="font-bold text-slate-900 mb-2">Select Period</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Use the date filter at the top to select the specific month, year, or custom range for your reports.
-            </p>
-          </div>
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
-              <span className="font-bold">02</span>
+            <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
+                <span className="font-bold">02</span>
+              </div>
+              <h4 className="font-bold text-slate-900 mb-2">Verify Data</h4>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Check the status of each report. "Ready" means all required data is available for the selected period.
+              </p>
             </div>
-            <h4 className="font-bold text-slate-900 mb-2">Verify Data</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Check the status of each report. "Ready" means all required data is available for the selected period.
-            </p>
-          </div>
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
-              <span className="font-bold">03</span>
+            <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+                <span className="font-bold">03</span>
+              </div>
+              <h4 className="font-bold text-slate-900 mb-2">Download & File</h4>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Download your reports in CSV or JSON format and upload them directly to the government portal.
+              </p>
             </div>
-            <h4 className="font-bold text-slate-900 mb-2">Download & File</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Download your reports in CSV or JSON format and upload them directly to the government portal.
-            </p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

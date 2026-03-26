@@ -1126,43 +1126,6 @@ export default function ITRReport() {
         </div>
       </div>
 
-      {/* How it Works Section */}
-      <div className="mt-12">
-        <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
-          <Info size={24} className="mr-2 text-primary" />
-          How ITR Reporting Works
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
-              <span className="font-bold">01</span>
-            </div>
-            <h4 className="font-bold text-slate-900 mb-2">Enter Data</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Fill in the Balance Sheet, P&L, and Annexure tables. The system automatically calculates totals and net profit.
-            </p>
-          </div>
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
-              <span className="font-bold">02</span>
-            </div>
-            <h4 className="font-bold text-slate-900 mb-2">Review Totals</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Verify that your Balance Sheet is balanced and all depreciation rates are correctly applied in Annexure B.
-            </p>
-          </div>
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
-              <span className="font-bold">03</span>
-            </div>
-            <h4 className="font-bold text-slate-900 mb-2">Export Report</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Download the complete set of financial statements in professional Excel or PDF formats for your records or filing.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Bulk Download Section */}
       <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 no-print">
         <div className="text-center md:text-left">

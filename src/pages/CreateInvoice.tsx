@@ -1331,7 +1331,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="relative">
                       <input 
                         type="text"
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
+                        className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={invoiceNumber}
                         onFocus={() => setShowSeriesList(true)}
                         onBlur={() => {
@@ -1368,7 +1368,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       
                       {/* Custom Dropdown List */}
                       {showSeriesList && invoiceSeries.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl transition-all max-h-40 overflow-y-auto">
+                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl transition-all max-h-40 overflow-y-auto">
                           <div className="p-1">
                             <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50">
                               Series List
@@ -1406,7 +1406,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="text" 
                         placeholder="Search or enter name"
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.name || ''}
                         onFocus={() => setShowCustomerList(true)}
                         onBlur={() => {
@@ -1436,7 +1436,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       
                       {/* Custom Customer Dropdown */}
                       {showCustomerList && customers.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl transition-all max-h-48 overflow-y-auto">
+                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl transition-all max-h-48 overflow-y-auto">
                           <div className="p-1">
                             <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50">
                               Select Customer
@@ -1490,7 +1490,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input 
                         type="date" 
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={new Date().toISOString().split('T')[0]}
                         readOnly
                       />
@@ -1504,7 +1504,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         type="text" 
                         placeholder="Contact"
                         maxLength={10}
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.phone || ''}
                         onChange={e => {
                           const val = e.target.value.replace(/\D/g, '');
@@ -1519,7 +1519,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       type="text" 
                       placeholder="GSTIN"
                       maxLength={15}
-                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] uppercase text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] uppercase text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.gst || ''}
                       onChange={e => handleCustomerChange('gst', e.target.value.toUpperCase())}
                     />
@@ -1533,7 +1533,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="Building, Street, etc."
-                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.address1 || ''}
                       onChange={e => handleCustomerChange('address1', e.target.value)}
                     />
@@ -1543,7 +1543,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="Area, Locality, etc."
-                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.address2 || ''}
                       onChange={e => handleCustomerChange('address2', e.target.value)}
                     />
@@ -1553,7 +1553,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <input 
                       type="text" 
                       placeholder="City"
-                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                       value={customer.city || ''}
                       onChange={e => handleCustomerChange('city', e.target.value)}
                     />
@@ -1565,7 +1565,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         type="text" 
                         placeholder="Pincode"
                         maxLength={6}
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.pincode || ''}
                         onChange={e => {
                           const val = e.target.value.replace(/\D/g, '');
@@ -1576,7 +1576,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                       <select
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={customer.stateCode || ''}
                         onChange={e => handleCustomerChange('stateCode', e.target.value)}
                       >
@@ -1622,7 +1622,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="md:col-span-8 space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Product / Service</label>
                       <select 
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={newItem.productId || ''}
                         onChange={e => updateNewItem('productId', e.target.value)}
                       >
@@ -1638,7 +1638,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         type="text" 
                         placeholder="SKU"
                         readOnly
-                        className="w-full px-2 py-1.5 bg-slate-200/50 border border-slate-200 rounded-lg outline-none text-[11px] transition-all text-slate-600 font-bold placeholder:text-[11px]"
+                        className="w-full px-2 py-1.5 bg-slate-200/50 border border-slate-300 rounded-lg outline-none text-[11px] transition-all text-slate-600 font-bold placeholder:text-[11px]"
                         value={newItem.sku || ''}
                       />
                     </div>
@@ -1649,7 +1649,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="number" 
                         placeholder="0"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={newItem.quantity === '' ? '' : newItem.quantity}
                         onChange={e => updateNewItem('quantity', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
@@ -1659,7 +1659,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="number" 
                         placeholder="0.00"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={newItem.rate === '' ? '' : newItem.rate}
                         onChange={e => updateNewItem('rate', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
@@ -1669,7 +1669,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <input 
                         type="number" 
                         placeholder="0"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={newItem.discount === '' || newItem.discount === undefined ? '' : newItem.discount}
                         onChange={e => updateNewItem('discount', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       />
@@ -1677,7 +1677,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="md:col-span-2 space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">GST %</label>
                       <select 
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={newItem.gstRate === '' ? '' : newItem.gstRate}
                         onChange={e => updateNewItem('gstRate', e.target.value === '' ? '' : parseFloat(e.target.value))}
                       >
@@ -1814,7 +1814,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <input 
                             type="text" 
                             placeholder="12-digit E-way Bill No."
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all placeholder:text-[11px]"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all placeholder:text-[11px]"
                             value={ewayData.ewayBillNo}
                             onChange={e => setEwayData({...ewayData, ewayBillNo: e.target.value})}
                           />
@@ -1822,7 +1822,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Transaction Type</label>
                           <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transactionType}
                             onChange={e => setEwayData({...ewayData, transactionType: parseInt(e.target.value) || 1})}
                           >
@@ -1835,7 +1835,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Supply Type</label>
                           <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.supplyType}
                             onChange={e => setEwayData({...ewayData, supplyType: e.target.value})}
                           >
@@ -1846,7 +1846,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Sub Supply Type</label>
                           <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.subSupplyType}
                             onChange={e => setEwayData({...ewayData, subSupplyType: e.target.value})}
                           >
@@ -1865,7 +1865,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Trans Mode</label>
                           <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transMode}
                             onChange={e => setEwayData({...ewayData, transMode: e.target.value})}
                           >
@@ -1879,7 +1879,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Distance (in km)</label>
                           <input 
                             type="number" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transDistance}
                             onChange={e => setEwayData({...ewayData, transDistance: parseInt(e.target.value) || 0})}
                           />
@@ -1887,7 +1887,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Select Transporter</label>
                           <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             onChange={e => {
                               const trans = transporters.find(t => t.id === e.target.value);
                               if (trans) {
@@ -1909,7 +1909,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Transporter ID</label>
                           <input 
                             type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transporterId}
                             onChange={e => setEwayData({...ewayData, transporterId: e.target.value})}
                           />
@@ -1918,7 +1918,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Transporter Name</label>
                           <input 
                             type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transporterName}
                             onChange={e => setEwayData({...ewayData, transporterName: e.target.value})}
                           />
@@ -1927,7 +1927,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc No</label>
                           <input 
                             type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transDocNo}
                             onChange={e => setEwayData({...ewayData, transDocNo: e.target.value})}
                           />
@@ -1936,7 +1936,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc Date</label>
                           <input 
                             type="date" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.transDocDate}
                             onChange={e => setEwayData({...ewayData, transDocDate: e.target.value})}
                           />
@@ -1945,7 +1945,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Number</label>
                           <input 
                             type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.vehicleNo}
                             onChange={e => setEwayData({...ewayData, vehicleNo: e.target.value})}
                           />
@@ -1953,7 +1953,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Type</label>
                           <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.vehicleType}
                             onChange={e => setEwayData({...ewayData, vehicleType: e.target.value})}
                           >
@@ -1965,7 +1965,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">TotNonAdvolVal</label>
                           <input 
                             type="number" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.TotNonAdvolVal}
                             onChange={e => setEwayData({...ewayData, TotNonAdvolVal: parseFloat(e.target.value) || 0})}
                           />
@@ -1974,7 +1974,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Other Value</label>
                           <input 
                             type="number" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
                             value={ewayData.OthValue}
                             onChange={e => setEwayData({...ewayData, OthValue: parseFloat(e.target.value) || 0})}
                           />
@@ -2037,7 +2037,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <div className="relative">
                         <AlertCircle size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <select 
-                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] text-slate-900 font-medium transition-all appearance-none"
+                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] text-slate-900 font-medium transition-all appearance-none"
                           value={paymentStatus}
                           onChange={e => setPaymentStatus(e.target.value)}
                         >
@@ -2051,7 +2051,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <div className="relative">
                         <CreditCard size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <select 
-                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] text-slate-900 font-medium transition-all appearance-none disabled:opacity-50"
+                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] text-slate-900 font-medium transition-all appearance-none disabled:opacity-50"
                           value={paymentMode}
                           onChange={e => setPaymentMode(e.target.value)}
                           disabled={paymentStatus === 'unpaid'}
@@ -2071,7 +2071,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <Calendar size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
                           type="date" 
-                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                           value={dueDate}
                           onChange={e => setDueDate(e.target.value)}
                         />
@@ -2103,7 +2103,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       </button>
                       <button
                         onClick={handlePreview}
-                        className="w-full py-1.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg font-bold flex items-center justify-center hover:bg-slate-100 transition-all active:scale-95 text-[11px]"
+                        className="w-full py-1.5 bg-slate-50 border border-slate-300 text-slate-700 rounded-lg font-bold flex items-center justify-center hover:bg-slate-100 transition-all active:scale-95 text-[11px]"
                       >
                         <Eye size={12} className="mr-1" />
                         Preview Invoice
@@ -2132,7 +2132,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 <div className="flex space-x-3">
                   <button 
                     onClick={() => setViewMode('edit')}
-                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
+                    className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
                   >
                     Back to Edit
                   </button>
@@ -2358,7 +2358,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
         <>
           <button 
             onClick={onClose}
-            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-[11px] font-bold hover:bg-slate-100 transition-all"
+            className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-[11px] font-bold hover:bg-slate-100 transition-all"
           >
             Discard
           </button>
@@ -2389,7 +2389,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
               <label className="text-[8px] font-bold text-slate-500 uppercase">Name</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
                 value={editedData.customer.name}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, name: e.target.value } })}
               />
@@ -2398,7 +2398,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
               <label className="text-[8px] font-bold text-slate-500 uppercase">Phone</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
                 value={editedData.customer.phone}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, phone: e.target.value } })}
               />
@@ -2407,7 +2407,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
               <label className="text-[8px] font-bold text-slate-500 uppercase">GSTIN</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
                 value={editedData.customer.gst}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, gst: e.target.value } })}
               />
@@ -2416,7 +2416,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
               <label className="text-[8px] font-bold text-slate-500 uppercase">Address</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
                 value={editedData.customer.address1}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, address1: e.target.value } })}
               />

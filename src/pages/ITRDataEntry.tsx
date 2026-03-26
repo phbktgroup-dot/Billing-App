@@ -151,55 +151,6 @@ export default function ITRDataEntry() {
       </div>
 
       <form onSubmit={handleSave} className="space-y-8">
-        {/* Financial Summary (Read-only) */}
-        <div className="glass-card p-6 space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
-                <TrendingUp size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Financial Summary</h2>
-                <p className="text-xs text-slate-500">Automatically pulled from your invoices, purchases, and expenses.</p>
-              </div>
-            </div>
-            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${financialSummary.netProfit >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-              {financialSummary.netProfit >= 0 ? 'Profit' : 'Loss'}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Sales</span>
-                <TrendingUp size={14} className="text-emerald-500" />
-              </div>
-              <div className="text-lg font-bold text-slate-900">₹{financialSummary.totalSales.toLocaleString()}</div>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Purchases</span>
-                <ShoppingBag size={14} className="text-blue-500" />
-              </div>
-              <div className="text-lg font-bold text-slate-900">₹{financialSummary.totalPurchases.toLocaleString()}</div>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Expenses</span>
-                <Receipt size={14} className="text-amber-500" />
-              </div>
-              <div className="text-lg font-bold text-slate-900">₹{financialSummary.totalExpenses.toLocaleString()}</div>
-            </div>
-            <div className={`p-4 rounded-2xl border ${financialSummary.netProfit >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${financialSummary.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>Net {financialSummary.netProfit >= 0 ? 'Profit' : 'Loss'}</span>
-                {financialSummary.netProfit >= 0 ? <TrendingUp size={14} className="text-emerald-500" /> : <TrendingDown size={14} className="text-rose-500" />}
-              </div>
-              <div className={`text-lg font-bold ${financialSummary.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>₹{Math.abs(financialSummary.netProfit).toLocaleString()}</div>
-            </div>
-          </div>
-        </div>
-
         {/* Personal / Entity Details */}
         <div className="glass-card p-6 space-y-6">
           <div className="flex items-center space-x-3 pb-4 border-b border-slate-100">

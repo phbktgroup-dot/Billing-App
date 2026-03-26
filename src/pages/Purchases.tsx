@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical, User } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, getDateRange, FilterType, cn } from '../lib/utils';
@@ -75,11 +75,14 @@ export default function Purchases() {
     const [editedData, setEditedData] = useState(data);
 
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+      <div className="fixed inset-0 z-[60] flex items-stretch justify-end bg-slate-900/60 backdrop-blur-md">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          className="bg-white shadow-2xl overflow-hidden flex flex-col h-full"
+          style={{ width: 'calc(100% - var(--sidebar-width))' }}
         >
           <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center space-x-2">
@@ -980,20 +983,28 @@ Return as JSON format: {
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ml-16 md:ml-24 lg:ml-32 transition-all duration-300">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center">
-                <ShoppingCart size={20} className="mr-2 text-primary" />
-                {editingPurchase ? 'Edit Purchase' : 'Record Purchase'}
-              </h2>
-              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-900/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="bg-white shadow-2xl overflow-hidden flex flex-col h-full transition-all duration-300"
+              style={{ width: 'calc(100% - var(--sidebar-width))' }}
+            >
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center">
+                  <ShoppingCart size={20} className="mr-2 text-primary" />
+                  {editingPurchase ? 'Edit Purchase' : 'Record Purchase'}
+                </h2>
+                <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Supplier & Invoice Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-3">
@@ -1316,9 +1327,10 @@ Return as JSON format: {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModalOpen}
@@ -1342,49 +1354,51 @@ Return as JSON format: {
         type={modal.type}
       />
 
-      {showScannedReview && scannedData && (
-        <ScannedReviewModal 
-          data={scannedData}
-          onClose={() => setShowScannedReview(false)}
-          onConfirm={(finalData) => {
-            // Find or create supplier
-            let supplierId = '';
-            const supplierName = finalData.supplier.name;
-            if (supplierName) {
-              const existingSupplier = suppliers.find(s => s.name.trim().toLowerCase() === supplierName.trim().toLowerCase());
-              if (existingSupplier) {
-                supplierId = existingSupplier.id;
+      <AnimatePresence>
+        {showScannedReview && scannedData && (
+          <ScannedReviewModal 
+            data={scannedData}
+            onClose={() => setShowScannedReview(false)}
+            onConfirm={(finalData) => {
+              // Find or create supplier
+              let supplierId = '';
+              const supplierName = finalData.supplier.name;
+              if (supplierName) {
+                const existingSupplier = suppliers.find(s => s.name.trim().toLowerCase() === supplierName.trim().toLowerCase());
+                if (existingSupplier) {
+                  supplierId = existingSupplier.id;
+                }
               }
-            }
 
-            setFormData({
-              supplier_id: supplierId,
-              supplier_name: !supplierId ? supplierName : '',
-              supplier_gstin: finalData.supplier.gstin,
-              supplier_email: finalData.supplier.email,
-              supplier_phone: finalData.supplier.phone,
-              supplier_address: finalData.supplier.address,
-              invoice_number: finalData.invoiceNumber,
-              bill_date: finalData.date,
-              upload_date: new Date().toISOString().split('T')[0],
-              total_amount: finalData.items.reduce((sum: number, i: any) => sum + i.amount, 0),
-              status: 'paid',
-              notes: 'Scanned via AI',
-              items: finalData.items.map((item: any) => {
-                const matchedProduct = products.find(p => p.name.trim().toLowerCase() === item.particular.trim().toLowerCase());
-                return {
-                  ...item,
-                  product_id: matchedProduct?.id || null
-                };
-              })
-            });
-            
-            setShowScannedReview(false);
-            setIsModalOpen(true);
-            setModal({ isOpen: true, title: 'Success', message: 'Bill details confirmed. You can now review and save.', type: 'success' });
-          }}
-        />
-      )}
+              setFormData({
+                supplier_id: supplierId,
+                supplier_name: !supplierId ? supplierName : '',
+                supplier_gstin: finalData.supplier.gstin,
+                supplier_email: finalData.supplier.email,
+                supplier_phone: finalData.supplier.phone,
+                supplier_address: finalData.supplier.address,
+                invoice_number: finalData.invoiceNumber,
+                bill_date: finalData.date,
+                upload_date: new Date().toISOString().split('T')[0],
+                total_amount: finalData.items.reduce((sum: number, i: any) => sum + i.amount, 0),
+                status: 'paid',
+                notes: 'Scanned via AI',
+                items: finalData.items.map((item: any) => {
+                  const matchedProduct = products.find(p => p.name.trim().toLowerCase() === item.particular.trim().toLowerCase());
+                  return {
+                    ...item,
+                    product_id: matchedProduct?.id || null
+                  };
+                })
+              });
+              
+              setShowScannedReview(false);
+              setIsModalOpen(true);
+              setModal({ isOpen: true, title: 'Success', message: 'Bill details confirmed. You can now review and save.', type: 'success' });
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {isScanning && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
