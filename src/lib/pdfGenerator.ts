@@ -70,25 +70,25 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.line(10, 82, 200, 82);
   doc.line(10, 92, 200, 92);
   doc.line(10, 102, 200, 102);
-  doc.line(10, 207, 200, 207);
-  doc.line(10, 215, 200, 215);
-  doc.line(10, 225, 200, 225);
+  doc.line(10, 197, 200, 197);
+  doc.line(10, 205, 200, 205);
+  doc.line(10, 212, 200, 212);
   doc.line(10, 265, 200, 265);
   
   // Vertical lines
   doc.line(105, 45, 105, 92); // Header middle
   
-  // Table columns (from 92 to 207)
-  doc.line(20, 92, 20, 207); // S.N.
-  doc.line(95, 92, 95, 207); // Description end
-  doc.line(130, 92, 130, 207); // Product Code end
-  doc.line(150, 92, 150, 207); // Qty end
-  doc.line(175, 92, 175, 207); // Price end
-  doc.line(200, 92, 200, 225); // Table end (Keep right border)
+  // Table columns (from 92 to 197)
+  doc.line(20, 92, 20, 197); // S.N.
+  doc.line(95, 92, 95, 197); // Description end
+  doc.line(130, 92, 130, 197); // Product Code end
+  doc.line(150, 92, 150, 197); // Qty end
+  doc.line(175, 92, 175, 197); // Price end
+  doc.line(200, 92, 200, 212); // Table end (Keep right border)
   
   // Vertical line for Total row (Qty column)
-  doc.line(150, 215, 150, 225);
-  doc.line(175, 215, 175, 225);
+  doc.line(150, 205, 150, 212);
+  doc.line(175, 205, 175, 212);
   
   // Footer middle
   doc.line(120, 265, 120, 292);
@@ -137,18 +137,16 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.text(business?.address1 || "", 105, 25, { align: 'center' });
   
   // Line 2: Address 2
-  doc.text(business?.address2 || "", 105, 28, { align: 'center' });
+  doc.text(business?.address2 || "", 105, 29, { align: 'center' });
   
   // Line 3: City and Pincode
   const line3 = [business?.city, business?.pincode ? `PIN: ${business.pincode}` : ''].filter(Boolean).join(', ');
-  doc.text(line3 || "", 105, 31, { align: 'center' });
+  doc.text(line3 || "", 105, 33, { align: 'center' });
 
-  doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 34, { align: 'center' });
+  doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 37, { align: 'center' });
   
   doc.setFont("helvetica", "bold");
-  doc.text(`PAN NO.: ${business?.pan_number || ""} , GST NO. : ${business?.gst_number || ""}`, 105, 37, { align: 'center' });
-  doc.text(`${business?.bank_name || ""} A/C NO :- ${business?.bank_account_no || ""}, IFSC :- ${business?.bank_ifsc || ""}`, 105, 40, { align: 'center' });
-  doc.text(`Branch : ${business?.bank_branch || ""}`, 105, 43, { align: 'center' });
+  doc.text(`PAN NO.: ${business?.pan_number || ""} , GST NO. : ${business?.gst_number || ""}`, 105, 41, { align: 'center' });
 
   // Right Header
   doc.setFontSize(7);
@@ -216,6 +214,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setFont("helvetica", "normal");
   let currentY = 109;
   invoice.items.forEach((item, index) => {
+    if (currentY > 190) return; // Prevent items from overflowing table
     doc.text((index + 1).toString(), 15, currentY, { align: 'center' });
     doc.text(item.name, 22, currentY);
     doc.text(item.hsnCode || "-", 112.5, currentY, { align: 'center' });
@@ -230,20 +229,20 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setFont("helvetica", "bold");
   const effectiveDiscountPercent = invoice.discount_percentage || (invoice.raw_subtotal > 0 ? (invoice.discount / invoice.raw_subtotal * 100) : 0);
   const discountText = `Discount (${effectiveDiscountPercent.toFixed(effectiveDiscountPercent % 1 === 0 ? 0 : 1)}%) :`;
-  doc.text(discountText, 25, 211);
-  doc.text((invoice.discount || 0).toFixed(2), 198, 211, { align: 'right' });
+  doc.text(discountText, 25, 201);
+  doc.text((invoice.discount || 0).toFixed(2), 198, 201, { align: 'right' });
 
   // Total Row in Table (Discounted Amount)
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Total Amount :", 25, 220);
+  doc.text("Total Amount :", 25, 209);
   
   const totalQty = invoice.items.reduce((sum, i) => sum + i.quantity, 0);
-  doc.text(totalQty.toString(), 140, 220, { align: 'center' });
-  doc.text(invoice.subtotal.toFixed(2), 198, 220, { align: 'right' });
+  doc.text(totalQty.toString(), 140, 209, { align: 'center' });
+  doc.text(invoice.subtotal.toFixed(2), 198, 209, { align: 'right' });
 
   // Tax and Grand Total (Stacked on the right)
-  let summaryY = 230;
+  let summaryY = 220;
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
 
@@ -283,11 +282,11 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
     doc.text("Subtotal GST :", 130, summaryY);
     doc.text((invoice.tax_amount || 0).toFixed(2), 198, summaryY, { align: 'right' });
     doc.setFont("helvetica", "normal");
-    summaryY += 8;
+    summaryY += 10;
   } else {
     doc.text(`Add :GST 0% :`, 130, summaryY);
     doc.text("0.00", 198, summaryY, { align: 'right' });
-    summaryY += 6;
+    summaryY += 10;
   }
 
   // Grand Total Row
@@ -300,6 +299,14 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.text("GRAND TOTAL :", 130, summaryY);
   doc.text(invoice.total.toFixed(2), 198, summaryY, { align: 'right' });
   doc.setFont("helvetica", "normal");
+
+  // Bank Details Rows
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Bank Name - ${business?.bank_name || ""}`, 12, summaryY + 10);
+  doc.text(`Account Number - ${business?.bank_account_no || ""}`, 12, summaryY + 14);
+  doc.text(`IFSC Code - ${business?.bank_ifsc || ""}`, 12, summaryY + 18);
+  doc.text(`Branch - ${business?.bank_branch || ""}`, 12, summaryY + 22);
 
   // Footer
   const footerTopY = 265;
