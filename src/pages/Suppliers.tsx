@@ -262,7 +262,7 @@ export default function Suppliers() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-4 py-3 w-10">
+                <th className="px-2.5 py-1.5 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -270,11 +270,11 @@ export default function Suppliers() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3">Supplier Name</th>
-                <th className="px-4 py-3">Contact Info</th>
-                <th className="px-4 py-3">GST Number</th>
-                <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-2.5 py-1.5">Supplier Name</th>
+                <th className="px-2.5 py-1.5">Contact Info</th>
+                <th className="px-2.5 py-1.5">GST Number</th>
+                <th className="px-2.5 py-1.5">Address</th>
+                <th className="px-2.5 py-1.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -299,7 +299,7 @@ export default function Suppliers() {
                       selectedSuppliers.includes(supplier.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -307,7 +307,7 @@ export default function Suppliers() {
                         onChange={() => toggleSelectSupplier(supplier.id)}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs mr-3">
                           {supplier.name.charAt(0).toUpperCase()}
@@ -318,7 +318,7 @@ export default function Suppliers() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="space-y-1">
                         <div className="flex items-center text-[10px] text-slate-600">
                           <Phone size={10} className="mr-1.5 text-slate-400" />
@@ -330,18 +330,18 @@ export default function Suppliers() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <span className="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
                         {supplier.gst_number || 'No GSTIN'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
                         <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{supplier.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2.5 py-1.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(supplier)}

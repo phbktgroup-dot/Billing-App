@@ -309,7 +309,7 @@ export default function Expenses() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-bottom border-slate-100">
-                <th className="px-4 py-3 w-10">
+                <th className="px-2.5 py-1.5 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -317,11 +317,11 @@ export default function Expenses() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Date</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Category</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Description</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Amount</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Actions</th>
+                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Date</th>
+                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Category</th>
+                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Description</th>
+                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Amount</th>
+                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -351,7 +351,7 @@ export default function Expenses() {
                       selectedExpenses.includes(expense.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -359,25 +359,25 @@ export default function Expenses() {
                         onChange={() => toggleSelectExpense(expense.id)}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center space-x-2">
                         <Calendar size={14} className="text-slate-400" />
                         <span className="text-xs text-slate-600 font-medium">{new Date(expense.date).toLocaleDateString()}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center space-x-2">
                         <Tag size={14} className="text-slate-400" />
                         <span className="text-xs font-bold text-slate-900">{expense.category}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <span className="text-xs text-slate-500 line-clamp-1">{expense.description || '-'}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2.5 py-1.5 text-right">
                       <span className="text-xs font-bold text-red-600">{formatCurrency(expense.amount)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2.5 py-1.5 text-right">
                       <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleEdit(expense)}

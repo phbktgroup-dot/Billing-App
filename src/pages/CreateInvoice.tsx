@@ -28,7 +28,7 @@ import {
   Share2
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn, formatCurrency, getDateRange, FilterType, formatSeriesNumber } from '../lib/utils';
 import { GoogleGenAI } from '@google/genai';
 import { supabase } from '../lib/supabase';
@@ -1703,14 +1703,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <table className="w-full text-[11px] text-left">
                       <thead className="text-[9px] text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
                         <tr>
-                          <th className="px-3 py-1.5 font-bold">Item Description</th>
-                          <th className="px-3 py-1.5 font-bold">Product/HSN Code</th>
-                          <th className="px-3 py-1.5 font-bold text-center">Qty</th>
-                          <th className="px-3 py-1.5 font-bold text-right">Price</th>
-                          <th className="px-3 py-1.5 font-bold text-center">Disc.</th>
-                          <th className="px-3 py-1.5 font-bold text-center">GST</th>
-                          <th className="px-3 py-1.5 font-bold text-right">Total</th>
-                          <th className="px-3 py-1.5"></th>
+                          <th className="px-2.5 py-1.5 font-bold">Item Description</th>
+                          <th className="px-2.5 py-1.5 font-bold">Product/HSN Code</th>
+                          <th className="px-2.5 py-1.5 font-bold text-center">Qty</th>
+                          <th className="px-2.5 py-1.5 font-bold text-right">Price</th>
+                          <th className="px-2.5 py-1.5 font-bold text-center">Disc.</th>
+                          <th className="px-2.5 py-1.5 font-bold text-center">GST</th>
+                          <th className="px-2.5 py-1.5 font-bold text-right">Total</th>
+                          <th className="px-2.5 py-1.5"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
@@ -1734,14 +1734,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                               animate={{ opacity: 1, y: 0 }}
                               className="group hover:bg-slate-50 transition-colors"
                             >
-                              <td className="px-3 py-1">
+                              <td className="px-2.5 py-1">
                                 <div className="font-bold text-slate-900">{item.name}</div>
                                 <div className="text-[9px] text-slate-400 font-medium">Item #{index + 1}</div>
                               </td>
-                              <td className="px-3 py-1.5 text-slate-600 font-medium">{item.sku || '-'}</td>
-                              <td className="px-3 py-1.5 text-center font-medium text-slate-700">{item.quantity}</td>
-                              <td className="px-3 py-1.5 text-right font-medium text-slate-700">{formatCurrency(Number(item.rate) || 0)}</td>
-                              <td className="px-3 py-1.5 text-center">
+                              <td className="px-2.5 py-1.5 text-slate-600 font-medium">{item.sku || '-'}</td>
+                              <td className="px-2.5 py-1.5 text-center font-medium text-slate-700">{item.quantity}</td>
+                              <td className="px-2.5 py-1.5 text-right font-medium text-slate-700">{formatCurrency(Number(item.rate) || 0)}</td>
+                              <td className="px-2.5 py-1.5 text-center">
                                 {item.discount ? (
                                   <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[9px] font-bold">
                                     {item.discount}%
@@ -1750,15 +1750,15 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                   <span className="text-slate-300">-</span>
                                 )}
                               </td>
-                              <td className="px-3 py-1.5 text-center">
+                              <td className="px-2.5 py-1.5 text-center">
                                 <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold">
                                   {item.gstRate}%
                                 </span>
                               </td>
-                              <td className="px-3 py-1.5 text-right font-bold text-slate-900">
+                              <td className="px-2.5 py-1.5 text-right font-bold text-slate-900">
                                 {formatCurrency(Number(item.amount) || 0)}
                               </td>
-                              <td className="px-3 py-1.5 text-right">
+                              <td className="px-2.5 py-1.5 text-right">
                                 <button 
                                   onClick={() => removeItem(item.id)} 
                                   className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
@@ -2371,18 +2371,19 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
         </>
       }
     >
-      <div className="space-y-4">
-        {/* Customer Section */}
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-primary">
-              <UserPlus size={14} strokeWidth={2.5} />
-              <h4 className="text-[11px] font-bold uppercase tracking-wider">Customer Information</h4>
+      {editedData && (
+        <div className="space-y-4">
+          {/* Customer Section */}
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-primary">
+                <UserPlus size={14} strokeWidth={2.5} />
+                <h4 className="text-[11px] font-bold uppercase tracking-wider">Customer Information</h4>
+              </div>
+              {!editedData.customer.id && (
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Customer</span>
+              )}
             </div>
-            {!editedData.customer.id && (
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Customer</span>
-            )}
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             <div className="space-y-0.5">
               <label className="text-[8px] font-bold text-slate-500 uppercase">Name</label>
@@ -2490,6 +2491,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
           </div>
         </section>
       </div>
+      )}
     </Drawer>
   );
 };

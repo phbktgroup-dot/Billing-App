@@ -837,23 +837,23 @@ export default function GSTReports() {
             <table className="w-full text-left text-[11px]">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="px-4 py-3">GSTIN</th>
-                  <th className="px-4 py-3">Invoice #</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Taxable Value</th>
-                  <th className="px-4 py-3">Tax Amount</th>
-                  <th className="px-4 py-3">Total Value</th>
+                  <th className="px-2.5 py-1.5">GSTIN</th>
+                  <th className="px-2.5 py-1.5">Invoice #</th>
+                  <th className="px-2.5 py-1.5">Date</th>
+                  <th className="px-2.5 py-1.5">Taxable Value</th>
+                  <th className="px-2.5 py-1.5">Tax Amount</th>
+                  <th className="px-2.5 py-1.5">Total Value</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {gstr1Data.b2b.map((inv, i) => (
                   <tr key={i} className="hover:bg-slate-50/50">
-                    <td className="px-4 py-3 font-medium">{inv.customers?.gstin}</td>
-                    <td className="px-4 py-3">{inv.invoice_number}</td>
-                    <td className="px-4 py-3">{new Date(inv.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">{formatCurrency(inv.subtotal)}</td>
-                    <td className="px-4 py-3">{formatCurrency(inv.tax_amount)}</td>
-                    <td className="px-4 py-3 font-bold">{formatCurrency(inv.total)}</td>
+                    <td className="px-2.5 py-1.5 font-medium">{inv.customers?.gstin}</td>
+                    <td className="px-2.5 py-1.5">{inv.invoice_number}</td>
+                    <td className="px-2.5 py-1.5">{new Date(inv.date).toLocaleDateString()}</td>
+                    <td className="px-2.5 py-1.5">{formatCurrency(inv.subtotal)}</td>
+                    <td className="px-2.5 py-1.5">{formatCurrency(inv.tax_amount)}</td>
+                    <td className="px-2.5 py-1.5 font-bold">{formatCurrency(inv.total)}</td>
                   </tr>
                 ))}
                 {gstr1Data.b2b.length === 0 && (
@@ -953,23 +953,23 @@ export default function GSTReports() {
             <table className="w-full text-left text-[11px]">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="px-4 py-3">Supplier GSTIN</th>
-                  <th className="px-4 py-3">Supplier Name</th>
-                  <th className="px-4 py-3">Invoice #</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Taxable Value</th>
-                  <th className="px-4 py-3">ITC Available</th>
+                  <th className="px-2.5 py-1.5">Supplier GSTIN</th>
+                  <th className="px-2.5 py-1.5">Supplier Name</th>
+                  <th className="px-2.5 py-1.5">Invoice #</th>
+                  <th className="px-2.5 py-1.5">Date</th>
+                  <th className="px-2.5 py-1.5">Taxable Value</th>
+                  <th className="px-2.5 py-1.5">ITC Available</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {purchases.map((pur, i) => (
                   <tr key={i} className="hover:bg-slate-50/50">
-                    <td className="px-4 py-3 font-medium">{pur.suppliers?.gstin}</td>
-                    <td className="px-4 py-3">{pur.suppliers?.name}</td>
-                    <td className="px-4 py-3">{pur.invoice_number}</td>
-                    <td className="px-4 py-3">{new Date(pur.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">{formatCurrency(pur.subtotal)}</td>
-                    <td className="px-4 py-3 font-bold text-emerald-600">{formatCurrency(pur.tax_amount)}</td>
+                    <td className="px-2.5 py-1.5 font-medium">{pur.suppliers?.gstin}</td>
+                    <td className="px-2.5 py-1.5">{pur.suppliers?.name}</td>
+                    <td className="px-2.5 py-1.5">{pur.invoice_number}</td>
+                    <td className="px-2.5 py-1.5">{new Date(pur.date).toLocaleDateString()}</td>
+                    <td className="px-2.5 py-1.5">{formatCurrency(pur.subtotal)}</td>
+                    <td className="px-2.5 py-1.5 font-bold text-emerald-600">{formatCurrency(pur.tax_amount)}</td>
                   </tr>
                 ))}
                 {purchases.length === 0 && (

@@ -161,17 +161,17 @@ export default function Purchases() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="px-3 py-1.5">Item Name</th>
-                      <th className="px-3 py-1.5 w-16 text-center">Qty</th>
-                      <th className="px-3 py-1.5 w-20 text-right">Rate</th>
-                      <th className="px-3 py-1.5 w-24 text-right">Amount</th>
-                      <th className="px-3 py-1.5 w-8"></th>
+                      <th className="px-2.5 py-1.5">Item Name</th>
+                      <th className="px-2.5 py-1.5 w-16 text-center">Qty</th>
+                      <th className="px-2.5 py-1.5 w-20 text-right">Rate</th>
+                      <th className="px-2.5 py-1.5 w-24 text-right">Amount</th>
+                      <th className="px-2.5 py-1.5 w-8"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {editedData.items.map((item: any, idx: number) => (
                       <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-3 py-1.5">
+                        <td className="px-2.5 py-1.5">
                           <input 
                             type="text"
                             className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-medium p-0"
@@ -183,7 +183,7 @@ export default function Purchases() {
                             }}
                           />
                         </td>
-                        <td className="px-3 py-1.5">
+                        <td className="px-2.5 py-1.5">
                           <input 
                             type="number"
                             className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-center p-0"
@@ -196,7 +196,7 @@ export default function Purchases() {
                             }}
                           />
                         </td>
-                        <td className="px-3 py-1.5">
+                        <td className="px-2.5 py-1.5">
                           <input 
                             type="number"
                             className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
@@ -209,10 +209,10 @@ export default function Purchases() {
                             }}
                           />
                         </td>
-                        <td className="px-3 py-1.5 text-right text-[10px] font-black text-primary">
+                        <td className="px-2.5 py-1.5 text-right text-[10px] font-black text-primary">
                           {formatCurrency(item.amount)}
                         </td>
-                        <td className="px-3 py-1.5 text-right">
+                        <td className="px-2.5 py-1.5 text-right">
                           <button 
                             onClick={() => {
                               const newItems = editedData.items.filter((_: any, i: number) => i !== idx);
@@ -884,7 +884,7 @@ Return as JSON format: {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-4 py-3 w-10">
+                <th className="px-2.5 py-1.5 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -892,13 +892,13 @@ Return as JSON format: {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3">Bill Date</th>
-                <th className="px-4 py-3">Upload Date</th>
-                <th className="px-4 py-3">Invoice #</th>
-                <th className="px-4 py-3">Supplier</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-2.5 py-1.5">Bill Date</th>
+                <th className="px-2.5 py-1.5">Upload Date</th>
+                <th className="px-2.5 py-1.5">Invoice #</th>
+                <th className="px-2.5 py-1.5">Supplier</th>
+                <th className="px-2.5 py-1.5">Amount</th>
+                <th className="px-2.5 py-1.5">Status</th>
+                <th className="px-2.5 py-1.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -923,7 +923,7 @@ Return as JSON format: {
                       selectedPurchases.includes(purchase.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -931,27 +931,27 @@ Return as JSON format: {
                         onChange={() => toggleSelectPurchase(purchase.id)}
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">
+                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
                       {new Date(purchase.date).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-[10px] text-slate-400">
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-400">
                       {new Date(purchase.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-xs font-medium text-slate-900">{purchase.invoice_number}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">
+                    <td className="px-2.5 py-1.5 text-xs font-medium text-slate-900">{purchase.invoice_number}</td>
+                    <td className="px-2.5 py-1.5 text-xs text-slate-600">
                       {purchase.suppliers?.name || 'Unknown Supplier'}
                     </td>
-                    <td className="px-4 py-3 text-xs font-bold text-slate-900">
+                    <td className="px-2.5 py-1.5 text-xs font-bold text-slate-900">
                       {formatCurrency(purchase.total_amount)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
                         purchase.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
                       }`}>
                         {purchase.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2.5 py-1.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(purchase)}
@@ -1161,18 +1161,18 @@ Return as JSON format: {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        <th className="px-4 py-3">Particular (Item Name)</th>
-                        <th className="px-4 py-3">HSN</th>
-                        <th className="px-4 py-3 w-24">Qty</th>
-                        <th className="px-4 py-3 w-32">Rate</th>
-                        <th className="px-4 py-3 w-32">Amount</th>
-                        <th className="px-4 py-3 text-right"></th>
+                        <th className="px-2.5 py-1.5">Particular (Item Name)</th>
+                        <th className="px-2.5 py-1.5">HSN</th>
+                        <th className="px-2.5 py-1.5 w-24">Qty</th>
+                        <th className="px-2.5 py-1.5 w-32">Rate</th>
+                        <th className="px-2.5 py-1.5 w-32">Amount</th>
+                        <th className="px-2.5 py-1.5 text-right"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {formData.items.map((item, index) => (
                         <tr key={index} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-2">
+                          <td className="px-2.5 py-1.5">
                             <div className="space-y-1">
                               <input 
                                 type="text"
@@ -1198,7 +1198,7 @@ Return as JSON format: {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2.5 py-1.5">
                             <input 
                               type="text"
                               placeholder="HSN"
@@ -1211,7 +1211,7 @@ Return as JSON format: {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2.5 py-1.5">
                             <input 
                               type="number"
                               className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
@@ -1229,7 +1229,7 @@ Return as JSON format: {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2.5 py-1.5">
                             <input 
                               type="number"
                               className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
@@ -1247,7 +1247,7 @@ Return as JSON format: {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2.5 py-1.5">
                             <input 
                               type="number"
                               readOnly
@@ -1255,7 +1255,7 @@ Return as JSON format: {
                               value={item.amount}
                             />
                           </td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="px-2.5 py-1.5 text-right">
                             <button 
                               type="button"
                               onClick={() => {
@@ -1283,8 +1283,8 @@ Return as JSON format: {
                     </tbody>
                     <tfoot className="bg-slate-50/50">
                       <tr>
-                        <td colSpan={4} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase">Total Amount</td>
-                        <td className="px-4 py-3 text-sm font-black text-primary">{formatCurrency(formData.total_amount)}</td>
+                        <td colSpan={4} className="px-2.5 py-1.5 text-right text-[10px] font-bold text-slate-500 uppercase">Total Amount</td>
+                        <td className="px-2.5 py-1.5 text-[10px] font-black text-primary">{formatCurrency(formData.total_amount)}</td>
                         <td></td>
                       </tr>
                     </tfoot>

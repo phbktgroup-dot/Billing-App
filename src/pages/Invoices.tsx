@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   FileText, 
   Plus, 
@@ -497,7 +497,7 @@ export default function Invoices() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 w-10">
+                <th className="px-2.5 py-1.5 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -505,13 +505,13 @@ export default function Invoices() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-6 py-4">Invoice #</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Amount</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Payment Mode</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-2.5 py-1.5">Invoice #</th>
+                <th className="px-2.5 py-1.5">Customer</th>
+                <th className="px-2.5 py-1.5">Date</th>
+                <th className="px-2.5 py-1.5">Amount</th>
+                <th className="px-2.5 py-1.5">Status</th>
+                <th className="px-2.5 py-1.5">Payment Mode</th>
+                <th className="px-2.5 py-1.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -548,7 +548,7 @@ export default function Invoices() {
                         selectedInvoices.includes(invoice.id) && "bg-primary/5"
                       )}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <input 
                           type="checkbox" 
                           className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -556,25 +556,25 @@ export default function Invoices() {
                           onChange={() => toggleSelectInvoice(invoice.id)}
                         />
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <span className="text-xs font-bold text-slate-900">{invoice.invoice_number}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <div className="flex items-center">
                           <User size={14} className="mr-2 text-slate-400" />
                           <span className="text-xs text-slate-600">{invoice.customers?.name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <div className="flex items-center text-xs text-slate-600">
                           <Calendar size={14} className="mr-2 text-slate-400" />
                           {new Date(invoice.date).toLocaleDateString()}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <span className="text-xs font-bold text-slate-900">{formatCurrency(invoice.total)}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <select 
                           className={cn(
                             "px-3 py-1 rounded-full text-[10px] font-bold uppercase outline-none cursor-pointer",
@@ -588,10 +588,10 @@ export default function Invoices() {
                           <option value="overdue">Overdue</option>
                         </select>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-2.5 py-1.5">
                         <span className="text-xs text-slate-600">{invoice.payment_mode || 'Cash'}</span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-2.5 py-1.5 text-right">
                         <div className="flex items-center justify-end space-x-2">
                           <button 
                             onClick={() => handlePreview(invoice)}

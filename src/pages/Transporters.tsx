@@ -198,11 +198,11 @@ export default function Transporters() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-4 py-3">Transporter Name</th>
-                <th className="px-4 py-3">Transporter ID / GSTIN</th>
-                <th className="px-4 py-3">Contact Info</th>
-                <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-2.5 py-1.5">Transporter Name</th>
+                <th className="px-2.5 py-1.5">Transporter ID / GSTIN</th>
+                <th className="px-2.5 py-1.5">Contact Info</th>
+                <th className="px-2.5 py-1.5">Address</th>
+                <th className="px-2.5 py-1.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -224,7 +224,7 @@ export default function Transporters() {
               ) : (
                 filteredTransporters.map((transporter) => (
                   <tr key={transporter.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 text-xs">
                           {transporter.name.charAt(0).toUpperCase()}
@@ -234,13 +234,13 @@ export default function Transporters() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-center text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700 w-fit">
                         <IdCard size={10} className="mr-1.5 text-slate-400" />
                         {transporter.transporter_id}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="space-y-1">
                         <div className="flex items-center text-[10px] text-slate-600">
                           <Phone size={10} className="mr-1.5 text-slate-400" />
@@ -252,13 +252,13 @@ export default function Transporters() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
                         <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{transporter.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2.5 py-1.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(transporter)}

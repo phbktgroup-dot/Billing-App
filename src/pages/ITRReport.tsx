@@ -1142,7 +1142,7 @@ function EditableTable({
                     type="text"
                     value={h}
                     onChange={(e) => onHeaderChange(i, e.target.value)}
-                    className="w-full p-3 bg-transparent font-bold text-left outline-none focus:bg-blue-50/50"
+                    className="w-full px-2 py-1.5 bg-transparent font-bold text-left outline-none focus:bg-blue-50/50 text-[11px]"
                   />
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-print z-10">
                     <button 
@@ -1174,7 +1174,7 @@ function EditableTable({
                       type="text"
                       value={cell}
                       onChange={(e) => onChange(rowIndex, colIndex, e.target.value)}
-                      className="w-full p-3 bg-transparent focus:bg-blue-50/30 outline-none transition-colors"
+                      className="w-full px-2 py-1.5 bg-transparent focus:bg-blue-50/30 outline-none transition-colors text-[11px]"
                     />
                   </td>
                 ))}

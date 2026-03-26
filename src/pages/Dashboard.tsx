@@ -1535,31 +1535,31 @@ export default function Dashboard() {
             <table className="w-full">
               <thead>
                 <tr className="text-left border-b border-slate-50">
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Invoice</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Customer</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Invoice</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Customer</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {recentInvoices.map((invoice) => (
                   <tr key={invoice.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <div className="text-[10px] font-bold text-slate-900">#{invoice.invoice_number || invoice.id.slice(0, 8)}</div>
                     </td>
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <div className="text-[10px] font-medium text-slate-600">
                         {Array.isArray(invoice.customers) ? invoice.customers[0]?.name : invoice.customers?.name || 'Unknown'}
                       </div>
                     </td>
-                    <td className="py-3 text-[9px] text-slate-500">
+                    <td className="py-1.5 text-[9px] text-slate-500">
                       {new Date(invoice.created_at).toLocaleDateString()}
                     </td>
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <div className="text-[10px] font-black text-slate-900">{formatCurrency(invoice.total)}</div>
                     </td>
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <span className={cn(
                         "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter",
                         invoice.status === 'paid' ? "bg-emerald-50 text-emerald-600" : 
@@ -1694,20 +1694,20 @@ export default function Dashboard() {
             <table className="w-full">
               <thead>
                 <tr className="text-left border-b border-slate-50">
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Purchase #</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Supplier</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
-                  <th className="pb-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Purchase #</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Supplier</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
+                  <th className="pb-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {recentPurchases.map((purchase) => (
                   <tr key={purchase.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <div className="text-[10px] font-bold text-slate-900">#{purchase.invoice_number || purchase.id.slice(0, 8)}</div>
                     </td>
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <div className="text-[10px] font-medium text-slate-600">
                         {(() => {
                           let name = Array.isArray(purchase.suppliers) ? purchase.suppliers[0]?.name : purchase.suppliers?.name;
@@ -1719,13 +1719,13 @@ export default function Dashboard() {
                         })()}
                       </div>
                     </td>
-                    <td className="py-3 text-[9px] text-slate-500">
+                    <td className="py-1.5 text-[9px] text-slate-500">
                       {new Date(purchase.date).toLocaleDateString()}
                     </td>
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <div className="text-[10px] font-black text-slate-900">{formatCurrency(purchase.total_amount)}</div>
                     </td>
-                    <td className="py-3">
+                    <td className="py-1.5">
                       <span className={cn(
                         "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter",
                         purchase.status === 'paid' ? "bg-emerald-50 text-emerald-600" : 
