@@ -57,6 +57,9 @@ export default function Purchases() {
     bill_date: new Date().toISOString().split('T')[0],
     upload_date: new Date().toISOString().split('T')[0],
     total_amount: 0,
+    cgst_total: 0,
+    sgst_total: 0,
+    igst_total: 0,
     status: 'paid',
     notes: '',
     items: [] as any[]
@@ -69,6 +72,9 @@ export default function Purchases() {
     invoiceNumber: string;
     date: string;
     totalAmount: number;
+    cgstTotal: number;
+    sgstTotal: number;
+    igstTotal: number;
   } | null>(null);
 
   const ScannedReviewModal = ({ data, onClose, onConfirm }: { data: any, onClose: () => void, onConfirm: (finalData: any) => void }) => {
@@ -117,37 +123,37 @@ export default function Purchases() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="space-y-0.5">
-                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Supplier Name</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Supplier Name</label>
                   <input 
                     type="text"
-                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium"
                     value={editedData.supplier.name}
                     onChange={e => setEditedData({...editedData, supplier: {...editedData.supplier, name: e.target.value}})}
                   />
                 </div>
                 <div className="space-y-0.5">
-                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">GST Number</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GST Number</label>
                   <input 
                     type="text"
-                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium uppercase"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium uppercase"
                     value={editedData.supplier.gstin}
                     onChange={e => setEditedData({...editedData, supplier: {...editedData.supplier, gstin: e.target.value.toUpperCase()}})}
                   />
                 </div>
                 <div className="space-y-0.5">
-                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
                   <input 
                     type="text"
-                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium"
                     value={editedData.invoiceNumber}
                     onChange={e => setEditedData({...editedData, invoiceNumber: e.target.value})}
                   />
                 </div>
                 <div className="space-y-0.5">
-                  <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Bill Date</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bill Date</label>
                   <input 
                     type="date"
-                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px] font-medium"
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium"
                     value={editedData.date}
                     onChange={e => setEditedData({...editedData, date: e.target.value})}
                   />
@@ -165,9 +171,12 @@ export default function Purchases() {
                   <thead>
                     <tr className="bg-slate-50 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
                       <th className="px-2.5 py-1.5">Item Name</th>
-                      <th className="px-2.5 py-1.5 w-16 text-center">Qty</th>
-                      <th className="px-2.5 py-1.5 w-20 text-right">Rate</th>
-                      <th className="px-2.5 py-1.5 w-24 text-right">Amount</th>
+                      <th className="px-2.5 py-1.5 w-12 text-center">Qty</th>
+                      <th className="px-2.5 py-1.5 w-16 text-right">Rate</th>
+                      <th className="px-2.5 py-1.5 w-16 text-right">CGST</th>
+                      <th className="px-2.5 py-1.5 w-16 text-right">SGST</th>
+                      <th className="px-2.5 py-1.5 w-16 text-right">IGST</th>
+                      <th className="px-2.5 py-1.5 w-20 text-right">Amount</th>
                       <th className="px-2.5 py-1.5 w-8"></th>
                     </tr>
                   </thead>
@@ -207,7 +216,46 @@ export default function Purchases() {
                             onChange={e => {
                               const newItems = [...editedData.items];
                               newItems[idx].rate = Number(e.target.value);
-                              newItems[idx].amount = newItems[idx].quantity * newItems[idx].rate;
+                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-2.5 py-1.5">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
+                            value={item.cgst}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].cgst = Number(e.target.value);
+                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-2.5 py-1.5">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
+                            value={item.sgst}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].sgst = Number(e.target.value);
+                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
+                              setEditedData({...editedData, items: newItems});
+                            }}
+                          />
+                        </td>
+                        <td className="px-2.5 py-1.5">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
+                            value={item.igst}
+                            onChange={e => {
+                              const newItems = [...editedData.items];
+                              newItems[idx].igst = Number(e.target.value);
+                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
                               setEditedData({...editedData, items: newItems});
                             }}
                           />
@@ -391,8 +439,12 @@ export default function Purchases() {
         business_id: businessId,
         supplier_id: currentSupplierId,
         invoice_number: formData.invoice_number,
-        date: formData.bill_date, // Keep for backward compatibility
+        date: formData.bill_date,
+        bill_date: formData.bill_date,
         total_amount: formData.total_amount,
+        cgst_amount: formData.cgst_total,
+        sgst_amount: formData.sgst_total,
+        igst_amount: formData.igst_total,
         status: formData.status,
         notes: formData.notes + (formData.upload_date ? `\nUpload Date: ${formData.upload_date}` : ''),
         created_by: profile?.id
@@ -429,6 +481,9 @@ export default function Purchases() {
           hsn_code: item.hsn,
           quantity: item.quantity,
           unit_price: item.rate,
+          cgst: item.cgst || 0,
+          sgst: item.sgst || 0,
+          igst: item.igst || 0,
           total_price: item.amount
         }));
 
@@ -595,6 +650,9 @@ export default function Purchases() {
         bill_date: purchase.bill_date || purchase.date || new Date().toISOString().split('T')[0],
         upload_date: purchase.upload_date || new Date(purchase.created_at).toISOString().split('T')[0],
         total_amount: purchase.total_amount || 0,
+        cgst_total: purchase.cgst_amount || 0,
+        sgst_total: purchase.sgst_amount || 0,
+        igst_total: purchase.igst_amount || 0,
         status: purchase.status || 'paid',
         notes: purchase.notes || '',
         items: items?.map(i => ({
@@ -603,6 +661,9 @@ export default function Purchases() {
           hsn: i.hsn_code,
           quantity: i.quantity,
           rate: i.unit_price,
+          cgst: i.cgst || 0,
+          sgst: i.sgst || 0,
+          igst: i.igst || 0,
           amount: i.total_price
         })) || []
       });
@@ -619,6 +680,9 @@ export default function Purchases() {
         bill_date: new Date().toISOString().split('T')[0], 
         upload_date: new Date().toISOString().split('T')[0], 
         total_amount: 0, 
+        cgst_total: 0,
+        sgst_total: 0,
+        igst_total: 0,
         status: 'paid', 
         notes: '',
         items: []
@@ -652,7 +716,10 @@ export default function Purchases() {
 - supplier address
 - invoice number
 - date
-- items (array of: { particular: string, hsn: string, quantity: number, rate: number, amount: number })
+- items (array of: { particular: string, hsn: string, quantity: number, rate: number, cgst: number, sgst: number, igst: number, amount: number })
+- total CGST
+- total SGST
+- total IGST
 - total amount
 
 Return as JSON format: { 
@@ -663,7 +730,10 @@ Return as JSON format: {
   supplierAddress: string,
   invoiceNumber: string, 
   date: string, 
-  items: Array<{ particular: string, hsn: string, quantity: number, rate: number, amount: number }>,
+  items: Array<{ particular: string, hsn: string, quantity: number, rate: number, cgst: number, sgst: number, igst: number, amount: number }>,
+  cgstTotal: number,
+  sgstTotal: number,
+  igstTotal: number,
   totalAmount: number 
 }`;
 
@@ -760,12 +830,18 @@ Return as JSON format: {
               const d = new Date(data.date);
               return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
             })(),
+            cgstTotal: data.cgstTotal || data.totalCgst || 0,
+            sgstTotal: data.sgstTotal || data.totalSgst || 0,
+            igstTotal: data.igstTotal || data.totalIgst || 0,
             totalAmount: data.totalAmount || 0,
             items: (data.items || []).map((item: any) => ({
               particular: item.particular || item.name || 'Unknown Item',
               hsn: item.hsn || '',
               quantity: Number(item.quantity) || 1,
               rate: Number(item.rate) || 0,
+              cgst: Number(item.cgst) || 0,
+              sgst: Number(item.sgst) || 0,
+              igst: Number(item.igst) || 0,
               amount: Number(item.amount) || 0,
             }))
           });
@@ -899,6 +975,9 @@ Return as JSON format: {
                 <th className="px-2.5 py-1.5">Upload Date</th>
                 <th className="px-2.5 py-1.5">Invoice #</th>
                 <th className="px-2.5 py-1.5">Supplier</th>
+                <th className="px-2.5 py-1.5">CGST</th>
+                <th className="px-2.5 py-1.5">SGST</th>
+                <th className="px-2.5 py-1.5">IGST</th>
                 <th className="px-2.5 py-1.5">Amount</th>
                 <th className="px-2.5 py-1.5">Status</th>
                 <th className="px-2.5 py-1.5 text-right">Actions</th>
@@ -943,6 +1022,15 @@ Return as JSON format: {
                     <td className="px-2.5 py-1.5 text-xs font-medium text-slate-900">{purchase.invoice_number}</td>
                     <td className="px-2.5 py-1.5 text-xs text-slate-600">
                       {purchase.suppliers?.name || 'Unknown Supplier'}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                      {formatCurrency(purchase.cgst_amount || 0)}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                      {formatCurrency(purchase.sgst_amount || 0)}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                      {formatCurrency(purchase.igst_amount || 0)}
                     </td>
                     <td className="px-2.5 py-1.5 text-xs font-bold text-slate-900">
                       {formatCurrency(purchase.total_amount)}
@@ -1010,9 +1098,9 @@ Return as JSON format: {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier Details</h3>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Select Supplier</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Supplier</label>
                     <select 
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                       value={formData.supplier_id}
                       onChange={e => {
                         const selected = suppliers.find(s => s.id === e.target.value);
@@ -1033,58 +1121,58 @@ Return as JSON format: {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-2 p-2 bg-primary/5 rounded-xl border border-primary/10">
+                  <div className="space-y-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Supplier Name *</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Supplier Name *</label>
                       <input 
                         type="text" 
                         required
                         placeholder="Enter supplier name"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                         value={formData.supplier_name}
                         onChange={e => setFormData({...formData, supplier_name: e.target.value})}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">GST Number</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">GST Number</label>
                         <input 
                           type="text" 
                           placeholder="GSTIN"
                           maxLength={15}
-                          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all uppercase"
+                          className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all uppercase"
                           value={formData.supplier_gstin}
                           onChange={e => setFormData({...formData, supplier_gstin: e.target.value.toUpperCase()})}
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Phone</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone</label>
                         <input 
                           type="text" 
                           placeholder="Contact"
                           maxLength={10}
-                          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                          className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                           value={formData.supplier_phone}
                           onChange={e => setFormData({...formData, supplier_phone: e.target.value.replace(/\D/g, '')})}
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Email</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
                       <input 
                         type="email" 
                         placeholder="Email address"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                         value={formData.supplier_email}
                         onChange={e => setFormData({...formData, supplier_email: e.target.value})}
                       />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Address</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Address</label>
                       <textarea 
-                        rows={1}
+                        rows={2}
                         placeholder="Full address"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all resize-none"
+                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all resize-none"
                         value={formData.supplier_address}
                         onChange={e => setFormData({...formData, supplier_address: e.target.value})}
                       ></textarea>
@@ -1095,31 +1183,31 @@ Return as JSON format: {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Info</h3>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Invoice Number *</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Invoice Number *</label>
                     <input 
                       type="text" 
                       required
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                       value={formData.invoice_number}
                       onChange={e => setFormData({...formData, invoice_number: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Bill Date *</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bill Date *</label>
                     <input 
                       type="date" 
                       required
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                       value={formData.bill_date}
                       onChange={e => setFormData({...formData, bill_date: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Upload Date</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Upload Date</label>
                     <input 
                       type="date" 
                       readOnly
-                      className="w-full px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg outline-none text-[10px] text-slate-500 cursor-not-allowed"
+                      className="w-full px-3 py-3 bg-slate-100 border border-slate-200 rounded-lg outline-none text-sm text-slate-500 cursor-not-allowed"
                       value={formData.upload_date}
                     />
                   </div>
@@ -1128,10 +1216,10 @@ Return as JSON format: {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment & Notes</h3>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Status *</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status *</label>
                     <select 
                       required
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all"
+                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                       value={formData.status}
                       onChange={e => setFormData({...formData, status: e.target.value})}
                     >
@@ -1140,10 +1228,10 @@ Return as JSON format: {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Notes</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notes</label>
                     <textarea 
-                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[10px] transition-all resize-none"
-                      rows={2}
+                      className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all resize-none"
+                      rows={3}
                       placeholder="Additional info..."
                       value={formData.notes}
                       onChange={e => setFormData({...formData, notes: e.target.value})}
@@ -1174,9 +1262,12 @@ Return as JSON format: {
                       <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                         <th className="px-2.5 py-1.5">Particular (Item Name)</th>
                         <th className="px-2.5 py-1.5">HSN</th>
-                        <th className="px-2.5 py-1.5 w-24">Qty</th>
-                        <th className="px-2.5 py-1.5 w-32">Rate</th>
-                        <th className="px-2.5 py-1.5 w-32">Amount</th>
+                        <th className="px-2.5 py-1.5 w-16">Qty</th>
+                        <th className="px-2.5 py-1.5 w-24">Rate</th>
+                        <th className="px-2.5 py-1.5 w-24">CGST</th>
+                        <th className="px-2.5 py-1.5 w-24">SGST</th>
+                        <th className="px-2.5 py-1.5 w-24">IGST</th>
+                        <th className="px-2.5 py-1.5 w-24">Amount</th>
                         <th className="px-2.5 py-1.5 text-right"></th>
                       </tr>
                     </thead>
@@ -1231,11 +1322,14 @@ Return as JSON format: {
                                 const qty = parseInt(e.target.value) || 0;
                                 const newItems = [...formData.items];
                                 newItems[index].quantity = qty;
-                                newItems[index].amount = qty * newItems[index].rate;
+                                newItems[index].amount = (qty * newItems[index].rate) + (newItems[index].cgst || 0) + (newItems[index].sgst || 0) + (newItems[index].igst || 0);
                                 setFormData({
                                   ...formData, 
                                   items: newItems,
-                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0),
+                                  cgst_total: newItems.reduce((sum, i) => sum + (i.cgst || 0), 0),
+                                  sgst_total: newItems.reduce((sum, i) => sum + (i.sgst || 0), 0),
+                                  igst_total: newItems.reduce((sum, i) => sum + (i.igst || 0), 0)
                                 });
                               }}
                             />
@@ -1249,11 +1343,77 @@ Return as JSON format: {
                                 const rate = parseFloat(e.target.value) || 0;
                                 const newItems = [...formData.items];
                                 newItems[index].rate = rate;
-                                newItems[index].amount = newItems[index].quantity * rate;
+                                newItems[index].amount = (newItems[index].quantity * rate) + (newItems[index].cgst || 0) + (newItems[index].sgst || 0) + (newItems[index].igst || 0);
                                 setFormData({
                                   ...formData, 
                                   items: newItems,
-                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0)
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0),
+                                  cgst_total: newItems.reduce((sum, i) => sum + (i.cgst || 0), 0),
+                                  sgst_total: newItems.reduce((sum, i) => sum + (i.sgst || 0), 0),
+                                  igst_total: newItems.reduce((sum, i) => sum + (i.igst || 0), 0)
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-2.5 py-1.5">
+                            <input 
+                              type="number"
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
+                              value={item.cgst}
+                              onChange={e => {
+                                const cgst = parseFloat(e.target.value) || 0;
+                                const newItems = [...formData.items];
+                                newItems[index].cgst = cgst;
+                                newItems[index].amount = (newItems[index].quantity * newItems[index].rate) + cgst + (newItems[index].sgst || 0) + (newItems[index].igst || 0);
+                                setFormData({
+                                  ...formData, 
+                                  items: newItems,
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0),
+                                  cgst_total: newItems.reduce((sum, i) => sum + (i.cgst || 0), 0),
+                                  sgst_total: newItems.reduce((sum, i) => sum + (i.sgst || 0), 0),
+                                  igst_total: newItems.reduce((sum, i) => sum + (i.igst || 0), 0)
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-2.5 py-1.5">
+                            <input 
+                              type="number"
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
+                              value={item.sgst}
+                              onChange={e => {
+                                const sgst = parseFloat(e.target.value) || 0;
+                                const newItems = [...formData.items];
+                                newItems[index].sgst = sgst;
+                                newItems[index].amount = (newItems[index].quantity * newItems[index].rate) + (newItems[index].cgst || 0) + sgst + (newItems[index].igst || 0);
+                                setFormData({
+                                  ...formData, 
+                                  items: newItems,
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0),
+                                  cgst_total: newItems.reduce((sum, i) => sum + (i.cgst || 0), 0),
+                                  sgst_total: newItems.reduce((sum, i) => sum + (i.sgst || 0), 0),
+                                  igst_total: newItems.reduce((sum, i) => sum + (i.igst || 0), 0)
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-2.5 py-1.5">
+                            <input 
+                              type="number"
+                              className="w-full bg-transparent border-none focus:ring-0 text-xs p-0"
+                              value={item.igst}
+                              onChange={e => {
+                                const igst = parseFloat(e.target.value) || 0;
+                                const newItems = [...formData.items];
+                                newItems[index].igst = igst;
+                                newItems[index].amount = (newItems[index].quantity * newItems[index].rate) + (newItems[index].cgst || 0) + (newItems[index].sgst || 0) + igst;
+                                setFormData({
+                                  ...formData, 
+                                  items: newItems,
+                                  total_amount: newItems.reduce((sum, i) => sum + i.amount, 0),
+                                  cgst_total: newItems.reduce((sum, i) => sum + (i.cgst || 0), 0),
+                                  sgst_total: newItems.reduce((sum, i) => sum + (i.sgst || 0), 0),
+                                  igst_total: newItems.reduce((sum, i) => sum + (i.igst || 0), 0)
                                 });
                               }}
                             />
@@ -1294,7 +1454,16 @@ Return as JSON format: {
                     </tbody>
                     <tfoot className="bg-slate-50/50">
                       <tr>
-                        <td colSpan={4} className="px-2.5 py-1.5 text-right text-[10px] font-bold text-slate-500 uppercase">Total Amount</td>
+                        <td colSpan={4} className="px-2.5 py-1.5 text-right text-[10px] font-bold text-slate-500 uppercase">Total Tax</td>
+                        <td colSpan={3} className="px-2.5 py-1.5 text-[10px] font-bold text-slate-600">
+                          CGST: {formatCurrency(formData.cgst_total)} | 
+                          SGST: {formatCurrency(formData.sgst_total)} | 
+                          IGST: {formatCurrency(formData.igst_total)}
+                        </td>
+                        <td></td>
+                      </tr>
+                      <tr>
+                        <td colSpan={4} className="px-2.5 py-1.5 text-right text-[10px] font-bold text-slate-500 uppercase">Grand Total</td>
                         <td className="px-2.5 py-1.5 text-[10px] font-black text-primary">{formatCurrency(formData.total_amount)}</td>
                         <td></td>
                       </tr>
@@ -1381,13 +1550,19 @@ Return as JSON format: {
                 bill_date: finalData.date,
                 upload_date: new Date().toISOString().split('T')[0],
                 total_amount: finalData.items.reduce((sum: number, i: any) => sum + i.amount, 0),
+                cgst_total: finalData.items.reduce((sum: number, i: any) => sum + (i.cgst || 0), 0),
+                sgst_total: finalData.items.reduce((sum: number, i: any) => sum + (i.sgst || 0), 0),
+                igst_total: finalData.items.reduce((sum: number, i: any) => sum + (i.igst || 0), 0),
                 status: 'paid',
                 notes: 'Scanned via AI',
                 items: finalData.items.map((item: any) => {
                   const matchedProduct = products.find(p => p.name.trim().toLowerCase() === item.particular.trim().toLowerCase());
                   return {
                     ...item,
-                    product_id: matchedProduct?.id || null
+                    product_id: matchedProduct?.id || null,
+                    cgst: item.cgst || 0,
+                    sgst: item.sgst || 0,
+                    igst: item.igst || 0
                   };
                 })
               });

@@ -162,22 +162,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
           </div>
           
-          {/* Close/Toggle Button */}
-          {(!isCollapsed || isOpen) && (
-            <button 
-              onClick={() => {
-                if (windowWidth < 1024) {
-                  onClose?.();
-                } else {
-                  toggleSidebar();
-                }
-              }}
-              className="p-2 text-slate-400 hover:text-primary transition-colors"
-              title={windowWidth < 1024 ? "Close Menu" : "Collapse Sidebar"}
-            >
-              <X size={20} />
-            </button>
-          )}
+          {/* Close/Toggle Button removed as per user request */}
         </div>
 
         {/* Menu Items */}

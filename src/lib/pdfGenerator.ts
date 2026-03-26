@@ -132,20 +132,23 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  const businessAddress = [
-    business?.address1,
-    business?.address2,
-    business?.city,
-    business?.state,
-    business?.pincode ? `PIN: ${business.pincode}` : ''
-  ].filter(Boolean).join(', ');
-  doc.text(businessAddress || "", 105, 26, { align: 'center' });
-  doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 30, { align: 'center' });
+  
+  // Line 1: Address 1
+  doc.text(business?.address1 || "", 105, 25, { align: 'center' });
+  
+  // Line 2: Address 2
+  doc.text(business?.address2 || "", 105, 28, { align: 'center' });
+  
+  // Line 3: City, State, Pincode
+  const line3 = [business?.city, business?.state, business?.pincode ? `PIN: ${business.pincode}` : ''].filter(Boolean).join(', ');
+  doc.text(line3 || "", 105, 31, { align: 'center' });
+
+  doc.text(`Tel: ${business?.mobile || ""}   Email: ${business?.email || ""}`, 105, 34, { align: 'center' });
   
   doc.setFont("helvetica", "bold");
-  doc.text(`PAN NO.: ${business?.pan_number || ""} , GST NO. : ${business?.gst_number || ""}`, 105, 34, { align: 'center' });
-  doc.text(`${business?.bank_name || ""} A/C NO :- ${business?.bank_account_no || ""}, IFSC :- ${business?.bank_ifsc || ""}`, 105, 38, { align: 'center' });
-  doc.text(`Branch : ${business?.bank_branch || ""}`, 105, 42, { align: 'center' });
+  doc.text(`PAN NO.: ${business?.pan_number || ""} , GST NO. : ${business?.gst_number || ""}`, 105, 37, { align: 'center' });
+  doc.text(`${business?.bank_name || ""} A/C NO :- ${business?.bank_account_no || ""}, IFSC :- ${business?.bank_ifsc || ""}`, 105, 40, { align: 'center' });
+  doc.text(`Branch : ${business?.bank_branch || ""}`, 105, 43, { align: 'center' });
 
   // Right Header
   doc.setFontSize(7);

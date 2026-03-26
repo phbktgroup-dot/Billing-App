@@ -15,9 +15,11 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice, busines
           {business.logo_url && <img src={business.logo_url} alt="Logo" className="w-16 h-16 object-contain" />}
           <div>
             <h1 className="text-2xl font-bold">PHBKT Group Limited</h1>
-            <p className="text-sm text-slate-600">
-              {[business.address1, business.address2, business.city, business.state, business.pincode].filter(Boolean).join(', ')}
-            </p>
+            <div className="text-sm text-slate-600">
+              {business.address1 && <p>{business.address1}</p>}
+              {business.address2 && <p>{business.address2}</p>}
+              <p>{[business.city, business.state, business.pincode].filter(Boolean).join(', ')}</p>
+            </div>
           </div>
         </div>
         <div className="text-right">
