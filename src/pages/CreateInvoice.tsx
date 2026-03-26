@@ -47,7 +47,7 @@ interface LineItem {
   id: string;
   productId: string;
   name: string;
-  sku?: string;
+  hsnCode?: string;
   quantity: number | '';
   rate: number | '';
   gstRate: number | '';
@@ -76,7 +76,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   const { user, profile } = useAuth();
   const [items, setItems] = useState<LineItem[]>([]);
   const [customer, setCustomer] = useState({ id: '', name: '', phone: '', gst: '', address1: '', address2: '', city: '', pincode: '', stateCode: '' });
-  const [newItem, setNewItem] = useState<LineItem>({ id: '', productId: '', name: '', quantity: '', rate: '', gstRate: '', discount: '', amount: '' });
+  const [newItem, setNewItem] = useState<LineItem>({ id: '', productId: '', name: '', hsnCode: '', quantity: '', rate: '', gstRate: '', discount: '', amount: '' });
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
     isOpen: false,
     title: '',
@@ -673,7 +673,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }
 
     setItems([...items, { ...newItem, id: Date.now().toString() }]);
-    setNewItem({ id: '', productId: '', name: '', sku: '', quantity: '', rate: '', gstRate: '', amount: '' });
+    setNewItem({ id: '', productId: '', name: '', hsnCode: '', quantity: '', rate: '', gstRate: '', amount: '' });
     setSavedInvoiceData(null);
   };
 
@@ -703,7 +703,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       const product = products.find(p => p.id === value);
       if (product) {
         updated.name = product.name;
-        updated.sku = product.sku;
+        updated.hsnCode = product.hsn_code;
         updated.rate = product.price;
         updated.gstRate = product.gst_rate;
         updated.quantity = 1; // Default quantity to 1
@@ -1127,7 +1127,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         payment_mode: finalPaymentMode,
         items: items.map(item => ({
           name: item.name,
-          sku: item.sku,
+          hsnCode: item.hsnCode,
           quantity: Number(item.quantity) || 0,
           rate: Number(item.rate) || 0,
           gstRate: Number(item.gstRate) || 0,
@@ -1633,13 +1633,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       </select>
                     </div>
                     <div className="md:col-span-4 space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">SKU</label>
+                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">HSN Code</label>
                       <input 
                         type="text" 
-                        placeholder="SKU"
+                        placeholder="HSN Code"
                         readOnly
                         className="w-full px-2 py-1.5 bg-slate-200/50 border border-slate-300 rounded-lg outline-none text-[11px] transition-all text-slate-600 font-bold placeholder:text-[11px]"
-                        value={newItem.sku || ''}
+                        value={newItem.hsnCode || ''}
                       />
                     </div>
 
@@ -1704,7 +1704,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <thead className="text-[9px] text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
                         <tr>
                           <th className="px-2.5 py-1.5 font-bold">Item Description</th>
-                          <th className="px-2.5 py-1.5 font-bold">Product/HSN Code</th>
+                          <th className="px-2.5 py-1.5 font-bold">HSN Code</th>
                           <th className="px-2.5 py-1.5 font-bold text-center">Qty</th>
                           <th className="px-2.5 py-1.5 font-bold text-right">Price</th>
                           <th className="px-2.5 py-1.5 font-bold text-center">Disc.</th>
@@ -1738,7 +1738,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 <div className="font-bold text-slate-900">{item.name}</div>
                                 <div className="text-[9px] text-slate-400 font-medium">Item #{index + 1}</div>
                               </td>
-                              <td className="px-2.5 py-1.5 text-slate-600 font-medium">{item.sku || '-'}</td>
+                              <td className="px-2.5 py-1.5 text-slate-600 font-medium">{item.hsnCode || '-'}</td>
                               <td className="px-2.5 py-1.5 text-center font-medium text-slate-700">{item.quantity}</td>
                               <td className="px-2.5 py-1.5 text-right font-medium text-slate-700">{formatCurrency(Number(item.rate) || 0)}</td>
                               <td className="px-2.5 py-1.5 text-center">
