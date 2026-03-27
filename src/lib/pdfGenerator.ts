@@ -68,23 +68,23 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   
   // Horizontal lines
   doc.line(10, 45, 200, 45);
-  doc.line(10, 82, 200, 82);
-  doc.line(10, 92, 200, 92);
-  doc.line(10, 102, 200, 102);
+  doc.line(10, 78, 200, 78);
+  doc.line(10, 88, 200, 88);
+  doc.line(10, 98, 200, 98);
   doc.line(10, 197, 200, 197);
   doc.line(10, 205, 200, 205);
   doc.line(10, 212, 200, 212);
   doc.line(10, 265, 200, 265);
   
   // Vertical lines
-  doc.line(105, 45, 105, 92); // Header middle
+  doc.line(105, 45, 105, 88); // Header middle
   
-  // Table columns (from 92 to 197)
-  doc.line(20, 92, 20, 197); // S.N.
-  doc.line(95, 92, 95, 197); // Description end
-  doc.line(130, 92, 130, 197); // Product Code end
-  doc.line(150, 92, 150, 197); // Qty end
-  doc.line(175, 92, 175, 197); // Price end
+  // Table columns (from 88 to 197)
+  doc.line(20, 88, 20, 197); // S.N.
+  doc.line(95, 88, 95, 197); // Description end
+  doc.line(130, 88, 130, 197); // Product Code end
+  doc.line(150, 88, 150, 197); // Qty end
+  doc.line(175, 88, 175, 197); // Price end
   doc.line(200, 92, 200, 212); // Table end (Keep right border)
   
   // Vertical line for Total row (Qty column)
@@ -166,54 +166,54 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   // Buyer Details
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Buyer details :", 12, 48);
-  doc.text(invoice.customer_name || "Optimus OE Solutions India Pvt. Ltd, Pune", 12, 53);
+  doc.text("Buyer details :", 12, 50);
+  doc.text(invoice.customer_name || "Optimus OE Solutions India Pvt. Ltd, Pune", 12, 55);
   
   if (invoice.customer_address) {
     doc.setFontSize(9.5);
     doc.setFont("helvetica", "normal");
     const splitAddress = doc.splitTextToSize(invoice.customer_address, 85);
-    doc.text(splitAddress, 12, 57);
+    doc.text(splitAddress, 12, 59);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
   }
   
-  doc.text("GSTIN      :", 12, 72);
+  doc.text("GSTIN      :", 12, 73);
   doc.setFont("helvetica", "normal");
-  doc.text(invoice.customer_gstin || "", 35, 72);
+  doc.text(invoice.customer_gstin || "", 35, 73);
   
   // Right side
   doc.setFont("helvetica", "bold");
-  doc.text("Invoice No.", 108, 52);
-  doc.text("Invoice Date", 108, 58);
-  doc.text("Payment Mode", 108, 64);
-  doc.text("State Code", 108, 70);
+  doc.text("Invoice No.", 108, 54);
+  doc.text("Invoice Date", 108, 60);
+  doc.text("Payment Mode", 108, 66);
+  doc.text("State Code", 108, 72);
   
   doc.setFont("helvetica", "normal");
-  doc.text(`:  ${invoice.invoice_number}`, 135, 52);
-  doc.text(`:  ${new Date(invoice.date).toLocaleDateString('en-GB')}`, 135, 58);
-  doc.text(`:  ${invoice.payment_mode || 'Cash'}`, 135, 64);
-  doc.text(`:  ${invoice.customer_state_code || ''}`, 135, 70);
+  doc.text(`:  ${invoice.invoice_number}`, 135, 54);
+  doc.text(`:  ${new Date(invoice.date).toLocaleDateString('en-GB')}`, 135, 60);
+  doc.text(`:  ${invoice.payment_mode || 'Cash'}`, 135, 66);
+  doc.text(`:  ${invoice.customer_state_code || ''}`, 135, 72);
 
   // E-WAY BILL
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text(`E-WAY BILL NO. : ${invoice.eway_bill_no || ""}`, 12, 88);
-  doc.text("Weight :", 108, 88);
+  doc.text(`E-WAY BILL NO. : ${invoice.eway_bill_no || ""}`, 12, 84);
+  doc.text("Weight :", 108, 84);
 
   // Table Headers
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("S.N.", 15, 98, { align: 'center' });
-  doc.text("Description of Goods", 57.5, 98, { align: 'center' });
-  doc.text("HSN Code", 112.5, 98, { align: 'center' });
-  doc.text("Qty.", 140, 98, { align: 'center' });
-  doc.text("Price", 162.5, 98, { align: 'center' });
-  doc.text("Amount\n(Rs.)", 187.5, 96, { align: 'center' });
+  doc.text("S.N.", 15, 94, { align: 'center' });
+  doc.text("Description of Goods", 57.5, 94, { align: 'center' });
+  doc.text("HSN Code", 112.5, 94, { align: 'center' });
+  doc.text("Qty.", 140, 94, { align: 'center' });
+  doc.text("Price", 162.5, 94, { align: 'center' });
+  doc.text("Amount\n(Rs.)", 187.5, 92, { align: 'center' });
 
   // Table Items
   doc.setFont("helvetica", "normal");
-  let currentY = 109;
+  let currentY = 105;
   invoice.items.forEach((item, index) => {
     if (currentY > 190) return; // Prevent items from overflowing table
     doc.text((index + 1).toString(), 15, currentY, { align: 'center' });
@@ -243,7 +243,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.text(invoice.subtotal.toFixed(2), 198, 209, { align: 'right' });
 
   // Tax and Grand Total (Stacked on the right)
-  let summaryY = 220;
+  let summaryY = 218;
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
 
@@ -283,11 +283,11 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
     doc.text("Subtotal GST :", 130, summaryY);
     doc.text((invoice.tax_amount || 0).toFixed(2), 198, summaryY, { align: 'right' });
     doc.setFont("helvetica", "normal");
-    summaryY += 10;
+    summaryY += 8;
   } else {
     doc.text(`Add :GST 0% :`, 130, summaryY);
     doc.text("0.00", 198, summaryY, { align: 'right' });
-    summaryY += 10;
+    summaryY += 8;
   }
 
   // Grand Total Row
@@ -304,10 +304,10 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   // Bank Details Rows
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text(`Bank Name - ${business?.bank_name || ""}`, 12, summaryY + 10);
-  doc.text(`Account Number - ${business?.bank_account_no || ""}`, 12, summaryY + 14);
-  doc.text(`IFSC Code - ${business?.bank_ifsc || ""}`, 12, summaryY + 18);
-  doc.text(`Branch - ${business?.bank_branch || ""}`, 12, summaryY + 22);
+  doc.text(`Bank Name - ${business?.bank_name || ""}`, 12, summaryY + 8);
+  doc.text(`Account Number - ${business?.bank_account_no || ""}`, 12, summaryY + 12);
+  doc.text(`IFSC Code - ${business?.bank_ifsc || ""}`, 12, summaryY + 16);
+  doc.text(`Branch - ${business?.bank_branch || ""}`, 12, summaryY + 20);
 
   // Footer
   const footerTopY = 265;

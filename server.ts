@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import cors from "cors";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 console.log("SERVER STARTING...");
 dotenv.config();
@@ -436,7 +436,10 @@ app.post("/api/scan", async (req, res) => {
             { inlineData: { mimeType, data: base64Data } }
           ]
         }
-      ]
+      ],
+      config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      }
     });
 
     res.json({ text: response.text });

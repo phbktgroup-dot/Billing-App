@@ -3,11 +3,11 @@ import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, C
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, getDateRange, FilterType, cn } from '../lib/utils';
+import { formatCurrency, getDateRange, FilterType, cn, resizeImage } from '../lib/utils';
 import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import MessageModal from '../components/MessageModal';
 import { getApiUrl } from '../lib/api';
 
@@ -726,6 +726,9 @@ export default function Purchases() {
     }, 500);
 
     try {
+      // Resize image for faster processing
+      const optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+      
       // Use business-specific API key if available, otherwise fallback to environment variable
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None (falling back to backend default)');
@@ -766,7 +769,7 @@ Return as JSON format: {
         const response = await fetch(getApiUrl('/api/scan'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64Data, mimeType, prompt, apiKey })
+          body: JSON.stringify({ base64Data: optimizedBase64, mimeType, prompt, apiKey })
         });
 
         if (response.ok) {
@@ -817,10 +820,13 @@ Return as JSON format: {
             {
               parts: [
                 { text: prompt },
-                { inlineData: { mimeType: mimeType, data: base64Data } }
+                { inlineData: { mimeType: mimeType, data: optimizedBase64 } }
               ]
             }
-          ]
+          ],
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+          }
         }));
         extractedText = response.text || '';
       }

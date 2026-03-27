@@ -236,7 +236,7 @@ export default function Invoices() {
         customers (*),
         invoice_items (
           *,
-          products (name)
+          products (name, hsn_code, sku)
         )
       `)
       .eq('id', invoice.id)
@@ -268,6 +268,7 @@ export default function Invoices() {
       items: invoiceData.invoice_items.map((item: any) => ({
         name: item.products?.name || 'Unknown Item',
         sku: item.products?.sku,
+        hsnCode: item.hsn_code || item.products?.hsn_code || '',
         quantity: item.quantity,
         rate: item.unit_price,
         gstRate: item.gst_rate,

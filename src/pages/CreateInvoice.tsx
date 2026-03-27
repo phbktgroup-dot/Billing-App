@@ -29,8 +29,8 @@ import {
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, formatCurrency, getDateRange, FilterType, formatSeriesNumber } from '../lib/utils';
-import { GoogleGenAI } from '@google/genai';
+import { cn, formatCurrency, getDateRange, FilterType, formatSeriesNumber, resizeImage } from '../lib/utils';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
@@ -387,6 +387,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }, 500);
 
     try {
+      // Resize image for faster processing
+      const optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+      
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');
       
@@ -399,7 +402,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         const response = await fetch(getApiUrl('/api/scan'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64Data, mimeType, prompt, apiKey })
+          body: JSON.stringify({ base64Data: optimizedBase64, mimeType, prompt, apiKey })
         });
 
         if (response.ok) {
@@ -450,10 +453,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             {
               parts: [
                 { text: prompt },
-                { inlineData: { mimeType: mimeType, data: base64Data } }
+                { inlineData: { mimeType: mimeType, data: optimizedBase64 } }
               ]
             }
-          ]
+          ],
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+          }
         }));
         extractedText = response.text || '';
       }
@@ -600,6 +606,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               productId: product?.id || '',
               name: itemName,
               sku: product?.sku || '',
+              hsnCode: itemHsnCode || product?.hsn_code || '',
               quantity: item.quantity || 1,
               rate: item.rate || 0,
               gstRate: item.gstRate || 18,
@@ -1032,6 +1039,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 business_id: businessId,
                 created_by: user?.id,
                 name: itemName,
+                hsn_code: item.hsnCode || '',
                 price: Number(item.rate) || 0,
                 gst_rate: Number(item.gstRate) || 18,
                 stock: 0,
@@ -1053,6 +1061,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         invoiceItems.push({
           invoice_id: invoice.id,
           product_id: productId,
+          hsn_code: item.hsnCode || '',
           quantity: Number(item.quantity) || 0,
           unit_price: Number(item.rate) || 0,
           gst_rate: Number(item.gstRate) || 0,
@@ -2437,6 +2446,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
                   <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase">Particular</th>
+                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-20 text-center">HSN</th>
                   <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-16 text-center">Qty</th>
                   <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-20">Rate</th>
                   <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-24 text-right">Amount</th>
@@ -2455,6 +2465,19 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                           newItems[idx].name = e.target.value;
                           setEditedData({ ...editedData, items: newItems });
                         }}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input 
+                        type="text" 
+                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0 text-center"
+                        value={item.hsnCode || ''}
+                        onChange={e => {
+                          const newItems = [...editedData.items];
+                          newItems[idx].hsnCode = e.target.value;
+                          setEditedData({ ...editedData, items: newItems });
+                        }}
+                        placeholder="HSN"
                       />
                     </td>
                     <td className="px-2 py-1.5">
