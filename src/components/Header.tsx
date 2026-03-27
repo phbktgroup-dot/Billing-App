@@ -131,14 +131,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-24 md:h-20 bg-black/80 backdrop-blur-md border-b border-slate-800 sticky z-30 px-4 md:px-6 flex items-center justify-between pt-6 md:pt-0",
+        "h-24 md:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky z-30 px-4 md:px-6 flex items-center justify-between pt-6 md:pt-0",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
       {/* Left Section: Menu Toggle (Mobile) & Search (Desktop) */}
       <div className="flex items-center space-x-4">
         <button 
           onClick={onMenuClick}
-          className="lg:hidden p-2 text-slate-400 hover:bg-slate-900 rounded-xl transition-all"
+          className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
         >
           <Menu size={20} />
         </button>
@@ -147,9 +147,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <input 
             type="text"
             placeholder="Search..."
-            className="bg-slate-900 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all w-64"
+            className="bg-slate-100 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all w-64"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center space-x-4">
         <button 
           onClick={handleRefresh}
-          className="p-2 text-slate-400 hover:bg-slate-900 rounded-xl transition-all"
+          className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
         >
           <RefreshCw size={20} />
         </button>
@@ -166,11 +166,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
             onClick={() => {
               setShowNotifications(!showNotifications);
             }}
-            className="p-2 text-slate-400 hover:bg-slate-900 rounded-xl transition-all relative"
+            className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all relative"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-black">
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                 {unreadCount}
               </span>
             )}
@@ -180,20 +180,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <>
               {/* Mobile Backdrop */}
               <div 
-                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 sm:hidden" 
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 sm:hidden" 
                 onClick={() => setShowNotifications(false)}
               />
               
-              <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-black/50">
-                <h3 className="text-xs font-bold text-white">Notifications</h3>
+              <div className="fixed inset-x-4 top-24 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <h3 className="text-xs font-bold text-slate-900">Notifications</h3>
                 <div className="flex items-center space-x-3">
                   {unreadCount > 0 && (
                     <button onClick={markAllAsRead} className="text-[10px] text-primary font-bold hover:underline">
                       Mark all as read
                     </button>
                   )}
-                  <button onClick={() => setShowNotifications(false)} className="text-slate-500 hover:text-slate-300">
+                  <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600">
                     <X size={14} />
                   </button>
                 </div>
@@ -201,28 +201,28 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <div className="max-h-[400px] overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center">
-                    <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Bell size={16} className="text-slate-600" />
+                    <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Bell size={16} className="text-slate-300" />
                     </div>
                     <p className="text-[10px] text-slate-500">No notifications yet</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-800">
+                  <div className="divide-y divide-slate-50">
                     {notifications.map((notif) => (
                       <div key={notif.user_notification_id} className={cn(
-                        "p-4 hover:bg-slate-800 transition-colors cursor-default",
-                        !notif.is_read && "bg-primary/5"
+                        "p-4 hover:bg-slate-50 transition-colors cursor-default",
+                        !notif.is_read && "bg-blue-50/30"
                       )}>
                         <div className="flex items-start space-x-3">
                           <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                            notif.is_read ? "bg-slate-800 text-slate-500" : "bg-primary/10 text-primary"
+                            notif.is_read ? "bg-slate-100 text-slate-400" : "bg-primary/10 text-primary"
                           )}>
                             <Bell size={14} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-bold text-white truncate">{notif.title}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed break-words">
+                            <p className="text-[11px] font-bold text-slate-900 truncate">{notif.title}</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5 leading-relaxed break-words">
                               {notif.message.split(/(https?:\/\/[^\s]+)/g).map((part: string, i: number) => {
                                 if (part.match(/https?:\/\/[^\s]+/)) {
                                   return (
@@ -245,8 +245,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
                               <a href={notif.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary font-bold mt-1 inline-block hover:underline">View Link</a>
                             )}
                             <div className="flex justify-between items-center mt-1.5">
-                              <p className="text-[9px] text-slate-500 flex items-center">
-                                <CheckCircle2 size={10} className={cn("mr-1", notif.is_read ? "text-emerald-500" : "text-slate-600")} />
+                              <p className="text-[9px] text-slate-400 flex items-center">
+                                <CheckCircle2 size={10} className={cn("mr-1", notif.is_read ? "text-emerald-500" : "text-slate-300")} />
                                 {new Date(notif.created_at).toLocaleDateString()}
                               </p>
                               {!notif.is_read && (
@@ -269,7 +269,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 )}
               </div>
               {notifications.length > 0 && (
-                <div className="p-3 bg-black/50 border-t border-slate-800 text-center">
+                <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
                   <button className="text-[10px] font-bold text-primary hover:underline">
                     View All Notifications
                   </button>
@@ -280,7 +280,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         )}
       </div>
       
-      <div className="h-8 w-[1px] bg-slate-800 mx-2"></div>
+      <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
 
         <div 
           ref={menuRef}
@@ -288,12 +288,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
           onClick={() => setShowMenu(!showMenu)}
         >
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-white hover:text-primary transition-colors">
+            <p className="text-xs font-semibold text-slate-900 hover:text-primary transition-colors">
               {profile?.name || user?.email?.split('@')[0] || 'Admin User'}
             </p>
             <p className="text-[11px] text-slate-500">{profile?.business_profiles?.name || 'PHBKT Group Ltd'}</p>
           </div>
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden border border-slate-800">
+          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden">
             {profile?.business_profiles?.logo_url ? (
               <img src={profile.business_profiles.logo_url} alt="Logo" className="w-full h-full object-contain" />
             ) : (
@@ -303,30 +303,30 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
           {/* Click Dropdown for Logout */}
           {showMenu && (
-            <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 rounded-xl shadow-xl border border-slate-800 transition-all z-50 p-2">
-              <button onClick={() => { navigate('/settings'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 transition-all z-50 p-2">
+              <button onClick={() => { navigate('/settings'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                 <Settings size={16} />
                 <span>Setting</span>
               </button>
-              <button onClick={() => { navigate('/settings?tab=security'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+              <button onClick={() => { navigate('/settings?tab=security'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                 <Lock size={16} />
                 <span>Change password</span>
               </button>
               {(profile?.role === 'Admin' || profile?.role === 'Super Admin' || profile?.is_super_admin || originalProfile?.role === 'Admin' || originalProfile?.role === 'Super Admin' || originalProfile?.is_super_admin) && (
-                <button onClick={() => { navigate('/admin'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+                <button onClick={() => { navigate('/admin'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                   <ShieldCheck size={16} />
                   <span>Admin Panel</span>
                 </button>
               )}
-              <button onClick={() => { navigate('/support'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
+              <button onClick={() => { navigate('/support'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                 <HelpCircle size={16} />
                 <span>Help & Support</span>
               </button>
-              <div className="h-[1px] bg-slate-800 my-1"></div>
+              <div className="h-[1px] bg-slate-100 my-1"></div>
               {isImpersonating && (
                 <button 
                   onClick={() => { stopImpersonating(); setShowMenu(false); }} 
-                  className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                 >
                   <LogOut size={16} />
                   <span>Exit Impersonation</span>
@@ -334,7 +334,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               )}
               <button 
                 onClick={handleSignOut}
-                className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <LogOut size={16} />
                 <span>Logout</span>
