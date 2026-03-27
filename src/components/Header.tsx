@@ -222,7 +222,25 @@ export default function Header({ onMenuClick }: HeaderProps) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] font-bold text-slate-900 truncate">{notif.title}</p>
-                            <p className="text-[10px] text-slate-600 mt-0.5 leading-relaxed">{notif.message}</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5 leading-relaxed break-words">
+                              {notif.message.split(/(https?:\/\/[^\s]+)/g).map((part: string, i: number) => {
+                                if (part.match(/https?:\/\/[^\s]+/)) {
+                                  return (
+                                    <a 
+                                      key={i} 
+                                      href={part} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-primary hover:underline font-medium"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {part}
+                                    </a>
+                                  );
+                                }
+                                return part;
+                              })}
+                            </p>
                             {notif.link && (
                               <a href={notif.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary font-bold mt-1 inline-block hover:underline">View Link</a>
                             )}
