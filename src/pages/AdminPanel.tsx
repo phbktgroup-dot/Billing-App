@@ -926,7 +926,24 @@ export default function AdminPanel() {
                           {notif.type}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 mt-0.5">{notif.message}</p>
+                      <p className="text-[11px] text-slate-600 mt-0.5 break-words">
+                        {notif.message.split(/(https?:\/\/[^\s]+)/g).map((part: string, i: number) => {
+                          if (part.match(/https?:\/\/[^\s]+/)) {
+                            return (
+                              <a 
+                                key={i} 
+                                href={part} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-primary hover:underline font-medium"
+                              >
+                                {part}
+                              </a>
+                            );
+                          }
+                          return part;
+                        })}
+                      </p>
                       <div className="flex items-center space-x-2 mt-2">
                         <p className="text-[9px] text-slate-400">
                           {new Date(notif.created_at).toLocaleString()}
@@ -1144,13 +1161,20 @@ export default function AdminPanel() {
       {/* Add Notification Modal */}
       <Drawer
         isOpen={showAddNotification}
-        onClose={() => setShowAddNotification(false)}
+        onClose={() => {
+          setShowAddNotification(false);
+          setNotificationStatus(null);
+        }}
         title="Send Notification"
+        maxWidth="max-w-lg"
         icon={<Bell size={18} />}
         footer={
           <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50">
             <button 
-              onClick={() => setShowAddNotification(false)} 
+              onClick={() => {
+                setShowAddNotification(false);
+                setNotificationStatus(null);
+              }} 
               className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
             >
               Cancel
@@ -1161,51 +1185,66 @@ export default function AdminPanel() {
               className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px]"
             >
               {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Send className="w-3.5 h-3.5 mr-1.5" />}
-              Send
+              Send Notification
             </button>
           </div>
         }
       >
         <div className="p-6">
           <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Select Recipient</label>
-              <select 
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:bg-white focus:border-primary outline-none"
-                onChange={(e) => setSelectedUserForNotification(e.target.value)}
-                value={selectedUserForNotification}
-              >
-                <option value="all">{isSuperAdmin ? "All System Users" : "All My Users"}</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
-                ))}
-              </select>
+            {notificationStatus && (
+              <div className={cn(
+                "p-3 rounded-lg flex items-center space-x-2 text-[11px] font-medium",
+                notificationStatus.type === 'success' ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"
+              )}>
+                {notificationStatus.type === 'success' ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                <span>{notificationStatus.message}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Select Recipient</label>
+                <div className="relative">
+                  <select 
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all appearance-none"
+                    onChange={(e) => setSelectedUserForNotification(e.target.value)}
+                    value={selectedUserForNotification}
+                  >
+                    <option value="all">{isSuperAdmin ? "All System Users" : "All My Users"}</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                    <MoreVertical size={14} className="rotate-90" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Notification Title</label>
+                <input 
+                  type="text" 
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all placeholder:text-slate-400"
+                  value={notificationTitle}
+                  onChange={e => setNotificationTitle(e.target.value)}
+                  placeholder="e.g., System Update"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Title</label>
-              <input 
-                type="text" 
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:bg-white focus:border-primary outline-none"
-                value={notificationTitle}
-                onChange={e => setNotificationTitle(e.target.value)}
-                placeholder="Notification Title"
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Message Content</label>
+              <textarea 
+                rows={6}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs transition-all placeholder:text-slate-400 resize-none"
+                value={notificationMessage}
+                onChange={e => setNotificationMessage(e.target.value)}
+                placeholder="Type your notification message here..."
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Message</label>
-            <textarea 
-              rows={4}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:bg-white focus:border-primary outline-none resize-none"
-              value={notificationMessage}
-              onChange={e => setNotificationMessage(e.target.value)}
-              placeholder="Type your message here..."
-            />
-          </div>
         </div>
-      </div>
-    </Drawer>
+      </Drawer>
 
       {/* Edit API Key Modal */}
       <Drawer

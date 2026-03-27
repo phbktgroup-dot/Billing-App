@@ -101,8 +101,26 @@ export default function NotificationBell() {
                 notifications.map((n) => (
                   <div key={n.id} className={`p-3 border-b border-slate-50 ${n.is_read ? 'bg-white' : 'bg-blue-50/50'}`}>
                     <div className="flex justify-between items-start">
-                      <div className="text-xs text-slate-700">{n.notifications.message}</div>
-                      {!n.is_read && <button onClick={() => markAsRead(n.id)} className="text-primary"><Check size={14} /></button>}
+                      <div className="text-xs text-slate-700 break-words">
+                        {n.notifications.message.split(/(https?:\/\/[^\s]+)/g).map((part: string, i: number) => {
+                          if (part.match(/https?:\/\/[^\s]+/)) {
+                            return (
+                              <a 
+                                key={i} 
+                                href={part} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-primary hover:underline font-medium"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {part}
+                              </a>
+                            );
+                          }
+                          return part;
+                        })}
+                      </div>
+                      {!n.is_read && <button onClick={() => markAsRead(n.id)} className="text-primary ml-2 shrink-0"><Check size={14} /></button>}
                     </div>
                     {n.notifications.link && (
                       <a href={n.notifications.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary font-bold mt-1 inline-block hover:underline">View Link</a>
