@@ -16,10 +16,11 @@ interface DateFilterProps {
   setYear: (year: number) => void;
   customRange: { start: string, end: string };
   setCustomRange: (range: { start: string, end: string }) => void;
+  className?: string;
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({
-  filterType, setFilterType, day, setDay, year, setYear, customRange, setCustomRange
+  filterType, setFilterType, day, setDay, year, setYear, customRange, setCustomRange, className
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -121,10 +122,13 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   ];
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={cn("relative", className)} ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm flex items-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
+        className={cn(
+          "bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm flex items-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95",
+          className?.includes('w-full') && "w-full justify-center"
+        )}
       >
         <CalendarIcon size={16} className="text-primary" />
         {getLabel()}

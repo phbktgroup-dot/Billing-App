@@ -22,7 +22,7 @@ import {
   Package
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
+import { cn, formatCurrency, getDateRange, FilterType, downloadFile } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
@@ -42,6 +42,7 @@ interface Invoice {
   customer_id: string;
   customers: {
     name: string;
+    phone?: string;
     gstin?: string;
     address?: string;
     city?: string;
@@ -82,6 +83,7 @@ export default function Invoices() {
 
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [ewaySettings, setEwaySettings] = useState<any>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const businessId = profile?.business_id;
 
@@ -125,7 +127,7 @@ export default function Invoices() {
         .from('invoices')
         .select(`
           *,
-          customers (name),
+          customers (name, phone),
           eway_bills (id)
         `)
         .eq('business_id', businessId)
@@ -217,14 +219,7 @@ export default function Invoices() {
       }
 
       const blob = new Blob([JSON.stringify(ewayJson, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", url);
-      downloadAnchorNode.setAttribute("download", `eway_bill_${invoiceData.invoice_number}.json`);
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      document.body.removeChild(downloadAnchorNode);
-      URL.revokeObjectURL(url);
+      await downloadFile(blob, `eway_bill_${invoiceData.invoice_number}.json`);
 
     } catch (error: any) {
       console.error('Error generating E-way Bill JSON:', error);
@@ -232,76 +227,162 @@ export default function Invoices() {
     }
   };
 
+  const getInvoicePDFData = async (invoice: Invoice) => {
+    // Fetch full invoice details
+    const { data: invoiceData, error: invoiceError } = await supabase
+      .from('invoices')
+      .select(`
+        *,
+        customers (*),
+        invoice_items (
+          *,
+          products (name)
+        )
+      `)
+      .eq('id', invoice.id)
+      .single();
+
+    if (invoiceError) throw invoiceError;
+
+    // Fetch business profile
+    const { data: businessProfile, error: businessError } = await supabase
+      .from('business_profiles')
+      .select('*')
+      .eq('id', businessId)
+      .single();
+
+    if (businessError) throw businessError;
+
+    // Format data for PDF generator
+    const pdfData = {
+      invoice_number: invoiceData.invoice_number,
+      date: new Date(invoiceData.date).toISOString(),
+      customer_name: invoiceData.customers?.name || 'Walk-in Customer',
+      customer_gstin: invoiceData.customers?.gstin,
+      customer_address: [
+        invoiceData.customers?.address1,
+        invoiceData.customers?.address2,
+        [invoiceData.customers?.city, invoiceData.customers?.pincode].filter(Boolean).join(', ')
+      ].filter(Boolean).join('\n'),
+      payment_mode: invoiceData.payment_mode,
+      items: invoiceData.invoice_items.map((item: any) => ({
+        name: item.products?.name || 'Unknown Item',
+        sku: item.products?.sku,
+        quantity: item.quantity,
+        rate: item.unit_price,
+        gstRate: item.gst_rate,
+        amount: item.total_price || item.amount || 0
+      })),
+      subtotal: invoiceData.subtotal,
+      raw_subtotal: invoiceData.subtotal + (invoiceData.discount || 0),
+      discount: invoiceData.discount,
+      discount_percentage: invoiceData.discount_percentage,
+      tax_amount: invoiceData.tax_amount,
+      cgst_amount: invoiceData.cgst_amount,
+      sgst_amount: invoiceData.sgst_amount,
+      igst_amount: invoiceData.igst_amount,
+      is_inter_state: invoiceData.is_inter_state,
+      billing_state: invoiceData.billing_state,
+      customer_state: invoiceData.customer_state,
+      customer_state_code: invoiceData.customers?.state 
+        ? Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === invoiceData.customers.state.toLowerCase() || code === invoiceData.customers.state)?.[0] || ''
+        : (invoiceData.customers?.gstin?.substring(0, 2) || ''),
+      total: invoiceData.total,
+      notes: invoiceData.notes,
+      terms: invoiceData.terms
+    };
+
+    return { pdfData, businessProfile, invoiceData };
+  };
+
   const handleDownloadPDF = async (invoice: Invoice) => {
     try {
-      // Fetch full invoice details
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          customers (*),
-          invoice_items (
-            *,
-            products (name)
-          )
-        `)
-        .eq('id', invoice.id)
-        .single();
-
-      if (invoiceError) throw invoiceError;
-
-      // Fetch business profile
-      const { data: businessProfile, error: businessError } = await supabase
-        .from('business_profiles')
-        .select('*')
-        .eq('id', businessId)
-        .single();
-
-      if (businessError) throw businessError;
-
-      // Format data for PDF generator
-      const pdfData = {
-        invoice_number: invoiceData.invoice_number,
-        date: new Date(invoiceData.date).toISOString(),
-        customer_name: invoiceData.customers?.name || 'Walk-in Customer',
-        customer_gstin: invoiceData.customers?.gstin,
-        customer_address: [
-          invoiceData.customers?.address1,
-          invoiceData.customers?.address2,
-          [invoiceData.customers?.city, invoiceData.customers?.pincode].filter(Boolean).join(', ')
-        ].filter(Boolean).join('\n'),
-        payment_mode: invoiceData.payment_mode,
-        items: invoiceData.invoice_items.map((item: any) => ({
-          name: item.products?.name || 'Unknown Item',
-          sku: item.products?.sku,
-          quantity: item.quantity,
-          rate: item.unit_price,
-          gstRate: item.gst_rate,
-          amount: item.total_price || item.amount || 0
-        })),
-        subtotal: invoiceData.subtotal,
-        raw_subtotal: invoiceData.subtotal + (invoiceData.discount || 0),
-        discount: invoiceData.discount,
-        discount_percentage: invoiceData.discount_percentage,
-        tax_amount: invoiceData.tax_amount,
-        cgst_amount: invoiceData.cgst_amount,
-        sgst_amount: invoiceData.sgst_amount,
-        igst_amount: invoiceData.igst_amount,
-        is_inter_state: invoiceData.is_inter_state,
-        billing_state: invoiceData.billing_state,
-        customer_state: invoiceData.customer_state,
-        customer_state_code: invoiceData.customers?.state 
-          ? Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === invoiceData.customers.state.toLowerCase() || code === invoiceData.customers.state)?.[0] || ''
-          : (invoiceData.customers?.gstin?.substring(0, 2) || ''),
-        total: invoiceData.total,
-        notes: invoiceData.notes,
-        terms: invoiceData.terms
-      };
-
+      const { pdfData, businessProfile } = await getInvoicePDFData(invoice);
       await generateInvoicePDF(pdfData, businessProfile);
     } catch (error: any) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF: ' + error.message);
+    }
+  };
+
+  const handleWhatsAppShare = async (invoice: Invoice) => {
+    try {
+      const { pdfData, businessProfile, invoiceData } = await getInvoicePDFData(invoice);
+
+      // Generate PDF as blob for sharing
+      const pdfBlob = await generateInvoicePDF(pdfData, businessProfile, true) as Blob;
+      
+      const customerPhone = invoiceData.customers?.phone;
+      const message = `Dear ${invoiceData.customers?.name || 'Customer'},\n\nPlease find attached Invoice #${invoiceData.invoice_number} for ${formatCurrency(invoiceData.total)}.\n\nThank you for your business!`;
+
+      // 1. Try Web Share API (Best for mobile - allows attaching the file)
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+        const file = new File([pdfBlob], `Invoice_${invoiceData.invoice_number}.pdf`, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Invoice #${invoiceData.invoice_number}`,
+              text: message
+            });
+            return; // If successful, we're done
+          } catch (shareError) {
+            console.log('Share cancelled or failed, falling back to direct link');
+          }
+        }
+      }
+
+      // 2. Fallback: Direct WhatsApp Link (Best for desktop - opens chat directly)
+      if (customerPhone) {
+        // Download the PDF first so the user has it ready to attach
+        await generateInvoicePDF(pdfData, businessProfile);
+        
+        const cleanPhone = customerPhone.replace(/\D/g, '');
+        // Add country code if missing (assuming India +91 if 10 digits)
+        const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+        
+        // Small delay to ensure PDF download starts before opening WhatsApp
+        setTimeout(() => {
+          window.open(whatsappUrl, '_blank');
+        }, 1000);
+      } else {
+        alert('Customer phone number not found. Please add a phone number to the customer profile.');
+      }
+    } catch (error: any) {
+      console.error('Error sharing via WhatsApp:', error);
+      alert('Failed to share via WhatsApp: ' + error.message);
+    }
+  };
+
+  const handleSystemShare = async (invoice: Invoice) => {
+    try {
+      const { pdfData, businessProfile, invoiceData } = await getInvoicePDFData(invoice);
+      const pdfBlob = await generateInvoicePDF(pdfData, businessProfile, true) as Blob;
+      const message = `Invoice #${invoiceData.invoice_number} for ${formatCurrency(invoiceData.total)}`;
+
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+        const file = new File([pdfBlob], `Invoice_${invoiceData.invoice_number}.pdf`, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `Invoice #${invoiceData.invoice_number}`,
+            text: message
+          });
+        } else {
+          // Fallback to text share if file share not supported
+          await navigator.share({
+            title: `Invoice #${invoiceData.invoice_number}`,
+            text: message,
+            url: window.location.href
+          });
+        }
+      } else {
+        alert('Web Share not supported on this browser');
+      }
+    } catch (error: any) {
+      console.error('Error sharing invoice:', error);
+      alert('Failed to share invoice: ' + error.message);
     }
   };
 
@@ -492,8 +573,8 @@ export default function Invoices() {
       </div>
 
       {/* Invoices Table */}
-      <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="glass-card !overflow-visible">
+        <div className="overflow-x-auto min-h-[450px] !overflow-visible">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
@@ -591,7 +672,7 @@ export default function Invoices() {
                       <td className="px-2.5 py-1.5">
                         <span className="text-xs text-slate-600">{invoice.payment_mode || 'Cash'}</span>
                       </td>
-                      <td className="px-2.5 py-1.5 text-right">
+                      <td className="px-2.5 py-1.5 text-right relative">
                         <div className="flex items-center justify-end space-x-2">
                           <button 
                             onClick={() => handlePreview(invoice)}
@@ -623,9 +704,72 @@ export default function Invoices() {
                           >
                             <Trash2 size={16} />
                           </button>
-                          <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
-                            <MoreVertical size={16} />
-                          </button>
+                          <div className="relative menu-container">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('Toggling menu for:', invoice.id);
+                                setActiveMenu(activeMenu === invoice.id ? null : invoice.id);
+                              }}
+                              className={cn(
+                                "p-2 rounded-xl transition-all",
+                                activeMenu === invoice.id ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                              )}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            
+                            {activeMenu === invoice.id && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-[60]" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenu(null);
+                                  }}
+                                />
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[70] animate-in fade-in zoom-in duration-200 origin-top-right">
+                                  <div className="px-3 py-2 mb-1 border-bottom border-slate-50">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Actions</p>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleWhatsAppShare(invoice);
+                                      setActiveMenu(null);
+                                    }}
+                                    className="w-full flex items-center px-3 py-2.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                                  >
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center mr-3 text-emerald-600">
+                                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-11.7 8.38 8.38 0 0 1 3.8.9L21 3z"></path>
+                                      </svg>
+                                    </div>
+                                    <div className="text-left">
+                                      <p className="font-bold">WhatsApp Share</p>
+                                      <p className="text-[10px] opacity-70">Send PDF to customer</p>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSystemShare(invoice);
+                                      setActiveMenu(null);
+                                    }}
+                                    className="w-full flex items-center px-3 py-2.5 text-xs text-slate-700 hover:bg-primary/5 hover:text-primary transition-colors"
+                                  >
+                                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mr-3 text-primary">
+                                      <Plus size={16} />
+                                    </div>
+                                    <div className="text-left">
+                                      <p className="font-bold">System Share</p>
+                                      <p className="text-[10px] opacity-70">Share via other apps</p>
+                                    </div>
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </motion.tr>

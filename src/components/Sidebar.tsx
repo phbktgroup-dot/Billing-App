@@ -21,6 +21,8 @@ import {
   ChevronRight,
   X,
   Receipt,
+  CreditCard,
+  BookOpen,
   HelpCircle,
   Menu
 } from 'lucide-react';
@@ -38,7 +40,9 @@ const menuItems = [
   { icon: Truck, label: 'Suppliers', path: '/suppliers' },
   { icon: ShoppingCart, label: 'Purchases', path: '/purchases' },
   { icon: Receipt, label: 'Expenses', path: '/expenses' },
+  { icon: CreditCard, label: 'Payments & Receipts', path: '/payments' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
+  { icon: BookOpen, label: 'Ledger', path: '/ledger' },
   { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst-reports' },
   { icon: FileCheck, label: 'E-Way Bill', path: '/eway-bill' },
   { icon: FileText, label: 'ITR Report', path: '/itr-report', adminOnly: true },
@@ -124,10 +128,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         {/* Logo Section / Top Left Menu */}
         <div className={cn(
-          "h-20 flex items-center border-b border-slate-100 transition-all duration-300 relative",
+          "h-16 md:h-14 flex items-center border-b border-slate-100 transition-all duration-300 relative",
           (isCollapsed && !isOpen) ? "justify-center px-0" : "justify-between px-6"
         )}>
-          <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => {
                 if (windowWidth < 1024) {
@@ -136,17 +140,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   toggleSidebar();
                 }
               }}
-              className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+              className="p-1 text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
             >
               {appSettings?.logo_url ? (
                 <img 
                   src={appSettings.logo_url} 
                   alt="Logo" 
-                  className="w-6 h-6 object-contain"
+                  className="w-10 h-10 object-contain"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <Menu size={20} />
+                <Menu size={24} />
               )}
             </button>
 
@@ -154,7 +158,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <motion.span 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="font-bold text-slate-900 truncate"
+                className="font-bold text-slate-900 text-sm"
               >
                 {appSettings?.app_name || 'Billing pro+'}
               </motion.span>
@@ -165,7 +169,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Menu Items */}
-        <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto py-2 px-3 space-y-1 custom-scrollbar">
           {filteredMenuItems.filter(item => item.path !== '/support').map((item) => (
             <NavLink
               key={item.path}

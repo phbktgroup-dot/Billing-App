@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { numberToWords } from './numberToWords';
+import { downloadFile } from './utils';
 
 export interface InvoiceData {
   invoice_number: string;
@@ -341,11 +342,11 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yy = String(d.getFullYear()).slice(-2);
     const dateStr = `${dd}${yy}${mm}`;
-    doc.save(`Invoice_${invoice.invoice_number}_${dateStr}.pdf`);
+    await downloadFile(doc.output('blob'), `Invoice_${invoice.invoice_number}_${dateStr}.pdf`);
   }
 };
 
-export const generateProfitLossPDF = async (data: any, business: BusinessProfile) => {
+export const generateProfitLossPDF = async (data: any, business: any) => {
   const doc = new jsPDF();
   
   doc.setFontSize(18);
@@ -369,5 +370,102 @@ export const generateProfitLossPDF = async (data: any, business: BusinessProfile
     body: tableData.slice(1),
   });
   
-  doc.save(`profit-loss-ledger-${new Date().toISOString().split('T')[0]}.pdf`);
+  await downloadFile(doc.output('blob'), `profit-loss-ledger-${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const generateLedgerPDF = async (data: {
+  partyName: string;
+  partyGstin?: string;
+  partyAddress?: string;
+  startDate: string;
+  endDate: string;
+  entries: any[];
+  totals: any;
+  type: 'Customer' | 'Supplier';
+}, business: any) => {
+  const doc = new jsPDF();
+  const businessProfile = Array.isArray(business) ? business[0] : business;
+
+  // Header
+  doc.setFontSize(18);
+  doc.setTextColor(30, 41, 59);
+  doc.text(businessProfile?.name || 'Business Ledger', 105, 20, { align: 'center' });
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.text(businessProfile?.address || '', 105, 26, { align: 'center' });
+  if (businessProfile?.gstin) {
+    doc.text(`GSTIN: ${businessProfile.gstin}`, 105, 31, { align: 'center' });
+  }
+
+  doc.setDrawColor(226, 232, 240);
+  doc.line(20, 35, 190, 35);
+
+  // Report Title
+  doc.setFontSize(14);
+  doc.setTextColor(30, 41, 59);
+  doc.text(`${data.type} Ledger Account`, 20, 45);
+  
+  doc.setFontSize(10);
+  doc.text(`${data.startDate} to ${data.endDate}`, 190, 45, { align: 'right' });
+
+  // Party Info
+  doc.setFontSize(11);
+  doc.text(`${data.type} Details:`, 20, 55);
+  doc.setFontSize(10);
+  doc.setTextColor(71, 85, 105);
+  doc.text(data.partyName, 20, 61);
+  if (data.partyAddress) doc.text(data.partyAddress, 20, 66);
+  if (data.partyGstin) doc.text(`GSTIN: ${data.partyGstin}`, 20, 71);
+
+  // Table
+  const tableData = data.entries.map(entry => {
+    let prefix = entry.debit > 0 ? 'To  ' : 'By  ';
+    let particulars = entry.particulars;
+    
+    if (entry.voucherType === 'Sales') {
+      particulars = `Sales A/c`;
+    } else if (entry.voucherType === 'Purchase') {
+      particulars = `Purchase A/c`;
+    }
+
+    return [
+      new Date(entry.date).toLocaleDateString('en-GB'),
+      prefix + particulars,
+      entry.voucherType,
+      entry.voucherNo,
+      entry.debit > 0 ? entry.debit.toFixed(2) : '',
+      entry.credit > 0 ? entry.credit.toFixed(2) : '',
+      `${Math.abs(entry.balance).toFixed(2)} ${entry.balance >= 0 ? 'Dr' : 'Cr'}`
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 80,
+    head: [['Date', 'Particulars', 'Vch Type', 'Vch No.', 'Debit', 'Credit', 'Balance']],
+    body: [
+      ...tableData,
+      [
+        { content: 'Total', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: data.totals.totalDebit.toFixed(2), styles: { fontStyle: 'bold' } },
+        { content: data.totals.totalCredit.toFixed(2), styles: { fontStyle: 'bold' } },
+        { content: `${Math.abs(data.totals.closingBalance).toFixed(2)} ${data.totals.closingBalance >= 0 ? 'Dr' : 'Cr'}`, styles: { fontStyle: 'bold' } }
+      ]
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 8, textColor: 51 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { top: 80 }
+  });
+
+  // Footer
+  const finalY = (doc as any).lastAutoTable.finalY || 80;
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Generated on ${new Date().toLocaleString()}`, 20, finalY + 10);
+  doc.text('This is a computer generated statement.', 20, finalY + 15);
+
+  const blob = doc.output('blob');
+  await downloadFile(blob, `ledger-${data.partyName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`);
 };

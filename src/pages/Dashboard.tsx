@@ -622,8 +622,8 @@ export default function Dashboard() {
           <h1 className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">Business Performance Dashboard</h1>
           <p className="text-xs font-medium text-slate-500 mt-1">Real-time financial metrics and business health monitoring.</p>
         </div>
-        <div className="flex items-center space-x-2 justify-end relative z-20">
-          {loading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+        <div className="grid grid-cols-1 sm:flex sm:items-center gap-2 sm:justify-end relative z-20 w-full sm:w-auto">
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-primary hidden sm:block" />}
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -633,17 +633,18 @@ export default function Dashboard() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            className="w-full sm:w-auto"
           />
           <button 
             onClick={() => navigate('/invoices/new')}
-            className="bg-gradient-to-r from-primary to-blue-600 text-white hover:shadow-lg hover:shadow-primary/30 flex items-center text-[11px] font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95"
+            className="bg-gradient-to-r from-primary to-blue-600 text-white hover:shadow-lg hover:shadow-primary/30 flex items-center justify-center text-[11px] font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 w-full sm:w-auto"
           >
             <Plus size={16} className="mr-1.5" strokeWidth={2.5} />
             Create Invoice
           </button>
           <button 
             onClick={() => setShowScanOptions(true)}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center shadow-sm text-[11px] transition-all active:scale-95"
+            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center justify-center shadow-sm text-[11px] transition-all active:scale-95 w-full sm:w-auto"
           >
             <Scan size={16} className="mr-1.5 text-primary" strokeWidth={2.5} />
             Scan Invoice
@@ -733,7 +734,7 @@ export default function Dashboard() {
       {/* Business Summary & Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Business Performance Summary */}
-        <div className="lg:col-span-2 glass-card p-6 relative overflow-hidden group h-full">
+        <div className="lg:col-span-2 glass-card p-4 md:p-6 relative overflow-hidden group h-full">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/10 transition-colors" />
             
             <div className="flex items-center justify-between mb-8">
@@ -759,7 +760,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
               {/* Profit & Loss */}
               <div className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group/card">
                 <div className="flex justify-between items-start mb-4">
@@ -1156,7 +1157,7 @@ export default function Dashboard() {
         </div>
 
         {/* Proactive Actions */}
-        <div className="lg:col-span-1 glass-card p-6 flex flex-col h-full">
+        <div className="lg:col-span-1 glass-card p-4 md:p-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-orange-50 rounded-lg">
@@ -1240,7 +1241,7 @@ export default function Dashboard() {
         </div>
 
         {/* Scenario Simulator Card (Inline) */}
-        <div className="lg:col-span-2 glass-card p-6 flex flex-col h-full">
+        <div className="lg:col-span-2 glass-card p-4 md:p-6 flex flex-col h-full">
           <div className="flex items-center space-x-2 mb-4">
             <div className="p-1.5 bg-purple-50 rounded-lg">
               <TrendingUp size={16} className="text-purple-600" />
@@ -1302,7 +1303,7 @@ export default function Dashboard() {
         </div>
 
         {/* Inventory & Supply Chain - Moved to Right Side */}
-        <div className="lg:col-span-1 glass-card p-6 flex flex-col h-full">
+        <div className="lg:col-span-1 glass-card p-4 md:p-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-indigo-50 rounded-lg">
@@ -1358,7 +1359,7 @@ export default function Dashboard() {
       {/* Revenue & Cash Flow Forecast Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Revenue Performance */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
+        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
@@ -1441,7 +1442,7 @@ export default function Dashboard() {
         </div>
 
         {/* Owner's Strategic Insights - Moved to Right Side */}
-        <div className="lg:col-span-1 p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl flex flex-col h-full">
+        <div className="lg:col-span-1 p-4 md:p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl flex flex-col h-full">
           <div className="flex items-center space-x-2 mb-6">
             <div className="p-1.5 bg-primary/20 rounded-lg">
               <ShieldCheck size={16} className="text-primary" />
@@ -1479,7 +1480,7 @@ export default function Dashboard() {
       {/* Customers & Invoices Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Top Customers */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
             <Users size={16} className="mr-2 text-primary" />
             Top Customers
@@ -1518,7 +1519,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Invoices */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
               <FileText size={16} className="mr-2 text-primary" />
@@ -1583,7 +1584,7 @@ export default function Dashboard() {
         </div>
 
         {/* Customer Segments */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
             <Target size={16} className="mr-2 text-primary" />
             Customer Segments

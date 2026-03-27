@@ -95,3 +95,46 @@ export function getDateRange(
 
   return { startDate, endDate };
 }
+
+export async function downloadFile(blob: Blob, filename: string) {
+  try {
+    const url = URL.createObjectURL(blob);
+    
+    // 1. Direct Download (Works on Desktop and most Mobile browsers)
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // 2. Web Share API (Convenience for Mobile)
+    // This allows users to easily send the file to WhatsApp, Email, or Save to Files
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile && typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], filename, { type: blob.type });
+        if (navigator.canShare({ files: [file] })) {
+          // We don't await here to avoid blocking the UI
+          navigator.share({
+            files: [file],
+            title: filename,
+          }).catch((err) => {
+            // Ignore AbortError (user cancelled)
+            if (err.name !== 'AbortError') {
+              console.warn('Share failed:', err);
+            }
+          });
+        }
+      } catch (shareError) {
+        console.warn('Error preparing share:', shareError);
+      }
+    }
+
+    // Revoke the URL after a delay to ensure the browser has started the download
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (error) {
+    console.error('Download failed:', error);
+  }
+}

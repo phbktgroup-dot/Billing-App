@@ -10,6 +10,8 @@ import Inventory from './pages/Inventory';
 import Customers from './pages/Customers';
 import Transporters from './pages/Transporters';
 import Suppliers from './pages/Suppliers';
+import Payments from './pages/Payments';
+import Ledger from './pages/Ledger';
 import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
 import GSTReports from './pages/GSTReports';
@@ -107,6 +109,8 @@ export default function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="transporters" element={<Transporters />} />
           <Route path="suppliers" element={<Suppliers />} />
+          <Route path="payments" element={<Payments />} />
+          <Route path="ledger" element={<Ledger />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="expenses" element={<Expenses />} />
           <Route path="reports" element={<Reports />} />

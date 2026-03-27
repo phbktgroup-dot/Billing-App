@@ -2432,8 +2432,8 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
             <Package size={14} strokeWidth={2.5} />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">Scanned Items</h4>
           </div>
-          <div className="border border-slate-100 rounded-xl overflow-hidden">
-            <table className="w-full text-left border-collapse">
+          <div className="border border-slate-100 rounded-xl overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[400px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
                   <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase">Particular</th>

@@ -16,7 +16,7 @@ import {
   FileUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, getDateRange, FilterType } from '../lib/utils';
+import { cn, getDateRange, FilterType, downloadFile } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateProfitLossExcel, generateGSTExcel } from '../lib/excelGenerator';
@@ -257,14 +257,14 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       bg: 'bg-emerald-50',
       reports: [
         { id: 'eway_json', name: 'E-Way Bill Bulk Generation', format: 'JSON', status: 'Ready' },
-        { id: 'eway_csv', name: 'E-Way Bill Register', format: 'CSV', status: 'Ready' },
+        { id: 'eway_csv', name: 'E-Way Bill Register', format: 'Excel', status: 'Ready' },
       ]
     }
   };
 
   const current = tools[type];
 
-  const generateCSV = (data: any[], filename: string) => {
+  const generateCSV = async (data: any[], filename: string) => {
     if (!data || !data.length) {
       alert("No data available for this report.");
       return;
@@ -280,14 +280,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    await downloadFile(blob, `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   const handleDownloadReport = async (reportId: string, reportName: string, format: string = 'CSV') => {
@@ -401,14 +394,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         const itrJson = generateITRJson(reportId, profile, financialData);
         
         const blob = new Blob([JSON.stringify(itrJson, null, 2)], { type: 'application/json' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `${reportId.toUpperCase()}_${new Date().toISOString().split('T')[0]}.json`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        await downloadFile(blob, `${reportId.toUpperCase()}_${new Date().toISOString().split('T')[0]}.json`);
         
         setDownloadingReport(null);
         return; // Exit early since we handled the download
@@ -417,8 +403,8 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           .from('invoices')
           .select('*, customers(*), invoice_items(*, products(*))')
           .eq('business_id', businessId);
-        if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate);
-        if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate);
+        if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate.toISOString());
+        if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate.toISOString());
         const { data: invoices } = await invoicesQuery;
 
         const { data: ewayBills } = await supabase
@@ -442,14 +428,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           }
 
           const blob = new Blob([JSON.stringify(ewayJson, null, 2)], { type: 'application/json' });
-          const link = document.createElement('a');
-          const url = URL.createObjectURL(blob);
-          link.setAttribute('href', url);
-          link.setAttribute('download', `EWAY_BULK_${new Date().toISOString().split('T')[0]}.json`);
-          link.style.visibility = 'hidden';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          await downloadFile(blob, `EWAY_BULK_${new Date().toISOString().split('T')[0]}.json`);
           
           setDownloadingReport(null);
           return;
@@ -600,6 +579,8 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
 27IJEPD7286N1ZG,,CR/10357,27-Feb-2026,21508.00,27-Maharashtra,N,0.00,Regular B2B,,5.00,20483.40,0.00
 27IJEPD7286N1ZG,,CR/10359,27-Feb-2026,125657.00,27-Maharashtra,N,0.00,Regular B2B,,5.00,119673.51,0.00`;
         await generateGST1Zip(reportId, csvContent);
+      } else if (format === 'CSV') {
+        generateCSV(dataToExport, reportId);
       } else {
         generateCSV(dataToExport, reportId);
       }

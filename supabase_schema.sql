@@ -82,6 +82,8 @@
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS address1 TEXT;
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS address2 TEXT;
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS aadhar_number TEXT;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS bank_accounts JSONB DEFAULT '[]';
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS upi_ids JSONB DEFAULT '[]';
 
     -- 3. CUSTOMERS
     CREATE TABLE IF NOT EXISTS customers (
@@ -754,6 +756,7 @@
 
     ALTER TABLE transporters ENABLE ROW LEVEL SECURITY;
 
+    DROP POLICY IF EXISTS "Users can manage their transporters" ON transporters;
     CREATE POLICY "Users can manage their transporters" ON transporters
         FOR ALL USING (
             public.can_access_business(business_id)
@@ -796,7 +799,60 @@
 
     ALTER TABLE eway_bills ENABLE ROW LEVEL SECURITY;
 
+    DROP POLICY IF EXISTS "Users can manage their eway bills" ON eway_bills;
     CREATE POLICY "Users can manage their eway bills" ON eway_bills
+        FOR ALL USING (
+            public.can_access_business(business_id)
+        );
+
+    -- 20. CUSTOMER PAYMENTS (Receipts)
+    CREATE TABLE IF NOT EXISTS customer_payments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID REFERENCES business_profiles(id) ON DELETE CASCADE,
+        customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
+        invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL,
+        created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        date DATE DEFAULT CURRENT_DATE,
+        payment_mode TEXT DEFAULT 'Cash',
+        reference_number TEXT,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT now()
+    );
+
+    ALTER TABLE customer_payments ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL;
+
+    ALTER TABLE customer_payments ENABLE ROW LEVEL SECURITY;
+
+    DROP POLICY IF EXISTS "Users can manage their customer payments" ON customer_payments;
+    CREATE POLICY "Users can manage their customer payments" ON customer_payments
+        FOR ALL USING (
+            public.can_access_business(business_id)
+        );
+
+    -- 21. SUPPLIER PAYMENTS (Payments)
+    CREATE TABLE IF NOT EXISTS supplier_payments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID REFERENCES business_profiles(id) ON DELETE CASCADE,
+        supplier_id UUID REFERENCES suppliers(id) ON DELETE CASCADE,
+        invoice_id UUID REFERENCES purchases(id) ON DELETE SET NULL,
+        purchase_id UUID REFERENCES purchases(id) ON DELETE SET NULL,
+        created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        date DATE DEFAULT CURRENT_DATE,
+        payment_mode TEXT DEFAULT 'Cash',
+        reference_number TEXT,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT now()
+    );
+
+    ALTER TABLE supplier_payments ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES purchases(id) ON DELETE SET NULL;
+    ALTER TABLE supplier_payments ADD COLUMN IF NOT EXISTS purchase_id UUID REFERENCES purchases(id) ON DELETE SET NULL;
+
+    ALTER TABLE supplier_payments ENABLE ROW LEVEL SECURITY;
+
+    DROP POLICY IF EXISTS "Users can manage their supplier payments" ON supplier_payments;
+    CREATE POLICY "Users can manage their supplier payments" ON supplier_payments
         FOR ALL USING (
             public.can_access_business(business_id)
         );

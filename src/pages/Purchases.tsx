@@ -166,8 +166,8 @@ export default function Purchases() {
               <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
                 <Package size={12} className="mr-1.5" /> Items Detected
               </h3>
-              <div className="border border-slate-100 rounded-xl overflow-hidden">
-                <table className="w-full text-left border-collapse">
+              <div className="border border-slate-100 rounded-xl overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead>
                     <tr className="bg-slate-50 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
                       <th className="px-2.5 py-1.5">Item Name</th>
@@ -1287,8 +1287,8 @@ Return as JSON format: {
                   </button>
                 </div>
                 
-                <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left border-collapse">
+                <div className="border border-slate-100 rounded-2xl overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
                     <thead>
                       <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                         <th className="px-2.5 py-1.5">Particular (Item Name)</th>

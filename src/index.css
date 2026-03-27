@@ -9,11 +9,25 @@
 }
 
 @layer base {
+  html {
+    font-size: 18px;
+  }
   body {
     @apply bg-background-soft text-slate-900 antialiased;
     font-family: 'Inter', sans-serif;
   }
 }
+
+/* Increase all arbitrary pixel font sizes by 2px total as requested */
+.text-\[7px\] { font-size: 9px !important; }
+.text-\[8px\] { font-size: 10px !important; }
+.text-\[9px\] { font-size: 11px !important; }
+.text-\[10px\] { font-size: 12px !important; }
+.text-\[11px\] { font-size: 13px !important; }
+.text-\[12px\] { font-size: 14px !important; }
+.text-\[13px\] { font-size: 15px !important; }
+.text-\[14px\] { font-size: 16px !important; }
+.text-\[15px\] { font-size: 17px !important; }
 
 @layer components {
   .glass-card {

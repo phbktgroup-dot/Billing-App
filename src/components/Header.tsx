@@ -131,7 +131,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky z-30 px-4 md:px-6 flex items-center justify-between",
+        "h-24 md:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky z-30 px-4 md:px-6 flex items-center justify-between pt-6 md:pt-0",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
       {/* Left Section: Menu Toggle (Mobile) & Search (Desktop) */}

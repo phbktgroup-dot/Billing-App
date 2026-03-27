@@ -16,7 +16,7 @@ import {
   Info
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { cn, getDateRange } from '../lib/utils';
+import { cn, getDateRange, downloadFile } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -684,13 +684,8 @@ export default function ITRReport() {
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
       const fileName = mode === 'all' ? `ITR_All_Reports_${businessName.replace(/\s+/g, '_')}.xlsx` : `ITR_${activeTab}_${businessName.replace(/\s+/g, '_')}.xlsx`;
-      a.download = fileName;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      await downloadFile(blob, fileName);
       setLoading(false);
     } catch (error) {
       console.error('Excel Generation Error:', error);

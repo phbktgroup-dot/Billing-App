@@ -17,7 +17,7 @@ import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
-import { FilterType, cn, formatCurrency, getDateRange } from '../lib/utils';
+import { FilterType, cn, formatCurrency, getDateRange, downloadFile } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -405,12 +405,7 @@ export default function GSTReports() {
     const zip = new JSZip();
     populateGSTR1Folder(zip);
     const content = await zip.generateAsync({ type: 'blob' });
-    const url = window.URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `GSTR1_CSVs_${filterType}_${day}.zip`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+    await downloadFile(content, `GSTR1_CSVs_${filterType}_${day}.zip`);
   };
 
   const getGSTR3BWorkbook = () => {
@@ -588,12 +583,7 @@ export default function GSTReports() {
     const zip = new JSZip();
     populateGSTR3BFolder(zip);
     const content = await zip.generateAsync({ type: 'blob' });
-    const url = window.URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `GSTR3B_CSVs_${filterType}_${day}.zip`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+    await downloadFile(content, `GSTR3B_CSVs_${filterType}_${day}.zip`);
   };
 
   const getGSTR2AWorkbook = () => {
@@ -779,12 +769,7 @@ export default function GSTReports() {
     const zip = new JSZip();
     populateGSTR2AFolder(zip);
     const content = await zip.generateAsync({ type: 'blob' });
-    const url = window.URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `GSTR2A_CSVs_${filterType}_${day}.zip`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+    await downloadFile(content, `GSTR2A_CSVs_${filterType}_${day}.zip`);
   };
 
   const downloadAllAsZip = async () => {
@@ -800,12 +785,7 @@ export default function GSTReports() {
     if (gstr2aFolder) populateGSTR2AFolder(gstr2aFolder);
 
     const content = await zip.generateAsync({ type: 'blob' });
-    const url = window.URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `GST_Reports_${filterType}_${day}.zip`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+    await downloadFile(content, `GST_Reports_${filterType}_${day}.zip`);
   };
 
   const renderGSTR1Analysis = () => {

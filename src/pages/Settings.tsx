@@ -16,7 +16,9 @@ import {
   Lock,
   ShieldCheck,
   Smartphone,
-  History
+  History,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn, formatSeriesNumber } from '../lib/utils';
@@ -57,6 +59,8 @@ export default function Settings() {
     bankAccountNo: '',
     bankIfsc: '',
     bankBranch: '',
+    bankAccounts: [] as { bankName: string; accountNo: string; ifsc: string; branch: string }[],
+    upiIds: [] as { upiId: string; label: string }[],
     geminiApiKey: '',
     defaultNotes: '',
     defaultTerms: '',
@@ -167,6 +171,12 @@ export default function Settings() {
         bankAccountNo: bp.bank_account_no || '',
         bankIfsc: bp.bank_ifsc || '',
         bankBranch: bp.bank_branch || '',
+        bankAccounts: (bp.bank_accounts && bp.bank_accounts.length > 0) 
+          ? bp.bank_accounts 
+          : (bp.bank_name || bp.bank_account_no) 
+            ? [{ bankName: bp.bank_name || '', accountNo: bp.bank_account_no || '', ifsc: bp.bank_ifsc || '', branch: bp.bank_branch || '' }]
+            : [],
+        upiIds: bp.upi_ids || [],
         geminiApiKey: bp.gemini_api_key || '',
         defaultNotes: bp.default_notes || '',
         defaultTerms: bp.default_terms || '',
@@ -250,6 +260,8 @@ export default function Settings() {
           bank_account_no: formData.bankAccountNo,
           bank_ifsc: formData.bankIfsc,
           bank_branch: formData.bankBranch,
+          bank_accounts: formData.bankAccounts,
+          upi_ids: formData.upiIds,
           invoice_prefix: formData.invoicePrefix,
           invoice_number_format: formData.invoiceFormat,
           gemini_api_key: formData.geminiApiKey,
@@ -583,24 +595,162 @@ export default function Settings() {
                 </div>
 
                 <div className="pt-6 border-t border-slate-100">
-                  <h3 className="text-sm font-bold text-slate-900 mb-4">Bank Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bank Name</label>
-                      <input type="text" className="input-field text-xs py-2" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Account Number</label>
-                      <input type="text" className="input-field text-xs py-2" value={formData.bankAccountNo} onChange={e => setFormData({...formData, bankAccountNo: e.target.value})} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">IFSC Code</label>
-                      <input type="text" className="input-field text-xs py-2" value={formData.bankIfsc} onChange={e => setFormData({...formData, bankIfsc: e.target.value})} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Branch</label>
-                      <input type="text" className="input-field text-xs py-2" value={formData.bankBranch} onChange={e => setFormData({...formData, bankBranch: e.target.value})} />
-                    </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-slate-900">Bank Accounts</h3>
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData, 
+                        bankAccounts: [...formData.bankAccounts, { bankName: '', accountNo: '', ifsc: '', branch: '' }]
+                      })}
+                      className="flex items-center space-x-1 text-xs text-primary font-bold hover:underline"
+                    >
+                      <Plus size={14} />
+                      <span>Add Account</span>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {formData.bankAccounts.map((acc, index) => (
+                      <div key={index} className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative group">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newAccs = [...formData.bankAccounts];
+                            newAccs.splice(index, 1);
+                            setFormData({ ...formData, bankAccounts: newAccs });
+                          }}
+                          className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bank Name</label>
+                            <input 
+                              type="text" 
+                              className="input-field text-xs py-2 bg-white" 
+                              value={acc.bankName} 
+                              onChange={e => {
+                                const newAccs = [...formData.bankAccounts];
+                                newAccs[index].bankName = e.target.value;
+                                setFormData({ ...formData, bankAccounts: newAccs });
+                              }} 
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Account Number</label>
+                            <input 
+                              type="text" 
+                              className="input-field text-xs py-2 bg-white" 
+                              value={acc.accountNo} 
+                              onChange={e => {
+                                const newAccs = [...formData.bankAccounts];
+                                newAccs[index].accountNo = e.target.value;
+                                setFormData({ ...formData, bankAccounts: newAccs });
+                              }} 
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">IFSC Code</label>
+                            <input 
+                              type="text" 
+                              className="input-field text-xs py-2 bg-white" 
+                              value={acc.ifsc} 
+                              onChange={e => {
+                                const newAccs = [...formData.bankAccounts];
+                                newAccs[index].ifsc = e.target.value;
+                                setFormData({ ...formData, bankAccounts: newAccs });
+                              }} 
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Branch</label>
+                            <input 
+                              type="text" 
+                              className="input-field text-xs py-2 bg-white" 
+                              value={acc.branch} 
+                              onChange={e => {
+                                const newAccs = [...formData.bankAccounts];
+                                newAccs[index].branch = e.target.value;
+                                setFormData({ ...formData, bankAccounts: newAccs });
+                              }} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {formData.bankAccounts.length === 0 && (
+                      <p className="text-xs text-slate-500 italic text-center py-4">No bank accounts added yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-slate-900">UPI IDs</h3>
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData, 
+                        upiIds: [...formData.upiIds, { upiId: '', label: '' }]
+                      })}
+                      className="flex items-center space-x-1 text-xs text-primary font-bold hover:underline"
+                    >
+                      <Plus size={14} />
+                      <span>Add UPI ID</span>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {formData.upiIds.map((upi, index) => (
+                      <div key={index} className="flex gap-4 items-end p-4 bg-slate-50 rounded-xl border border-slate-200 relative group">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newUpis = [...formData.upiIds];
+                            newUpis.splice(index, 1);
+                            setFormData({ ...formData, upiIds: newUpis });
+                          }}
+                          className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">UPI ID</label>
+                            <input 
+                              type="text" 
+                              className="input-field text-xs py-2 bg-white" 
+                              placeholder="e.g., name@upi"
+                              value={upi.upiId} 
+                              onChange={e => {
+                                const newUpis = [...formData.upiIds];
+                                newUpis[index].upiId = e.target.value;
+                                setFormData({ ...formData, upiIds: newUpis });
+                              }} 
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Label (Optional)</label>
+                            <input 
+                              type="text" 
+                              className="input-field text-xs py-2 bg-white" 
+                              placeholder="e.g., Business UPI"
+                              value={upi.label} 
+                              onChange={e => {
+                                const newUpis = [...formData.upiIds];
+                                newUpis[index].label = e.target.value;
+                                setFormData({ ...formData, upiIds: newUpis });
+                              }} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {formData.upiIds.length === 0 && (
+                      <p className="text-xs text-slate-500 italic text-center py-4">No UPI IDs added yet.</p>
+                    )}
                   </div>
                 </div>
 

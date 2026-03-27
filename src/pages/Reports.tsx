@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   BarChart as BarChartIcon, 
   PieChart as PieChartIcon, 
@@ -375,10 +376,10 @@ export default function Reports() {
                 View Detailed P&L
                 <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
               </button>
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+              <Link to="/ledger" className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
                 Download Ledger
                 <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
+              </Link>
             </div>
           </div>
         </div>
