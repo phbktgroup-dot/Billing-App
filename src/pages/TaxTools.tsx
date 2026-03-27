@@ -295,67 +295,172 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       if (type === 'gst') {
         if (reportId === 'gstr1') {
           let query = supabase
-            .from('invoices')
-            .select('invoice_number, date, total, tax_amount, customers(name, gstin)')
-            .eq('business_id', businessId);
-          if (startDate) query = query.gte('date', startDate.toISOString());
-          if (endDate) query = query.lte('date', endDate.toISOString());
-          const { data } = await query;
-          dataToExport = (data || []).map((inv: any) => ({
-            'Invoice Number': inv.invoice_number,
-            'Date': inv.date ? new Date(inv.date).toLocaleDateString() : '',
-            'Customer Name': inv.customers?.name || '',
-            'Customer GSTIN': inv.customers?.gstin || '',
-            'Taxable Value': (inv.total - (inv.tax_amount || 0)).toFixed(2),
-            'Tax Amount': (inv.tax_amount || 0).toFixed(2),
-            'Total Value': (inv.total || 0).toFixed(2)
-          }));
-        } else if (reportId === 'hsn') {
-          let query = supabase
             .from('invoice_items')
-            .select('products(name, sku, gst_rate), quantity, total_price, invoices!inner(date, business_id)')
+            .select('quantity, total_price, products(name, gst_rate), invoices!inner(invoice_number, date, total, is_inter_state, customers(name, gstin, state))')
             .eq('invoices.business_id', businessId);
           if (startDate) query = query.gte('invoices.date', startDate.toISOString());
           if (endDate) query = query.lte('invoices.date', endDate.toISOString());
-          const { data } = await query.limit(100);
+          const { data } = await query;
           
-          // Flatten data
-          dataToExport = (data || []).map((item: any) => ({
-            product_name: item.products?.name,
-            sku: item.products?.sku,
-            gst_rate: item.products?.gst_rate,
-            quantity: item.quantity,
-            total_value: item.total_price
+          dataToExport = (data || []).map((item: any) => {
+            const inv = item.invoices;
+            const gstRate = item.products?.gst_rate || 0;
+            const taxableValue = item.total_price;
+            
+            return {
+              'GSTIN/UIN of Recipient': inv.customers?.gstin || 'URP',
+              'Receiver Name': inv.customers?.name || 'Walk-in Customer',
+              'Invoice Number': inv.invoice_number,
+              'Invoice date': inv.date ? new Date(inv.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-') : '',
+              'Invoice Value': inv.total.toFixed(2),
+              'Place Of Supply': inv.customers?.state || 'Local',
+              'Reverse Charge': 'N',
+              'Applicable % of Tax Rate': '',
+              'Invoice Type': inv.customers?.gstin ? 'Regular B2B' : 'B2C',
+              'E-Commerce GSTIN': '',
+              'Rate': gstRate.toFixed(2),
+              'Taxable Value': taxableValue.toFixed(2),
+              'Cess Amount': '0.00'
+            };
+          });
+        } else if (reportId === 'hsn') {
+          let query = supabase
+            .from('invoice_items')
+            .select('quantity, total_price, products(name, hsn_code, unit, gst_rate), invoices!inner(date, is_inter_state)')
+            .eq('invoices.business_id', businessId);
+          if (startDate) query = query.gte('invoices.date', startDate.toISOString());
+          if (endDate) query = query.lte('invoices.date', endDate.toISOString());
+          const { data } = await query;
+          
+          // Group by HSN
+          const hsnMap = new Map();
+          (data || []).forEach((item: any) => {
+             const hsn = item.products?.hsn_code || '0000';
+             const gstRate = item.products?.gst_rate || 0;
+             const key = `${hsn}-${gstRate}`;
+             if (!hsnMap.has(key)) {
+                hsnMap.set(key, {
+                   'HSN': hsn,
+                   'Description': item.products?.name || '',
+                   'UQC': item.products?.unit || 'NOS',
+                   'Total Quantity': 0,
+                   'Total Value': 0,
+                   'Taxable Value': 0,
+                   'Integrated Tax Amount': 0,
+                   'Central Tax Amount': 0,
+                   'State/UT Tax Amount': 0,
+                   'Cess Amount': 0
+                });
+             }
+             const entry = hsnMap.get(key);
+             entry['Total Quantity'] += item.quantity;
+             const taxable = item.total_price;
+             const tax = taxable * (gstRate / 100);
+             entry['Taxable Value'] += taxable;
+             entry['Total Value'] += taxable + tax;
+             
+             if (item.invoices?.is_inter_state) {
+                 entry['Integrated Tax Amount'] += tax;
+             } else {
+                 entry['Central Tax Amount'] += tax / 2;
+                 entry['State/UT Tax Amount'] += tax / 2;
+             }
+          });
+          
+          dataToExport = Array.from(hsnMap.values()).map((entry: any) => ({
+             ...entry,
+             'Total Quantity': entry['Total Quantity'].toFixed(2),
+             'Total Value': entry['Total Value'].toFixed(2),
+             'Taxable Value': entry['Taxable Value'].toFixed(2),
+             'Integrated Tax Amount': entry['Integrated Tax Amount'].toFixed(2),
+             'Central Tax Amount': entry['Central Tax Amount'].toFixed(2),
+             'State/UT Tax Amount': entry['State/UT Tax Amount'].toFixed(2),
+             'Cess Amount': entry['Cess Amount'].toFixed(2)
           }));
         } else if (reportId === 'gstr3b') {
-          let invoicesQuery = supabase.from('invoices').select('total, tax_amount').eq('business_id', businessId);
+          let invoicesQuery = supabase.from('invoices').select('total, tax_amount, is_inter_state').eq('business_id', businessId);
           if (startDate) invoicesQuery = invoicesQuery.gte('date', startDate.toISOString());
           if (endDate) invoicesQuery = invoicesQuery.lte('date', endDate.toISOString());
           const { data: invoices } = await invoicesQuery;
 
-          let purchasesQuery = supabase.from('purchases').select('total_amount, tax_amount').eq('business_id', businessId);
+          let purchasesQuery = supabase.from('purchases').select('total_amount, tax_amount, is_inter_state').eq('business_id', businessId);
           if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate.toISOString());
           if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate.toISOString());
           const { data: purchases } = await purchasesQuery;
 
-          dataToExport = [{
-            report: 'GSTR-3B',
-            total_outward_supplies: invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0,
-            total_outward_tax: invoices?.reduce((sum, inv) => sum + (inv.tax_amount || 0), 0) || 0,
-            total_inward_supplies: purchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0,
-            total_inward_tax: purchases?.reduce((sum, p) => sum + (p.tax_amount || 0), 0) || 0,
-          }];
+          let outTaxable = 0, outIgst = 0, outCgst = 0, outSgst = 0;
+          (invoices || []).forEach((inv: any) => {
+             const taxable = inv.total - (inv.tax_amount || 0);
+             outTaxable += taxable;
+             if (inv.is_inter_state) {
+                 outIgst += inv.tax_amount || 0;
+             } else {
+                 outCgst += (inv.tax_amount || 0) / 2;
+                 outSgst += (inv.tax_amount || 0) / 2;
+             }
+          });
+
+          let inTaxable = 0, inIgst = 0, inCgst = 0, inSgst = 0;
+          (purchases || []).forEach((p: any) => {
+             const taxable = p.total_amount - (p.tax_amount || 0);
+             inTaxable += taxable;
+             if (p.is_inter_state) {
+                 inIgst += p.tax_amount || 0;
+             } else {
+                 inCgst += (p.tax_amount || 0) / 2;
+                 inSgst += (p.tax_amount || 0) / 2;
+             }
+          });
+
+          dataToExport = [
+            {
+              'Nature of Supplies': '3.1 (a) Outward taxable supplies (other than zero rated, nil rated and exempted)',
+              'Total Taxable Value': outTaxable.toFixed(2),
+              'Integrated Tax': outIgst.toFixed(2),
+              'Central Tax': outCgst.toFixed(2),
+              'State/UT Tax': outSgst.toFixed(2),
+              'Cess': '0.00'
+            },
+            {
+              'Nature of Supplies': '4 (A) ITC Available (whether in full or part)',
+              'Total Taxable Value': inTaxable.toFixed(2),
+              'Integrated Tax': inIgst.toFixed(2),
+              'Central Tax': inCgst.toFixed(2),
+              'State/UT Tax': inSgst.toFixed(2),
+              'Cess': '0.00'
+            }
+          ];
         } else if (reportId === 'itc') {
-          let purchasesQuery = supabase.from('purchases').select('total_amount, tax_amount, date').eq('business_id', businessId);
-          if (startDate) purchasesQuery = purchasesQuery.gte('date', startDate.toISOString());
-          if (endDate) purchasesQuery = purchasesQuery.lte('date', endDate.toISOString());
-          const { data: purchases } = await purchasesQuery;
+          let query = supabase
+            .from('purchase_items')
+            .select('quantity, total_price, products(name, gst_rate), purchases!inner(invoice_number, date, total_amount, is_inter_state, suppliers(name, gstin, state))')
+            .eq('purchases.business_id', businessId);
+          if (startDate) query = query.gte('purchases.date', startDate.toISOString());
+          if (endDate) query = query.lte('purchases.date', endDate.toISOString());
+          const { data } = await query;
 
-          dataToExport = (purchases || []).map((p: any) => ({
-            date: p.date,
-            total_amount: p.total_amount,
-            tax_amount: p.tax_amount,
-          }));
+          dataToExport = (data || []).map((item: any) => {
+            const p = item.purchases;
+            const gstRate = item.products?.gst_rate || 0;
+            const taxableValue = item.total_price;
+            const tax = taxableValue * (gstRate / 100);
+            
+            return {
+              'GSTIN of Supplier': p.suppliers?.gstin || 'URP',
+              'Trade/Legal Name': p.suppliers?.name || 'Unknown Supplier',
+              'Invoice Number': p.invoice_number || '',
+              'Invoice Date': p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-') : '',
+              'Invoice Value': p.total_amount.toFixed(2),
+              'Place of Supply': p.suppliers?.state || 'Local',
+              'Reverse Charge': 'N',
+              'Rate': gstRate.toFixed(2),
+              'Taxable Value': taxableValue.toFixed(2),
+              'Integrated Tax': p.is_inter_state ? tax.toFixed(2) : '0.00',
+              'Central Tax': !p.is_inter_state ? (tax / 2).toFixed(2) : '0.00',
+              'State/UT Tax': !p.is_inter_state ? (tax / 2).toFixed(2) : '0.00',
+              'Cess': '0.00'
+            };
+          });
         } else {
           // Mock data for others
           dataToExport = [{ report: reportName, status: 'Generated', date: new Date().toISOString() }];
@@ -651,10 +756,12 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               setCustomRange={setCustomRange}
             />
           )}
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center">
-            <Info size={18} className="mr-2" />
-            Help Guide
-          </button>
+          {type === 'itr' && (
+            <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center">
+              <Info size={18} className="mr-2" />
+              Help Guide
+            </button>
+          )}
           {type === 'itr' && (
             <button 
               onClick={() => navigate('/itr-data-entry')}
@@ -676,7 +783,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Reports List */}
+          {/* Reports List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="glass-card overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
@@ -687,9 +794,9 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             </div>
             <div className="divide-y divide-slate-100">
               {current.reports.map((report, i) => (
-                <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/50 transition-colors group gap-4 sm:gap-0">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm shrink-0">
                       <FileSpreadsheet size={24} />
                     </div>
                     <div>
@@ -704,7 +811,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-6">
+                  <div className="flex items-center justify-between sm:justify-end space-x-6 w-full sm:w-auto">
                     <span className={cn(
                       "flex items-center text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
                       report.status === 'Ready' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
@@ -805,154 +912,126 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               </div>
             </div>
           )}
-
-          {/* External Links */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="glass-card p-6 flex items-center justify-between group cursor-pointer hover:border-primary transition-all">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
-                  <ExternalLink size={24} />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900">Government Portal</p>
-                  <p className="text-xs text-slate-500">Direct login to official site</p>
-                </div>
-              </div>
-              <ArrowRight size={20} className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-            </div>
-            <div className="glass-card p-6 flex items-center justify-between group cursor-pointer hover:border-primary transition-all">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
-                  <Info size={24} />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900">Compliance Check</p>
-                  <p className="text-xs text-slate-500">Verify your tax status</p>
-                </div>
-              </div>
-              <ArrowRight size={20} className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-            </div>
-          </div>
         </div>
 
         {/* Info Panel */}
         <div className="space-y-6">
-          {type !== 'itr' && (
+          {type === 'gst' && (
+            <div className="glass-card p-6 border-primary/20 bg-primary/5">
+              <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+                <Calculator size={18} className="mr-2 text-primary" />
+                Tax Estimation
+              </h4>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Estimated Net Profit</span>
+                  <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Taxable Income</span>
+                  <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
+                </div>
+                <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                  <span className="font-bold text-slate-900">Estimated Tax</span>
+                  <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 italic">
+                  *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* External Links / Quick Actions */}
+          <div className="glass-card p-6">
+            <h4 className="font-bold text-slate-900 mb-4">Government Portal & Compliance</h4>
+            <div className="space-y-2">
+              <button 
+                onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
+                className="w-full text-left px-4 py-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
+              >
+                <div className="flex items-center">
+                  <ExternalLink size={18} className="mr-3 text-emerald-500" />
+                  ITR Government Portal
+                </div>
+                <ArrowRight size={16} className="text-emerald-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+              </button>
+              <button 
+                onClick={() => window.open('https://www.gst.gov.in/', '_blank')}
+                className="w-full text-left px-4 py-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
+              >
+                <div className="flex items-center">
+                  <ExternalLink size={18} className="mr-3 text-emerald-500" />
+                  GST Government Portal
+                </div>
+                <ArrowRight size={16} className="text-emerald-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+              </button>
+              <button 
+                onClick={() => {
+                  const urls = {
+                    gst: 'https://services.gst.gov.in/services/searchtp',
+                    eway: 'https://ewaybillgst.gov.in/Search/SearchGSTIN.aspx',
+                    itr: 'https://www.incometax.gov.in/iec/foportal/help/all-about-compliance'
+                  };
+                  window.open(urls[type], '_blank');
+                }}
+                className="w-full text-left px-4 py-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
+              >
+                <div className="flex items-center">
+                  <FileCheck size={18} className="mr-3 text-emerald-500" />
+                  Compliance Check
+                </div>
+                <ArrowRight size={16} className="text-emerald-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+              </button>
+            </div>
+          </div>
+
+          {type === 'itr' && (
             <>
-              <div className="glass-card p-6 border-primary/20 bg-primary/5">
-                <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-                  <Calculator size={18} className="mr-2 text-primary" />
-                  Tax Estimation
+              <div className="glass-card p-6 bg-slate-900 text-white">
+                <h4 className="font-bold mb-4 flex items-center">
+                  <AlertCircle size={18} className="mr-2 text-yellow-400" />
+                  Important Notice
                 </h4>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Estimated Net Profit</span>
-                    <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  All reports generated are based on your business data. Please verify with a certified accountant before filing official returns.
+                </p>
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="text-slate-500">Last Sync</span>
+                    <span className="text-slate-300">Today, 10:30 AM</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Taxable Income</span>
-                    <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Data Integrity</span>
+                    <span className="text-emerald-400">Verified</span>
                   </div>
-                  <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <span className="font-bold text-slate-900">Estimated Tax</span>
-                    <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 italic">
-                    *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
-                  </p>
                 </div>
               </div>
 
               <div className="glass-card p-6">
-                <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-                  <Calculator size={18} className="mr-2 text-primary" />
-                  Tax Calendar
-                </h4>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 flex-shrink-0 text-xs font-bold">
-                      20
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">GSTR-3B Filing</p>
-                      <p className="text-[10px] text-slate-500">Monthly return deadline</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 flex-shrink-0 text-xs font-bold">
-                      11
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">GSTR-1 Filing</p>
-                      <p className="text-[10px] text-slate-500">Sales return deadline</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0 text-xs font-bold">
-                      15
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">TDS Payment</p>
-                      <p className="text-[10px] text-slate-500">Monthly deposit deadline</p>
-                    </div>
-                  </div>
+                <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
+                <div className="space-y-2">
+                  <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                    Update Tax Rates
+                    <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                  </button>
+                  <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                    View HSN Codes
+                    <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                  </button>
+                  <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                    Manage Branches
+                    <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                  </button>
                 </div>
-              </div>
-
-              <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
-                <h4 className="font-bold text-slate-900 mb-3 flex items-center">
-                  <FileCheck size={18} className="mr-2 text-primary" />
-                  Pro Tax Tip
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed italic">
-                  "Always reconcile your GSTR-2B with your purchase register before claiming ITC to avoid notices from the tax department."
-                </p>
               </div>
             </>
           )}
-
-          <div className="glass-card p-6 bg-slate-900 text-white">
-            <h4 className="font-bold mb-4 flex items-center">
-              <AlertCircle size={18} className="mr-2 text-yellow-400" />
-              Important Notice
-            </h4>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              All reports generated are based on your business data. Please verify with a certified accountant before filing official returns.
-            </p>
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-slate-500">Last Sync</span>
-                <span className="text-slate-300">Today, 10:30 AM</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Data Integrity</span>
-                <span className="text-emerald-400">Verified</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                Update Tax Rates
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                View HSN Codes
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                Manage Branches
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* How it Works Section - Best Design Improvement */}
-      {type !== 'itr' && (
+      {type === 'gst' && (
         <div className="mt-12">
           <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
             <Info size={24} className="mr-2 text-primary" />

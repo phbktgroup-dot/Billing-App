@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, subYears, isSameDay } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -125,13 +125,32 @@ export const DateFilter: React.FC<DateFilterProps> = ({
     <div className={cn("relative", className)} ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm flex items-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95",
-          className?.includes('w-full') && "w-full justify-center"
-        )}
+        className="flex items-center hover:opacity-70 transition-all active:scale-95"
       >
-        <CalendarIcon size={16} className="text-primary" />
-        {getLabel()}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 3H2L10 12.46V19L14 21V12.46L22 3Z" stroke="url(#paint0_linear_1_2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="10" cy="7" r="2" fill="url(#paint1_linear_1_2)"/>
+          <circle cx="17" cy="11" r="2" fill="url(#paint2_linear_1_2)"/>
+          <circle cx="13" cy="16" r="1" fill="url(#paint3_linear_1_2)"/>
+          <defs>
+            <linearGradient id="paint0_linear_1_2" x1="2" y1="3" x2="22" y2="21" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#4F46E5"/>
+              <stop offset="1" stopColor="#A855F7"/>
+            </linearGradient>
+            <linearGradient id="paint1_linear_1_2" x1="8" y1="5" x2="12" y2="9" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#7DD3FC"/>
+              <stop offset="1" stopColor="#A855F7"/>
+            </linearGradient>
+            <linearGradient id="paint2_linear_1_2" x1="15" y1="9" x2="19" y2="13" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#7DD3FC"/>
+              <stop offset="1" stopColor="#A855F7"/>
+            </linearGradient>
+            <linearGradient id="paint3_linear_1_2" x1="12" y1="15" x2="14" y2="17" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#7DD3FC"/>
+              <stop offset="1" stopColor="#A855F7"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </button>
 
       {isOpen && (

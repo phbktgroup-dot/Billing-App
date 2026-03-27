@@ -84,6 +84,14 @@
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS aadhar_number TEXT;
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS bank_accounts JSONB DEFAULT '[]';
     ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS upi_ids JSONB DEFAULT '[]';
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS eway_bill_enabled BOOLEAN DEFAULT false;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS inter_state_enabled BOOLEAN DEFAULT true;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS intra_state_enabled BOOLEAN DEFAULT true;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS eway_threshold NUMERIC DEFAULT 50000;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS intra_state_threshold NUMERIC DEFAULT 100000;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS eway_default_transporter_id TEXT;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS eway_default_transporter_name TEXT;
+    ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS default_hsn_code TEXT;
 
     -- 3. CUSTOMERS
     CREATE TABLE IF NOT EXISTS customers (

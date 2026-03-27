@@ -539,7 +539,7 @@ export default function Dashboard() {
       change: `${businessSummary?.profitAndLoss.change.toFixed(1)}%`, 
       trend: (businessSummary?.profitAndLoss.change || 0) >= 0 ? 'up' : 'down',
       color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      bg: 'bg-blue-50',
       isCurrency: true
     },
     { 
@@ -558,7 +558,7 @@ export default function Dashboard() {
       change: '-2.1%', 
       trend: 'down',
       color: 'text-orange-600',
-      bg: 'bg-orange-50'
+      bg: 'bg-blue-50'
     },
     { 
       label: 'Paid Invoices', 
@@ -568,7 +568,7 @@ export default function Dashboard() {
       change: '85%', 
       trend: 'up',
       color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      bg: 'bg-blue-50',
       isCurrency: true
     },
     { 
@@ -579,7 +579,7 @@ export default function Dashboard() {
       change: '15%', 
       trend: 'down',
       color: 'text-red-600',
-      bg: 'bg-red-50',
+      bg: 'bg-blue-50',
       isCurrency: true
     }
   ];
@@ -614,16 +614,43 @@ export default function Dashboard() {
     >
 
       {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative">
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative">
         <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/5 to-blue-500/5 rounded-full -mr-32 -mt-32 blur-3xl" />
         </div>
+        
+        {/* Top Row: Title + Buttons */}
         <div className="relative z-10">
-          <h1 className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">Business Performance Dashboard</h1>
-          <p className="text-xs font-medium text-slate-500 mt-1">Real-time financial metrics and business health monitoring.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            {/* Title + Description */}
+            <div>
+              <h1 className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">Business Performance Dashboard</h1>
+              <p className="text-xs font-medium text-slate-500 mt-1">Real-time financial metrics and business health monitoring.</p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-2">
+              {loading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+              <button 
+                onClick={() => navigate('/invoices/new')}
+                className="bg-gradient-to-r from-primary to-blue-600 text-white hover:shadow-lg hover:shadow-primary/30 flex items-center justify-center text-[11px] font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 h-10 sm:w-[3440px]"
+              >
+                <Plus size={16} className="mr-1.5" strokeWidth={2.5} />
+                Create Invoice
+              </button>
+              <button 
+                onClick={() => setShowScanOptions(true)}
+                className="px-4 py-2.5 bg-orange-100 border border-orange-200 rounded-xl font-bold text-orange-800 hover:bg-orange-200 hover:border-orange-300 flex items-center justify-center shadow-sm text-[11px] transition-all active:scale-95 h-10 sm:w-[3440px]"
+              >
+                <Scan size={16} className="mr-1.5 text-orange-600" strokeWidth={2.5} />
+                Scan Invoice
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:flex sm:items-center gap-2 sm:justify-end relative z-20 w-full sm:w-auto">
-          {loading && <Loader2 className="w-4 h-4 animate-spin text-primary hidden sm:block" />}
+
+        {/* Date Filter (Top Right) */}
+        <div className="absolute top-4 right-4 z-20">
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -633,22 +660,7 @@ export default function Dashboard() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
-            className="w-full sm:w-auto"
           />
-          <button 
-            onClick={() => navigate('/invoices/new')}
-            className="bg-gradient-to-r from-primary to-blue-600 text-white hover:shadow-lg hover:shadow-primary/30 flex items-center justify-center text-[11px] font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 w-full sm:w-auto"
-          >
-            <Plus size={16} className="mr-1.5" strokeWidth={2.5} />
-            Create Invoice
-          </button>
-          <button 
-            onClick={() => setShowScanOptions(true)}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center justify-center shadow-sm text-[11px] transition-all active:scale-95 w-full sm:w-auto"
-          >
-            <Scan size={16} className="mr-1.5 text-primary" strokeWidth={2.5} />
-            Scan Invoice
-          </button>
         </div>
       </div>
 
@@ -663,7 +675,7 @@ export default function Dashboard() {
             className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden h-full"
           >
             <div className={cn("absolute top-0 right-0 w-24 h-24 rounded-full -mr-12 -mt-12 blur-2xl opacity-50 transition-opacity group-hover:opacity-100", stat.bg)} />
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className={cn("p-2.5 rounded-2xl shadow-sm", stat.bg)}>
                   <stat.icon size={18} className={stat.color} strokeWidth={2.5} />
@@ -676,16 +688,18 @@ export default function Dashboard() {
                   {stat.change}
                 </div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 mt-auto">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
                 <h3 className="text-lg font-black text-slate-900 tracking-tight">
                   {stat.isCurrency
                     ? formatCurrency(stat.value as number) 
                     : stat.value}
                 </h3>
-                {stat.subValue && (
-                  <p className="text-[10px] font-bold text-slate-500">{stat.subValue}</p>
-                )}
+                <div className="h-4">
+                  {stat.subValue && (
+                    <p className="text-[10px] font-bold text-slate-500">{stat.subValue}</p>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>
@@ -734,7 +748,7 @@ export default function Dashboard() {
       {/* Business Summary & Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Business Performance Summary */}
-        <div className="lg:col-span-2 glass-card p-4 md:p-6 relative overflow-hidden group h-full">
+        <div className="lg:col-span-2 glass-card p-4 md:p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/10 transition-colors" />
             
             <div className="flex items-center justify-between mb-8">
@@ -1157,7 +1171,7 @@ export default function Dashboard() {
         </div>
 
         {/* Proactive Actions */}
-        <div className="lg:col-span-1 glass-card p-4 md:p-6 flex flex-col h-full">
+        <div className="lg:col-span-1 glass-card p-4 md:p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-orange-50 rounded-lg">
@@ -1241,7 +1255,7 @@ export default function Dashboard() {
         </div>
 
         {/* Scenario Simulator Card (Inline) */}
-        <div className="lg:col-span-2 glass-card p-4 md:p-6 flex flex-col h-full">
+        <div className="lg:col-span-2 glass-card p-4 md:p-6 flex flex-col">
           <div className="flex items-center space-x-2 mb-4">
             <div className="p-1.5 bg-purple-50 rounded-lg">
               <TrendingUp size={16} className="text-purple-600" />
@@ -1303,7 +1317,7 @@ export default function Dashboard() {
         </div>
 
         {/* Inventory & Supply Chain - Moved to Right Side */}
-        <div className="lg:col-span-1 glass-card p-4 md:p-6 flex flex-col h-full">
+        <div className="lg:col-span-1 glass-card p-4 md:p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-indigo-50 rounded-lg">
@@ -1359,7 +1373,7 @@ export default function Dashboard() {
       {/* Revenue & Cash Flow Forecast Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Revenue Performance */}
-        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
+        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
@@ -1442,7 +1456,7 @@ export default function Dashboard() {
         </div>
 
         {/* Owner's Strategic Insights - Moved to Right Side */}
-        <div className="lg:col-span-1 p-4 md:p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl flex flex-col h-full">
+        <div className="lg:col-span-1 p-4 md:p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl flex flex-col">
           <div className="flex items-center space-x-2 mb-6">
             <div className="p-1.5 bg-primary/20 rounded-lg">
               <ShieldCheck size={16} className="text-primary" />
@@ -1480,7 +1494,7 @@ export default function Dashboard() {
       {/* Customers & Invoices Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Top Customers */}
-        <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
             <Users size={16} className="mr-2 text-primary" />
             Top Customers
@@ -1519,7 +1533,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Invoices */}
-        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
               <FileText size={16} className="mr-2 text-primary" />
@@ -1584,7 +1598,7 @@ export default function Dashboard() {
         </div>
 
         {/* Customer Segments */}
-        <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
             <Target size={16} className="mr-2 text-primary" />
             Customer Segments
@@ -1617,7 +1631,7 @@ export default function Dashboard() {
         </div>
 
         {/* Business Tip Card */}
-        <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl relative overflow-hidden group h-full">
+        <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/30 transition-colors" />
           <div className="relative z-10">
             <div className="flex items-center space-x-2 mb-4">
@@ -1639,7 +1653,7 @@ export default function Dashboard() {
       {/* Purchases & Suppliers Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
         {/* Top Suppliers */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center">
             <Truck size={16} className="mr-2 text-primary" />
             Top Suppliers
@@ -1678,7 +1692,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Purchases */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
+        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center">
               <ShoppingCart size={16} className="mr-2 text-primary" />

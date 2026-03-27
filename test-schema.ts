@@ -8,8 +8,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function test() {
-  const { data, error } = await supabase.rpc('get_schema_info', { table_name: 'business_profiles' });
-  console.log('Data:', data);
-  console.log('Error:', error);
+  const { data, error } = await supabase.rpc('get_schema');
+  console.log(error);
 }
 test();

@@ -115,6 +115,7 @@ export default function App() {
           <Route path="expenses" element={<Expenses />} />
           <Route path="reports" element={<Reports />} />
           <Route path="gst-reports" element={<GSTReports />} />
+          <Route path="tax-tools" element={<TaxTools />} />
           <Route path="gst" element={<TaxTools type="gst" />} />
           <Route path="itr" element={<TaxTools type="itr" />} />
           <Route path="itr-data-entry" element={<ITRDataEntry />} />

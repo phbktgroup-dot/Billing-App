@@ -128,29 +128,15 @@ export default function Settings() {
 
     const populateForm = (bp: any) => {
       let ewaySettings = {
-        ewayBillEnabled: false,
-        interStateEnabled: true,
-        intraStateEnabled: true,
-        ewayThreshold: 50000,
-        intraStateThreshold: 100000,
-        ewayDefaultTransporterId: '',
-        ewayDefaultTransporterName: '',
-        defaultHsnCode: ''
+        ewayBillEnabled: bp.eway_bill_enabled ?? false,
+        interStateEnabled: bp.inter_state_enabled ?? true,
+        intraStateEnabled: bp.intra_state_enabled ?? true,
+        ewayThreshold: bp.eway_threshold ?? 50000,
+        intraStateThreshold: bp.intra_state_threshold ?? 100000,
+        ewayDefaultTransporterId: bp.eway_default_transporter_id || '',
+        ewayDefaultTransporterName: bp.eway_default_transporter_name || '',
+        defaultHsnCode: bp.default_hsn_code || ''
       };
-      if (profile?.business_id) {
-        const savedEway = localStorage.getItem(`eway_settings_${profile.business_id}`);
-        if (savedEway) {
-          try {
-            const parsed = JSON.parse(savedEway);
-            ewaySettings = {
-              ...ewaySettings,
-              ...parsed
-            };
-          } catch (e) {
-            console.error("Failed to parse eway settings");
-          }
-        }
-      }
 
       setFormData({
         businessName: bp.name || '',
@@ -266,25 +252,21 @@ export default function Settings() {
           invoice_number_format: formData.invoiceFormat,
           gemini_api_key: formData.geminiApiKey,
           default_notes: formData.defaultNotes,
-          default_terms: formData.defaultTerms
+          default_terms: formData.defaultTerms,
+          eway_bill_enabled: formData.ewayBillEnabled,
+          inter_state_enabled: formData.interStateEnabled,
+          intra_state_enabled: formData.intraStateEnabled,
+          eway_threshold: formData.ewayThreshold,
+          intra_state_threshold: formData.intraStateThreshold,
+          eway_default_transporter_id: formData.ewayDefaultTransporterId,
+          eway_default_transporter_name: formData.ewayDefaultTransporterName,
+          default_hsn_code: formData.defaultHsnCode
         })
         .eq('id', profile.business_id);
 
       if (updateError) {
         throw updateError;
       }
-
-      // Save eway settings to localStorage
-      localStorage.setItem(`eway_settings_${profile.business_id}`, JSON.stringify({
-        ewayBillEnabled: formData.ewayBillEnabled,
-        interStateEnabled: formData.interStateEnabled,
-        intraStateEnabled: formData.intraStateEnabled,
-        ewayThreshold: formData.ewayThreshold,
-        intraStateThreshold: formData.intraStateThreshold,
-        ewayDefaultTransporterId: formData.ewayDefaultTransporterId,
-        ewayDefaultTransporterName: formData.ewayDefaultTransporterName,
-        defaultHsnCode: formData.defaultHsnCode
-      }));
 
       // 2. Upload logo if exists
       if (logoFile) {

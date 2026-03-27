@@ -24,7 +24,8 @@ import {
   CreditCard,
   BookOpen,
   HelpCircle,
-  Menu
+  Menu,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -44,6 +45,7 @@ const menuItems = [
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: BookOpen, label: 'Ledger', path: '/ledger' },
   { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst-reports' },
+  { icon: Calculator, label: 'Tax tool', path: '/tax-tools' },
   { icon: FileCheck, label: 'E-Way Bill', path: '/eway-bill' },
   { icon: FileText, label: 'ITR Report', path: '/itr-report', adminOnly: true },
   { icon: PieChart, label: 'Analytics', path: '/analytics' },
@@ -122,16 +124,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         variants={sidebarVariants}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-[70] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
+          "fixed lg:sticky top-0 left-0 h-screen bg-black border-r border-slate-800 z-[70] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
           !isOpen && "lg:translate-x-0"
         )}
       >
         {/* Logo Section / Top Left Menu */}
         <div className={cn(
-          "h-16 md:h-14 flex items-center border-b border-slate-100 transition-all duration-300 relative",
-          (isCollapsed && !isOpen) ? "justify-center px-0" : "justify-between px-6"
+          "h-16 md:h-14 flex items-center border-b border-slate-800 transition-all duration-300 relative",
+          (isCollapsed && !isOpen) ? "justify-center px-0" : "px-4"
         )}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full overflow-hidden">
             <button 
               onClick={() => {
                 if (windowWidth < 1024) {
@@ -140,32 +142,39 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   toggleSidebar();
                 }
               }}
-              className="p-1 text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+              className="p-1 text-slate-400 hover:bg-slate-900 rounded-xl transition-all shrink-0 flex items-center justify-center"
             >
-              {appSettings?.logo_url ? (
+              {profile?.business_profiles?.logo_url || appSettings?.logo_url ? (
                 <img 
-                  src={appSettings.logo_url} 
+                  src={profile?.business_profiles?.logo_url || appSettings?.logo_url} 
                   alt="Logo" 
-                  className="w-10 h-10 object-contain"
+                  className="w-8 h-8 object-contain rounded-lg"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <Menu size={24} />
+                <Menu size={20} />
               )}
             </button>
 
             {(!isCollapsed || isOpen) && (
-              <motion.span 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="font-bold text-slate-900 text-sm"
-              >
-                {appSettings?.app_name || 'Billing pro+'}
-              </motion.span>
+              <div className="flex items-center justify-between flex-1 min-w-0">
+                <motion.span 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="font-bold text-white text-sm truncate pr-2"
+                >
+                  {profile?.business_profiles?.name || appSettings?.app_name || 'Billing Pro+'}
+                </motion.span>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="p-1.5 text-slate-500 hover:text-slate-300 hover:bg-slate-900 rounded-lg transition-colors shrink-0"
+                  title="Refresh Application"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
             )}
           </div>
-          
-          {/* Close/Toggle Button removed as per user request */}
         </div>
 
         {/* Menu Items */}
@@ -183,7 +192,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 (isCollapsed && !isOpen) ? "px-0 justify-center" : "px-3",
                 isActive 
                   ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                  : "text-slate-600 hover:bg-slate-50 hover:text-primary"
+                  : "text-slate-400 hover:bg-slate-900 hover:text-white"
               )}
             >
               <item.icon size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "" : "mr-3")} />
@@ -211,7 +220,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               (isCollapsed && !isOpen) ? "px-0 justify-center" : "px-3",
               isActive 
                 ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                : "text-slate-600 hover:bg-slate-50 hover:text-primary"
+                : "text-slate-400 hover:bg-slate-900 hover:text-white"
             )}
           >
             <HelpCircle size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "" : "mr-3")} />
@@ -227,17 +236,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Collapse Toggle */}
-        <div className="hidden lg:block border-t border-slate-100">
+        <div className="hidden lg:block border-t border-slate-800">
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               toggleSidebar();
             }}
-            className="flex h-12 w-full items-center justify-center text-slate-400 hover:text-primary hover:bg-slate-50 transition-all cursor-pointer"
+            className="flex h-12 w-full items-center justify-center text-slate-500 hover:text-primary hover:bg-slate-900 transition-all cursor-pointer"
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800 transition-colors">
               {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
             </div>
           </button>

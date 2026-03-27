@@ -254,10 +254,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   }, [items, customer, discount, discountType, notes, terms]);
 
   useEffect(() => {
-    if (businessId) {
+    if (businessId && businessProfile) {
       fetchInitialData();
     }
-  }, [businessId]);
+  }, [businessId, businessProfile]);
 
   useEffect(() => {
     if (businessProfile) {
@@ -281,22 +281,24 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
   const fetchInitialData = async () => {
     try {
-      if (businessId) {
-        const savedEway = localStorage.getItem(`eway_settings_${businessId}`);
-        if (savedEway) {
-          try {
-            const parsed = JSON.parse(savedEway);
-            setEwaySettings(parsed);
-            if (parsed.ewayBillEnabled) {
-              setEwayData(prev => ({
-                ...prev,
-                transporterId: parsed.ewayDefaultTransporterId || '',
-                transporterName: parsed.ewayDefaultTransporterName || ''
-              }));
-            }
-          } catch (e) {
-            console.error("Failed to parse eway settings");
-          }
+      if (businessId && businessProfile) {
+        const parsed = {
+          ewayBillEnabled: businessProfile.eway_bill_enabled ?? false,
+          interStateEnabled: businessProfile.inter_state_enabled ?? true,
+          intraStateEnabled: businessProfile.intra_state_enabled ?? true,
+          ewayThreshold: businessProfile.eway_threshold ?? 50000,
+          intraStateThreshold: businessProfile.intra_state_threshold ?? 100000,
+          ewayDefaultTransporterId: businessProfile.eway_default_transporter_id || '',
+          ewayDefaultTransporterName: businessProfile.eway_default_transporter_name || '',
+          defaultHsnCode: businessProfile.default_hsn_code || ''
+        };
+        setEwaySettings(parsed);
+        if (parsed.ewayBillEnabled) {
+          setEwayData(prev => ({
+            ...prev,
+            transporterId: parsed.ewayDefaultTransporterId || '',
+            transporterName: parsed.ewayDefaultTransporterName || ''
+          }));
         }
       }
 
