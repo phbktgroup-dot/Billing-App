@@ -137,6 +137,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   });
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -1193,7 +1194,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       {/* Header */}
       <PageHeader 
         title="Create New Invoice" 
-      
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -1205,6 +1206,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >
@@ -1214,9 +1217,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           
           <button 
             onClick={handleScanClick}
-            className="px-5 py-1.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-[11px] font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
+            className="px-5 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-sm font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
           >
-            <Scan size={16} className="mr-2" strokeWidth={2.5} />
+            <Scan size={18} className="mr-2" strokeWidth={2.5} />
             AI Scan
           </button>
         </div>
@@ -1323,32 +1326,33 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           >
             <div className="xl:col-span-2 space-y-6 pr-2">
               {/* Customer & Details Section */}
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="flex items-center justify-between mb-5 relative z-10">
                   <div className="flex items-center space-x-3">
-                    <div className="p-1.5 bg-blue-50 text-blue-600 rounded-xl">
+                    <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-600 rounded-xl shadow-sm border border-blue-100/50">
                       <UserPlus size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h3 className="text-[11px] font-bold text-slate-900">Customer Details</h3>
-                      <p className="text-[9px] font-medium text-slate-500">Billing information and dates</p>
+                      <h3 className="text-xs font-bold text-slate-900 tracking-tight">Customer Details</h3>
+                      <p className="text-[10px] font-medium text-slate-500">Billing information and dates</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => setQuickAdd({ isOpen: true, type: 'customer' })}
-                    className="text-[9px] font-bold text-primary bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-lg transition-colors flex items-center"
+                    className="text-[10px] font-bold text-blue-700 bg-gradient-to-r from-blue-50 to-blue-100/50 hover:from-blue-100 hover:to-blue-200/50 px-3 py-1.5 rounded-lg transition-all flex items-center shadow-sm border border-blue-200/50 active:scale-95"
                   >
-                    <Plus size={12} className="mr-1" /> New Customer
+                    <Plus size={14} className="mr-1.5" strokeWidth={2.5} /> New Customer
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative z-10">
                   <div className="space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Series</label>
                     <div className="relative">
                       <input 
                         type="text"
-                        className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
                         value={invoiceNumber}
                         onFocus={() => setShowSeriesList(true)}
                         onBlur={() => {
@@ -1544,7 +1548,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 </div>
                 
                 {/* Customer Address Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 relative z-10">
                   <div className="space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
@@ -1575,7 +1579,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('city', e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                       <input 
@@ -1608,33 +1612,34 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               </div>
 
               {/* Items Section */}
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="flex items-center justify-between mb-5 relative z-10">
                   <div className="flex items-center space-x-3">
-                    <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100/50 text-emerald-600 rounded-xl shadow-sm border border-emerald-100/50">
                       <Package size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h3 className="text-[11px] font-bold text-slate-900">Line Items</h3>
-                      <p className="text-[9px] font-medium text-slate-500">Products and services</p>
+                      <h3 className="text-xs font-bold text-slate-900 tracking-tight">Line Items</h3>
+                      <p className="text-[10px] font-medium text-slate-500">Products and services</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <button 
                       onClick={() => setQuickAdd({ isOpen: true, type: 'product' })}
-                      className="text-[9px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition-colors flex items-center"
+                      className="text-[11px] font-bold text-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100/50 hover:from-emerald-100 hover:to-emerald-200/50 px-3 py-1.5 rounded-lg transition-all flex items-center shadow-sm border border-emerald-200/50 active:scale-95"
                     >
-                      <Plus size={12} className="mr-1" /> New Product
+                      <Plus size={14} className="mr-1.5" strokeWidth={2.5} /> New Product
                     </button>
-                    <div className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100">
+                    <div className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                       {items.length} Items Added
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3 relative z-10">
                   {/* Item Input Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
                     {/* First Row */}
                     <div className="md:col-span-8 space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Product / Service</label>
@@ -1708,38 +1713,38 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="md:col-span-2 flex items-end">
                       <button 
                         onClick={addItem}
-                        className="w-full py-1.5 bg-emerald-500 text-white rounded-lg text-[11px] font-bold flex items-center justify-center hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                        className="w-full py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center hover:shadow-lg hover:shadow-emerald-500/30 transition-all active:scale-95"
                       >
-                        <Plus size={12} className="mr-1" /> Add
+                        <Plus size={16} className="mr-1.5" strokeWidth={2.5} /> Add Item
                       </button>
                     </div>
                   </div>
 
                   {/* Items List */}
-                  <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                  <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm bg-white">
                     <table className="w-full text-[11px] text-left">
-                      <thead className="text-[9px] text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+                      <thead className="text-[10px] text-slate-500 uppercase tracking-wider bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
                         <tr>
-                          <th className="px-2.5 py-1.5 font-bold">Item Description</th>
-                          <th className="px-2.5 py-1.5 font-bold">HSN Code</th>
-                          <th className="px-2.5 py-1.5 font-bold text-center">Qty</th>
-                          <th className="px-2.5 py-1.5 font-bold text-right">Price</th>
-                          <th className="px-2.5 py-1.5 font-bold text-center">Disc.</th>
-                          <th className="px-2.5 py-1.5 font-bold text-center">GST</th>
-                          <th className="px-2.5 py-1.5 font-bold text-right">Total</th>
-                          <th className="px-2.5 py-1.5"></th>
+                          <th className="px-3 py-2.5 font-bold">Item Description</th>
+                          <th className="px-3 py-2.5 font-bold">HSN Code</th>
+                          <th className="px-3 py-2.5 font-bold text-center">Qty</th>
+                          <th className="px-3 py-2.5 font-bold text-right">Price</th>
+                          <th className="px-3 py-2.5 font-bold text-center">Disc.</th>
+                          <th className="px-3 py-2.5 font-bold text-center">GST</th>
+                          <th className="px-3 py-2.5 font-bold text-right">Total</th>
+                          <th className="px-3 py-2.5"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-slate-100">
                         {items.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                            <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
                               <div className="flex flex-col items-center">
-                                <div className="p-3 bg-slate-50 rounded-full mb-2">
-                                  <Package size={20} className="text-slate-300" />
+                                <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-full mb-3 shadow-sm border border-slate-100">
+                                  <Package size={24} className="text-slate-300" strokeWidth={1.5} />
                                 </div>
-                                <p className="text-[11px] font-medium text-slate-500">No items added yet</p>
-                                <p className="text-[9px] text-slate-400 mt-1">Start by adding products above</p>
+                                <p className="text-xs font-bold text-slate-500">No items added yet</p>
+                                <p className="text-[10px] text-slate-400 mt-1 font-medium">Start by adding products above</p>
                               </div>
                             </td>
                           </tr>
@@ -1749,38 +1754,38 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                               key={item.id}
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="group hover:bg-slate-50 transition-colors"
+                              className="group hover:bg-slate-50/80 transition-colors"
                             >
-                              <td className="px-2.5 py-1">
-                                <div className="font-bold text-slate-900">{item.name}</div>
-                                <div className="text-[9px] text-slate-400 font-medium">Item #{index + 1}</div>
+                              <td className="px-3 py-2">
+                                <div className="font-bold text-slate-900 text-xs">{item.name}</div>
+                                <div className="text-[10px] text-slate-400 font-medium mt-0.5">Item #{index + 1}</div>
                               </td>
-                              <td className="px-2.5 py-1.5 text-slate-600 font-medium">{item.hsnCode || '-'}</td>
-                              <td className="px-2.5 py-1.5 text-center font-medium text-slate-700">{item.quantity}</td>
-                              <td className="px-2.5 py-1.5 text-right font-medium text-slate-700">{formatCurrency(Number(item.rate) || 0)}</td>
-                              <td className="px-2.5 py-1.5 text-center">
+                              <td className="px-3 py-2 text-slate-600 font-medium">{item.hsnCode || '-'}</td>
+                              <td className="px-3 py-2 text-center font-bold text-slate-700 bg-slate-50/50">{item.quantity}</td>
+                              <td className="px-3 py-2 text-right font-medium text-slate-700">{formatCurrency(Number(item.rate) || 0)}</td>
+                              <td className="px-3 py-2 text-center">
                                 {item.discount ? (
-                                  <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[9px] font-bold">
+                                  <span className="px-2 py-1 bg-gradient-to-r from-emerald-50 to-emerald-100/50 text-emerald-700 border border-emerald-200/50 rounded-md text-[10px] font-bold shadow-sm">
                                     {item.discount}%
                                   </span>
                                 ) : (
                                   <span className="text-slate-300">-</span>
                                 )}
                               </td>
-                              <td className="px-2.5 py-1.5 text-center">
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold">
+                              <td className="px-3 py-2 text-center">
+                                <span className="px-2 py-1 bg-gradient-to-r from-slate-100 to-slate-200/50 text-slate-700 border border-slate-200/50 rounded-md text-[10px] font-bold shadow-sm">
                                   {item.gstRate}%
                                 </span>
                               </td>
-                              <td className="px-2.5 py-1.5 text-right font-bold text-slate-900">
+                              <td className="px-3 py-2 text-right font-black text-slate-900 text-xs">
                                 {formatCurrency(Number(item.amount) || 0)}
                               </td>
-                              <td className="px-2.5 py-1.5 text-right">
+                              <td className="px-3 py-2 text-right">
                                 <button 
                                   onClick={() => removeItem(item.id)} 
-                                  className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                 >
-                                  <Trash2 size={14} />
+                                  <Trash2 size={16} strokeWidth={2.5} />
                                 </button>
                               </td>
                             </motion.tr>
@@ -1793,30 +1798,32 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
                 {/* E-way Bill Section */}
                 {isEwayEnabled && total > ewayThreshold && (
-                  <div className="mt-8 pt-6 border-t border-slate-100">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Package size={18} className="text-indigo-600" />
-                      <h3 className="text-xs font-bold text-slate-900">E-way Bill Details</h3>
+                  <div className="mt-8 pt-6 border-t border-slate-200/60 relative z-10">
+                    <div className="flex items-center space-x-2 mb-5">
+                      <div className="p-1.5 bg-gradient-to-br from-indigo-50 to-indigo-100/50 text-indigo-600 rounded-lg shadow-sm border border-indigo-100/50">
+                        <Package size={16} strokeWidth={2.5} />
+                      </div>
+                      <h3 className="text-xs font-bold text-slate-900 tracking-tight">E-way Bill Details</h3>
                     </div>
                     
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border border-amber-200/60 rounded-2xl p-5 mb-6 shadow-sm">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                          <h4 className="text-xs font-semibold text-amber-900">Invoice value exceeds ₹{formatCurrency(ewayThreshold)}.</h4>
-                          <p className="text-xs text-amber-700 mt-1">E-way bill is mandatory for movement of goods. Is this an over-the-counter sale or are goods being transported?</p>
+                          <h4 className="text-[13px] font-bold text-amber-900">Invoice value exceeds ₹{formatCurrency(ewayThreshold)}.</h4>
+                          <p className="text-[11px] font-medium text-amber-700 mt-1">E-way bill is mandatory for movement of goods. Is this an over-the-counter sale or are goods being transported?</p>
                         </div>
-                        <div className="flex items-center bg-white p-1 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                        <div className="flex items-center bg-white/80 backdrop-blur-sm p-1.5 rounded-xl border border-amber-200/60 shadow-sm shrink-0">
                           <button
                             type="button"
                             onClick={() => setIncludeEwayBill(false)}
-                            className={`px-4 py-2 text-xs font-medium rounded-md transition-colors ${!includeEwayBill ? 'bg-amber-100 text-amber-800 shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+                            className={`px-4 py-2 text-[11px] font-bold rounded-lg transition-all ${!includeEwayBill ? 'bg-gradient-to-r from-amber-100 to-amber-200/50 text-amber-900 shadow-sm border border-amber-200/50' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
                           >
                             Over-the-counter / Services
                           </button>
                           <button
                             type="button"
                             onClick={() => setIncludeEwayBill(true)}
-                            className={`px-4 py-2 text-xs font-medium rounded-md transition-colors ${includeEwayBill ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+                            className={`px-4 py-2 text-[11px] font-bold rounded-lg transition-all ${includeEwayBill ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
                           >
                             Goods are Transported
                           </button>
@@ -1825,7 +1832,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     </div>
                     
                     {includeEwayBill && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-gradient-to-br from-indigo-50/50 to-white rounded-2xl border border-indigo-100 shadow-sm">
                         <div className="space-y-0.5">
                           <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">E-way Bill Number</label>
                           <input 
@@ -2006,38 +2013,39 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
             {/* Sidebar Summary */}
             <div className="space-y-4 xl:col-span-1">
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 sticky top-4">
-                <h3 className="text-[11px] font-bold text-slate-900 mb-4 uppercase tracking-wider">Invoice Summary</h3>
+              <div className="bg-gradient-to-b from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 sticky top-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none"></div>
+                <h3 className="text-[10px] font-black text-slate-400 mb-5 uppercase tracking-widest relative z-10">Invoice Summary</h3>
                 
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center text-[11px]">
+                <div className="space-y-3 relative z-10">
+                  <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500 font-medium">Subtotal</span>
                     <span className="font-bold text-slate-900">{formatCurrency(rawSubtotal)}</span>
                   </div>
                   {itemDiscountTotal > 0 && (
-                    <div className="flex justify-between items-center text-[11px] text-emerald-600 font-bold">
+                    <div className="flex justify-between items-center text-xs text-emerald-600 font-bold bg-emerald-50/50 p-1.5 -mx-1.5 rounded-lg">
                       <span>Item Discounts</span>
                       <span>-{formatCurrency(itemDiscountTotal)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center text-[9px] border-t border-slate-50 pt-1 mt-1">
+                  <div className="flex justify-between items-center text-[10px] border-t border-slate-200/60 pt-2 mt-2">
                     <span className="text-slate-500 font-medium">Taxable Amount</span>
                     <span className="font-bold text-slate-900">{formatCurrency(taxableAmount)}</span>
                   </div>
                   
                   {!isInterState ? (
                     <>
-                      <div className="flex justify-between items-center text-[11px]">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-500 font-medium">CGST {isSingleRate ? `(${totalGstRate / 2}%)` : 'Var%'}</span>
                         <span className="font-bold text-slate-900">{formatCurrency(cgstAmount)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-[11px]">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-500 font-medium">SGST {isSingleRate ? `(${totalGstRate / 2}%)` : 'Var%'}</span>
                         <span className="font-bold text-slate-900">{formatCurrency(sgstAmount)}</span>
                       </div>
                     </>
                   ) : (
-                    <div className="flex justify-between items-center text-[11px]">
+                    <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-500 font-medium">IGST {isSingleRate ? `(${totalGstRate}%)` : 'Var%'}</span>
                       <span className="font-bold text-slate-900">{formatCurrency(igstAmount)}</span>
                     </div>
@@ -2048,13 +2056,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
 
                   {/* Payment Details */}
-                  <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-100">
-                    <div className="space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                  <div className="grid grid-cols-2 gap-3 pt-3 mt-3 border-t border-slate-200/60">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Status</label>
                       <div className="relative">
-                        <AlertCircle size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <AlertCircle size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <select 
-                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] text-slate-900 font-medium transition-all appearance-none"
+                          className="w-full pl-7 pr-2 py-2 bg-white border border-slate-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-xs text-slate-900 font-bold transition-all appearance-none shadow-sm"
                           value={paymentStatus}
                           onChange={e => setPaymentStatus(e.target.value)}
                         >
@@ -2063,12 +2071,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         </select>
                       </div>
                     </div>
-                    <div className="space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Mode</label>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Mode</label>
                       <div className="relative">
-                        <CreditCard size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <CreditCard size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <select 
-                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] text-slate-900 font-medium transition-all appearance-none disabled:opacity-50"
+                          className="w-full pl-7 pr-2 py-2 bg-white border border-slate-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-xs text-slate-900 font-bold transition-all appearance-none shadow-sm disabled:opacity-50 disabled:bg-slate-50"
                           value={paymentMode}
                           onChange={e => setPaymentMode(e.target.value)}
                           disabled={paymentStatus === 'unpaid'}
@@ -2082,13 +2090,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       </div>
                     </div>
                   {paymentStatus === 'unpaid' && (
-                    <div className="space-y-0.5 mt-1.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Due Date</label>
+                    <div className="space-y-1 mt-2 col-span-2">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Due Date</label>
                       <div className="relative">
-                        <Calendar size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Calendar size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
                           type="date" 
-                          className="w-full pl-5 pr-1.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                          className="w-full pl-7 pr-2 py-2 bg-white border border-slate-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-xs transition-all text-slate-900 font-bold shadow-sm"
                           value={dueDate}
                           onChange={e => setDueDate(e.target.value)}
                         />
@@ -2097,37 +2105,37 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   )}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Amount</span>
-                      <span className="text-lg font-black text-primary">{formatCurrency(total)}</span>
+                  <div className="pt-4 mt-4 border-t border-slate-200/60">
+                    <div className="flex justify-between items-center mb-4 bg-gradient-to-r from-primary/5 to-transparent p-3 -mx-3 rounded-xl border border-primary/10">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">Total Amount</span>
+                      <span className="text-2xl font-black text-primary tracking-tight">{formatCurrency(total)}</span>
                     </div>
                     
-                    <div className="flex flex-col gap-1.5 mb-1">
+                    <div className="flex flex-col gap-2.5 mb-2">
                       <button 
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="w-full py-1.5 bg-primary text-white rounded-lg font-bold flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 group active:scale-95 text-[11px]"
+                        className="w-full py-2.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-bold flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 transition-all group active:scale-95 text-xs"
                       >
                         {isSaving ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         ) : (
                           <>
-                            <Save size={12} className="mr-1 group-hover:scale-110 transition-transform" />
+                            <Save size={14} className="mr-2 group-hover:scale-110 transition-transform" strokeWidth={2.5} />
                             Save Invoice
                           </>
                         )}
                       </button>
                       <button
                         onClick={handlePreview}
-                        className="w-full py-1.5 bg-slate-50 border border-slate-300 text-slate-700 rounded-lg font-bold flex items-center justify-center hover:bg-slate-100 transition-all active:scale-95 text-[11px]"
+                        className="w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 text-xs shadow-sm"
                       >
-                        <Eye size={12} className="mr-1" />
+                        <Eye size={14} className="mr-2" strokeWidth={2.5} />
                         Preview Invoice
                       </button>
                     </div>
                     
-                    <p className="text-[11px] text-center text-slate-400 mt-4 font-medium">
+                    <p className="text-[10px] text-center text-slate-400 mt-5 font-medium px-2">
                       By saving, you agree to our terms of service and tax compliance guidelines.
                     </p>
                   </div>
@@ -2149,14 +2157,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 <div className="flex space-x-3">
                   <button 
                     onClick={() => setViewMode('edit')}
-                    className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
                   >
                     Back to Edit
                   </button>
                   <button 
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center hover:bg-primary/90 transition-all disabled:opacity-50"
+                    className="px-4 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-xs font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50 active:scale-95"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
                     Save & Download
@@ -2375,65 +2383,66 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
         <>
           <button 
             onClick={onClose}
-            className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-[11px] font-bold hover:bg-slate-100 transition-all"
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
           >
             Discard
           </button>
           <button 
             onClick={() => onConfirm(editedData)}
-            className="px-4 py-1.5 bg-primary text-white rounded-lg text-[11px] font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+            className="px-5 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-xs font-bold hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95 flex items-center"
           >
+            <Plus size={16} className="mr-1.5" strokeWidth={2.5} />
             Add to Invoice
           </button>
         </>
       }
     >
       {editedData && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Customer Section */}
-          <section className="space-y-2">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-primary">
-                <UserPlus size={14} strokeWidth={2.5} />
-                <h4 className="text-[11px] font-bold uppercase tracking-wider">Customer Information</h4>
+              <div className="flex items-center space-x-2 text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
+                <UserPlus size={16} strokeWidth={2.5} />
+                <h4 className="text-xs font-black uppercase tracking-widest">Customer Information</h4>
               </div>
               {!editedData.customer.id && (
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Customer</span>
+                <span className="px-3 py-1 bg-gradient-to-r from-amber-100 to-amber-200/50 text-amber-800 text-[10px] font-black rounded-full uppercase tracking-widest shadow-sm border border-amber-200/50">New Customer</span>
               )}
             </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            <div className="space-y-0.5">
-              <label className="text-[8px] font-bold text-slate-500 uppercase">Name</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Name</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
                 value={editedData.customer.name}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, name: e.target.value } })}
               />
             </div>
-            <div className="space-y-0.5">
-              <label className="text-[8px] font-bold text-slate-500 uppercase">Phone</label>
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Phone</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
                 value={editedData.customer.phone}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, phone: e.target.value } })}
               />
             </div>
-            <div className="space-y-0.5">
-              <label className="text-[8px] font-bold text-slate-500 uppercase">GSTIN</label>
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">GSTIN</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
                 value={editedData.customer.gst}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, gst: e.target.value } })}
               />
             </div>
-            <div className="space-y-0.5 md:col-span-2 lg:col-span-3">
-              <label className="text-[8px] font-bold text-slate-500 uppercase">Address</label>
+            <div className="space-y-1 md:col-span-2 lg:col-span-3">
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Address</label>
               <input 
                 type="text" 
-                className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-[11px] font-medium outline-none focus:border-primary"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
                 value={editedData.customer.address1}
                 onChange={e => setEditedData({ ...editedData, customer: { ...editedData.customer, address1: e.target.value } })}
               />
@@ -2442,29 +2451,29 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
         </section>
 
         {/* Items Section */}
-        <section className="space-y-2">
-          <div className="flex items-center space-x-2 text-primary">
-            <Package size={14} strokeWidth={2.5} />
-            <h4 className="text-[11px] font-bold uppercase tracking-wider">Scanned Items</h4>
+        <section className="space-y-3">
+          <div className="flex items-center space-x-2 text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 w-fit">
+            <Package size={16} strokeWidth={2.5} />
+            <h4 className="text-xs font-black uppercase tracking-widest">Scanned Items</h4>
           </div>
-          <div className="border border-slate-100 rounded-xl overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[400px]">
+          <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-sm bg-white">
+            <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase">Particular</th>
-                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-20 text-center">HSN</th>
-                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-16 text-center">Qty</th>
-                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-20">Rate</th>
-                  <th className="px-2 py-1.5 text-[8px] font-bold text-slate-500 uppercase w-24 text-right">Amount</th>
+                <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Particular</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">HSN</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Qty</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24">Rate</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-28 text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100">
                 {editedData.items.map((item: any, idx: number) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2 py-1.5">
+                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-3 py-2">
                       <input 
                         type="text" 
-                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0"
+                        className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 transition-all outline-none"
                         value={item.name}
                         onChange={e => {
                           const newItems = [...editedData.items];
@@ -2473,10 +2482,10 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                       />
                     </td>
-                    <td className="px-2 py-1.5">
+                    <td className="px-3 py-2">
                       <input 
                         type="text" 
-                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0 text-center"
+                        className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 transition-all outline-none text-center"
                         value={item.hsnCode || ''}
                         onChange={e => {
                           const newItems = [...editedData.items];
@@ -2486,10 +2495,10 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         placeholder="HSN"
                       />
                     </td>
-                    <td className="px-2 py-1.5">
+                    <td className="px-3 py-2">
                       <input 
                         type="number" 
-                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0 text-center"
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 transition-all outline-none text-center"
                         value={item.quantity}
                         onChange={e => {
                           const newItems = [...editedData.items];
@@ -2499,10 +2508,10 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                       />
                     </td>
-                    <td className="px-2 py-1.5">
+                    <td className="px-3 py-2">
                       <input 
                         type="number" 
-                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold text-slate-900 p-0"
+                        className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 transition-all outline-none"
                         value={item.rate}
                         onChange={e => {
                           const newItems = [...editedData.items];
@@ -2512,7 +2521,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                       />
                     </td>
-                    <td className="px-2 py-1.5 text-right text-[11px] font-black text-primary">
+                    <td className="px-3 py-2 text-right text-xs font-black text-slate-900 bg-slate-50/50 group-hover:bg-slate-100/50 transition-colors">
                       {formatCurrency(item.amount)}
                     </td>
                   </tr>

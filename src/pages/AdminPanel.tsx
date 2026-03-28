@@ -677,6 +677,7 @@ export default function AdminPanel() {
     <div className="space-y-4">
       <PageHeader 
         title="Admin Control Panel" 
+        description="Manage user access, monitor system activity, and configure global application settings."
       >
         <div className="flex items-center space-x-2">
           {isSuperAdmin && activeTab === 'notifications' && (

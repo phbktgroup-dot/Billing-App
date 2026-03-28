@@ -27,6 +27,7 @@ export default function GSTReports() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<GSTReportType>('GSTR-1');
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -996,6 +997,8 @@ export default function GSTReports() {
             <span>GST Compliance Reports</span>
           </div>
         }
+        description="Generate GST-ready reports, track input tax credits, and simplify your tax filing process."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -1007,6 +1010,8 @@ export default function GSTReports() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

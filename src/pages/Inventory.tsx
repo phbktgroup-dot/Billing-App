@@ -61,6 +61,7 @@ export default function Inventory() {
   const [lowStockAlerts, setLowStockAlerts] = useState<Product[]>([]);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -277,7 +278,8 @@ export default function Inventory() {
     <div className="space-y-4">
       <PageHeader 
         title="Inventory Management" 
-      
+        description="Track your stock levels, manage product variants, and monitor inventory movements."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -289,6 +291,8 @@ export default function Inventory() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

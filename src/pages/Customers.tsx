@@ -52,6 +52,7 @@ export default function Customers() {
   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -266,7 +267,8 @@ export default function Customers() {
     <div className="space-y-4">
       <PageHeader 
         title="Customer Management" 
-      
+        description="Maintain your client database, track their purchase history, and manage relationships."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -278,6 +280,8 @@ export default function Customers() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

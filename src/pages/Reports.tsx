@@ -44,6 +44,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -175,6 +176,8 @@ export default function Reports() {
             <span>Reports & Analytics</span>
           </div>
         }
+        description="Analyze your business performance with detailed reports on sales, expenses, and inventory."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -186,6 +189,8 @@ export default function Reports() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

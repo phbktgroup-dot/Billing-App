@@ -44,6 +44,7 @@ export default function Analytics() {
   const [isThinking, setIsThinking] = useState(false);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -103,6 +104,8 @@ export default function Analytics() {
             AI Business Analytics
           </>
         }
+        description="Leverage AI-driven insights to understand your sales trends, customer behavior, and growth opportunities."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -114,6 +117,8 @@ export default function Analytics() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

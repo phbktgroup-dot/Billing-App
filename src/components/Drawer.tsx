@@ -58,18 +58,16 @@ const Drawer: React.FC<DrawerProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={cn(
-              "fixed inset-0 z-50 flex items-center justify-center transition-all duration-300",
-              fullScreen ? "p-0" : "p-4 md:p-8"
+              "fixed bottom-0 right-0 z-[60] flex items-center justify-center transition-all duration-300",
+              "left-0 md:left-[var(--sidebar-width,0px)]",
+              maxWidth === 'max-w-sm' ? "top-0 p-4 md:p-4 lg:p-8 md:pt-4 lg:pt-8" : "top-16 md:top-0 p-0 md:p-4 lg:p-8"
             )}
-            style={{ 
-              left: 'var(--sidebar-width, 0px)',
-              width: 'calc(100% - var(--sidebar-width, 0px))'
-            }}
           >
             <div 
               className={cn(
                 "bg-white shadow-2xl flex flex-col w-full overflow-hidden",
-                fullScreen ? "h-full max-w-none" : cn("max-h-[90vh] rounded-2xl", maxWidth)
+                fullScreen ? "h-full max-w-none rounded-none md:rounded-2xl" : cn("max-h-full md:max-h-[90vh] rounded-none md:rounded-2xl", maxWidth),
+                !fullScreen && maxWidth !== 'max-w-sm' ? "h-full md:h-auto" : maxWidth === 'max-w-sm' ? "rounded-2xl" : ""
               )}
               ref={drawerRef}
             >

@@ -109,6 +109,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   });
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -741,6 +742,8 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             </div>
           </div>
         }
+        description="Access essential tax calculation tools, GST utilities, and compliance resources for your business."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -752,6 +755,8 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

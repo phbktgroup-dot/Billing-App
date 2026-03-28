@@ -49,6 +49,7 @@ export default function Ledger() {
   const [isExporting, setIsExporting] = useState(false);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -306,7 +307,8 @@ export default function Ledger() {
     <div className="space-y-6">
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
-      
+        description="View detailed transaction history, track outstanding balances, and reconcile accounts for your business partners."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -318,6 +320,8 @@ export default function Ledger() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

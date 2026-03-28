@@ -168,6 +168,7 @@ export default function Transporters() {
     <div className="space-y-4">
       <PageHeader 
         title="Transporter Management" 
+        description="Manage your logistics partners, track transporter IDs, and streamline e-way bill generation."
       >
         <button className="btn-primary flex items-center px-4 py-2 text-sm" onClick={() => openModal()}>
           <Plus size={16} className="mr-1.5" />

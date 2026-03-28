@@ -826,6 +826,7 @@ export default function ITRReport() {
             </div>
           </div>
         }
+        description="Generate comprehensive financial reports for Income Tax Return filing, including Profit & Loss and Balance Sheet data."
       >
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">

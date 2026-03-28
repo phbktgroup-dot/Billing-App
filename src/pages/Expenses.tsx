@@ -36,6 +36,7 @@ export default function Expenses() {
   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -203,7 +204,8 @@ export default function Expenses() {
     <div className="space-y-4">
       <PageHeader 
         title="Business Expenses" 
-      
+        description="Record and categorize your business spending to track profitability and tax deductions."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -215,6 +217,8 @@ export default function Expenses() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

@@ -93,7 +93,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const sidebarVariants = {
     expanded: { width: 240, x: 0 },
-    collapsed: { width: 56, x: 0 },
+    collapsed: { width: 72, x: 0 },
     mobileOpen: { width: 240, x: 0 },
     mobileClosed: { width: 240, x: -240 },
   };
@@ -104,7 +104,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   useEffect(() => {
     const width = (windowWidth >= 1024) 
-      ? (isCollapsed ? '56px' : '240px')
+      ? (isCollapsed ? '72px' : '240px')
       : '0px';
     document.documentElement.style.setProperty('--sidebar-width', width);
   }, [isCollapsed, windowWidth]);
@@ -165,7 +165,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   animate={{ opacity: 1, x: 0 }}
                   className="font-bold text-slate-900 text-sm truncate pr-2"
                 >
-                  {profile?.business_profiles?.name || appSettings?.app_name || 'Billing Pro+'}
+                  {appSettings?.app_name || 'Billing Pro+'}
                 </motion.span>
               </div>
             )}
@@ -204,10 +204,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
             </NavLink>
           ))}
-        </div>
 
-        {/* Bottom Menu Items */}
-        <div className="px-3 py-2 border-t border-slate-100 space-y-1">
+          <div className="border-t border-slate-100 my-2" />
+
           {bottomMenuItems.map((item) => (
             <NavLink
               key={item.path}

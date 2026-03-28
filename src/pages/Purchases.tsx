@@ -34,6 +34,7 @@ export default function Purchases() {
   });
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -926,7 +927,8 @@ Return as JSON format: {
     <div className="space-y-4">
       <PageHeader 
         title="Purchases" 
-      
+        description="Track your procurement, manage supplier invoices, and monitor purchase costs."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -938,6 +940,8 @@ Return as JSON format: {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

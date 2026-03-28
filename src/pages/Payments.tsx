@@ -309,6 +309,7 @@ export default function Payments() {
     <div className="space-y-6">
       <PageHeader 
         title="Payments & Receipts" 
+        description="Track incoming and outgoing funds, reconcile accounts, and manage your cash flow."
       >
         <button 
           onClick={() => setIsDrawerOpen(true)}

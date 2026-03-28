@@ -73,6 +73,7 @@ export default function Invoices() {
   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -472,7 +473,8 @@ export default function Invoices() {
     >
       <PageHeader 
         title="Invoices" 
-      
+        description="Manage your sales invoices, track payments, and generate professional billing documents."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -484,6 +486,8 @@ export default function Invoices() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

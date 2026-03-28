@@ -21,6 +21,7 @@ export default function Suppliers() {
   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
     const now = new Date();
@@ -206,7 +207,8 @@ export default function Suppliers() {
     <div className="space-y-4">
       <PageHeader 
         title="Suppliers" 
-      
+        description="Manage your vendor information, track outstanding balances, and streamline procurement."
+        isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -218,6 +220,8 @@ export default function Suppliers() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
           />
         }
       >

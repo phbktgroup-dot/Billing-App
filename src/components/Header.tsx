@@ -142,10 +142,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-16 md:h-14 bg-white border-b border-slate-200 sticky z-[60] px-4 md:px-6 flex items-center justify-between",
+        "h-16 md:h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky z-[60] px-4 md:px-8 flex items-center justify-between",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
-        <div className="absolute inset-0 backdrop-blur-md -z-10 pointer-events-none" />
+        <div className="absolute inset-0 -z-10 pointer-events-none" />
       {/* Left Section: Menu Toggle (Mobile) & Search (Desktop) */}
       <div className="flex items-center space-x-4">
         <button 
@@ -158,10 +158,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <div className="hidden md:flex items-center relative">
           <input 
             type="text"
-            placeholder="Search..."
-            className="bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all w-64"
+            placeholder="Search anything..."
+            className="bg-slate-100/50 border border-slate-200 rounded-full py-2 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:bg-white transition-all w-72"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
         </div>
       </div>
 
@@ -305,11 +305,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <p className="text-sm font-semibold text-slate-900 hover:text-primary transition-colors">
               {profile?.name || user?.email?.split('@')[0] || 'Admin User'}
             </p>
-            <p className="text-xs text-slate-500">{profile?.business_profiles?.name || 'PHBKT Group Ltd'}</p>
+            <p className="text-xs text-slate-500 font-medium">{profile?.business_profiles?.name || 'PHBKT Group Ltd'}</p>
           </div>
-          <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden border border-slate-200">
+          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden border border-slate-200 shadow-sm">
             {profile?.business_profiles?.logo_url ? (
-              <img src={profile.business_profiles.logo_url} alt="Logo" className="w-full h-full object-contain" />
+              <img src={profile.business_profiles.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
               <User size={20} />
             )}
