@@ -206,7 +206,6 @@ export default function Suppliers() {
     <div className="space-y-4">
       <PageHeader 
         title="Suppliers" 
-        description="Manage your vendors and suppliers."
       
         dateFilter={
           <DateFilter 

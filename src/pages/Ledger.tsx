@@ -306,7 +306,6 @@ export default function Ledger() {
     <div className="space-y-6">
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
-        description={`Detailed statement of accounts for each ${ledgerType}.`}
       
         dateFilter={
           <DateFilter 

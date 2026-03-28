@@ -175,7 +175,6 @@ export default function Reports() {
             <span>Reports & Analytics</span>
           </div>
         }
-        description="Comprehensive insights into your business performance."
         dateFilter={
           <DateFilter 
             filterType={filterType}

@@ -926,7 +926,6 @@ Return as JSON format: {
     <div className="space-y-4">
       <PageHeader 
         title="Purchases" 
-        description="Manage your purchase invoices and expenses."
       
         dateFilter={
           <DateFilter 

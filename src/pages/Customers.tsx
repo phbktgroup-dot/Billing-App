@@ -266,7 +266,6 @@ export default function Customers() {
     <div className="space-y-4">
       <PageHeader 
         title="Customer Management" 
-        description="Manage your clients, their contact info, and GST details."
       
         dateFilter={
           <DateFilter 

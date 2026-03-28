@@ -203,7 +203,6 @@ export default function Expenses() {
     <div className="space-y-4">
       <PageHeader 
         title="Business Expenses" 
-        description="Track and manage your daily business expenditures."
       
         dateFilter={
           <DateFilter 

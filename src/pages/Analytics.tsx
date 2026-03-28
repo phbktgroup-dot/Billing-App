@@ -103,7 +103,6 @@ export default function Analytics() {
             AI Business Analytics
           </>
         }
-        description="Next-generation insights powered by Google Gemini AI."
         dateFilter={
           <DateFilter 
             filterType={filterType}

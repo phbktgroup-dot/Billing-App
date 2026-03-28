@@ -1193,7 +1193,6 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       {/* Header */}
       <PageHeader 
         title="Create New Invoice" 
-        description="Draft professional invoices with AI assistance."
       
         dateFilter={
           <DateFilter 

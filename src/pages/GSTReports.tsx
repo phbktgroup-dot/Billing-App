@@ -996,7 +996,6 @@ export default function GSTReports() {
             <span>GST Compliance Reports</span>
           </div>
         }
-        description="Generate and download GSTR-1, GSTR-3B, and GSTR-2A reports for filing."
         dateFilter={
           <DateFilter 
             filterType={filterType}

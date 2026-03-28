@@ -146,7 +146,6 @@ export default function ITRDataEntry() {
         </button>
         <PageHeader 
           title="Complete ITR Profile" 
-          description="Fill in the required fields for ITR-3, ITR-4, ITR-5, ITR-6, and ITR-7 compliance."
         />
       </div>
 

@@ -741,7 +741,6 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             </div>
           </div>
         }
-        description={current.description}
         dateFilter={
           <DateFilter 
             filterType={filterType}

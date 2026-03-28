@@ -349,7 +349,6 @@ export default function Settings() {
     <div className="w-full space-y-4">
       <PageHeader 
         title="Settings" 
-        description="Manage your business profile and account preferences."
       />
 
       {error && (

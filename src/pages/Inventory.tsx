@@ -277,7 +277,6 @@ export default function Inventory() {
     <div className="space-y-4">
       <PageHeader 
         title="Inventory Management" 
-        description="Track stock levels, movements, and low stock alerts."
       
         dateFilter={
           <DateFilter 

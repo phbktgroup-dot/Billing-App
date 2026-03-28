@@ -309,7 +309,6 @@ export default function Payments() {
     <div className="space-y-6">
       <PageHeader 
         title="Payments & Receipts" 
-        description="Manage customer receipts and supplier payments."
       >
         <button 
           onClick={() => setIsDrawerOpen(true)}

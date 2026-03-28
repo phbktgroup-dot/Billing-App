@@ -472,7 +472,6 @@ export default function Invoices() {
     >
       <PageHeader 
         title="Invoices" 
-        description="View and manage all your generated invoices."
       
         dateFilter={
           <DateFilter 

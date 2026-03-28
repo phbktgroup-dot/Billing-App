@@ -611,13 +611,13 @@ export default function Dashboard() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-3 relative"
+      className="space-y-2 relative"
     >
 
       {/* Welcome Section */}
       <PageHeader 
         title="Business Performance" 
-        description="Real-time financial metrics and business health monitoring."
+        className="bg-white border-slate-200 text-slate-900"
         dateFilter={
           <DateFilter 
             filterType={filterType}
@@ -629,30 +629,31 @@ export default function Dashboard() {
             customRange={customRange}
             setCustomRange={setCustomRange}
             iconOnly={true}
+            className="text-primary hover:bg-slate-100"
           />
         }
       >
-        <div className="flex flex-row items-center gap-3 justify-end relative z-20 w-full sm:w-auto mt-4 md:mt-0">
+        <div className="flex flex-row items-center gap-2 justify-end relative z-20 w-full sm:w-auto md:mt-0">
           {loading && <Loader2 className="w-4 h-4 animate-spin text-primary hidden sm:block" />}
           <button 
             onClick={() => navigate('/invoices/new')}
-            className="btn-primary flex-1 sm:flex-none sm:min-w-[160px]"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
           >
             <Plus size={16} className="mr-2" />
             <span>Create Invoice</span>
           </button>
           <button 
             onClick={() => setShowScanOptions(true)}
-            className="btn-secondary flex-1 sm:flex-none sm:min-w-[160px]"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
           >
-            <Scan size={16} className="mr-2 text-slate-500" />
+            <Scan size={16} className="mr-2 text-white" />
             <span>Scan Invoice</span>
           </button>
         </div>
       </PageHeader>
 
       {/* Core Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -693,8 +694,8 @@ export default function Dashboard() {
       {/* Quick Actions (Vyapar-like) */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</h2>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
             {[
               { icon: Plus, label: 'Sale', color: 'bg-blue-50 text-blue-600 border-blue-100', path: '/invoices/new' },
               { icon: ShoppingCart, label: 'Purchase', color: 'bg-purple-50 text-purple-600 border-purple-100', path: '/purchases' },
@@ -729,10 +730,10 @@ export default function Dashboard() {
       )}
 
       {/* Business Summary & Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Business Performance Summary */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-slate-100 rounded-lg border border-slate-200">
                   <BarChart3 size={20} className="text-slate-700" />
@@ -755,10 +756,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {/* Profit & Loss */}
               <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all group/card">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-2">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100">
@@ -796,7 +797,7 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Gross Revenue</p>
                     <p className="text-[11px] font-black text-slate-800">{formatCurrency(businessSummary?.profitAndLoss.revenue || 0)}</p>
@@ -818,7 +819,7 @@ export default function Dashboard() {
 
               {/* Cash Flow */}
               <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all group/card">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-2">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100">
@@ -856,7 +857,7 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Inflow (Paid)</p>
                     <p className="text-[11px] font-black text-emerald-600">+{formatCurrency(businessSummary?.cashFlow.inflow || 0)}</p>
@@ -878,7 +879,7 @@ export default function Dashboard() {
 
               {/* Customer Flow */}
               <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all group/card">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-2">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100">
@@ -910,7 +911,7 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
                   <div className="space-y-0.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">New MTD</p>
                     <p className="text-[11px] font-black text-emerald-600">+{businessSummary?.customerFlow.newThisMonth}</p>
@@ -932,7 +933,7 @@ export default function Dashboard() {
 
               {/* Health Index */}
               <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 shadow-lg">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center space-x-2">
                     <div className="p-1.5 bg-white/10 rounded-md border border-white/5">
                       <Activity size={14} className="text-orange-400" />
@@ -990,7 +991,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {businessSummary?.businessHealth.factors.slice(0, 3).map((factor: any, i: number) => (
                     <div key={i} className="space-y-1">
                       <div className="flex justify-between items-center">
@@ -1230,7 +1231,7 @@ export default function Dashboard() {
             )}
           </div>
           
-          <button className="w-full mt-6 py-2.5 bg-slate-900 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors">
+          <button className="w-full mt-3 py-2.5 bg-slate-900 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors">
             View All Actions
           </button>
         </div>
@@ -1277,7 +1278,7 @@ export default function Dashboard() {
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="pt-4 border-t border-slate-100 space-y-3"
+                className="pt-4 border-t border-slate-100 space-y-2"
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
@@ -1352,10 +1353,10 @@ export default function Dashboard() {
       </div>
 
       {/* Revenue & Cash Flow Forecast Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Revenue Performance */}
         <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-sm font-semibold text-slate-900 flex items-center">
                 <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mr-2">
@@ -1422,7 +1423,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
           
-          <div className="mt-6 grid grid-cols-3 gap-4 pt-6 border-t border-slate-100">
+          <div className="mt-4 grid grid-cols-3 gap-2 pt-4 border-t border-slate-100">
             <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
               <p className="text-[10px] font-medium text-slate-500 mb-1">Avg. Daily Revenue</p>
               <p className="text-sm font-semibold text-slate-900">{formatCurrency((businessSummary?.profitAndLoss.revenue || 0) / 30)}</p>
@@ -1440,14 +1441,14 @@ export default function Dashboard() {
 
         {/* Owner's Strategic Insights - Moved to Right Side */}
         <div className="lg:col-span-1 p-4 md:p-6 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-lg flex flex-col">
-          <div className="flex items-center space-x-2 mb-6">
+          <div className="flex items-center space-x-2 mb-3">
             <div className="p-1.5 bg-white/10 rounded-md border border-white/5">
               <ShieldCheck size={16} className="text-primary" />
             </div>
             <h2 className="text-sm font-semibold text-white">Strategic Insights</h2>
           </div>
           
-          <div className="space-y-4 flex-1">
+          <div className="space-y-2 flex-1">
             <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <p className="text-[10px] font-medium text-slate-400 mb-1">Dividend Capacity</p>
               <p className="text-lg font-semibold text-emerald-400">{formatCurrency(businessSummary?.ownerVisibility.dividendCapacity || 0)}</p>
@@ -1475,16 +1476,16 @@ export default function Dashboard() {
       </div>
 
       {/* Customers & Invoices Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Top Customers */}
         <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 mb-6 flex items-center">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
             <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mr-2">
               <Users size={16} className="text-primary" />
             </div>
             Top Customers
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {topCustomers.map((customer, i) => (
               <div key={customer.id} className="flex items-center justify-between group cursor-pointer p-2 hover:bg-slate-50 rounded-xl transition-colors">
                 <div className="flex items-center space-x-3">
@@ -1519,7 +1520,7 @@ export default function Dashboard() {
 
         {/* Recent Invoices */}
         <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-900 flex items-center">
               <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mr-2">
                 <FileText size={16} className="text-primary" />
@@ -1586,7 +1587,7 @@ export default function Dashboard() {
 
         {/* Customer Segments */}
         <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 mb-6 flex items-center">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
             <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mr-2">
               <Target size={16} className="text-primary" />
             </div>
@@ -1607,7 +1608,7 @@ export default function Dashboard() {
               </RadarChart>
             </ResponsiveContainer>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-100">
               <span className="text-xs font-medium text-emerald-700">High Value</span>
               <span className="text-xs font-semibold text-emerald-700">42%</span>
@@ -1640,10 +1641,10 @@ export default function Dashboard() {
       </div>
 
       {/* Purchases & Suppliers Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 mt-2">
         {/* Top Suppliers */}
         <div className="lg:col-span-1 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 mb-6 flex items-center">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
             <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mr-2">
               <Truck size={16} className="text-primary" />
             </div>
@@ -1684,7 +1685,7 @@ export default function Dashboard() {
 
         {/* Recent Purchases */}
         <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-900 flex items-center">
               <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mr-2">
                 <ShoppingCart size={16} className="text-primary" />

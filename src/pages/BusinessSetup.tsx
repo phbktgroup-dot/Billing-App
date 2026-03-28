@@ -246,7 +246,6 @@ export default function BusinessSetup() {
       <div className="max-w-2xl mx-auto">
         <PageHeader 
           title="Setup Your Business" 
-          description="Complete your profile to start managing your business."
         />
 
         <motion.div 

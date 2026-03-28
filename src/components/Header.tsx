@@ -142,7 +142,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-16 bg-white/80 border-b border-slate-200 sticky z-[60] px-4 md:px-6 flex items-center justify-between",
+        "h-16 md:h-14 bg-white border-b border-slate-200 sticky z-[60] px-4 md:px-6 flex items-center justify-between",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
         <div className="absolute inset-0 backdrop-blur-md -z-10 pointer-events-none" />
@@ -302,12 +302,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
           onClick={() => setShowMenu(!showMenu)}
         >
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-slate-900 hover:text-primary transition-colors">
+            <p className="text-sm font-semibold text-slate-900 hover:text-primary transition-colors">
               {profile?.name || user?.email?.split('@')[0] || 'Admin User'}
             </p>
-            <p className="text-[11px] text-slate-500">{profile?.business_profiles?.name || 'PHBKT Group Ltd'}</p>
+            <p className="text-xs text-slate-500">{profile?.business_profiles?.name || 'PHBKT Group Ltd'}</p>
           </div>
-          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden border border-slate-200">
+          <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden border border-slate-200">
             {profile?.business_profiles?.logo_url ? (
               <img src={profile.business_profiles.logo_url} alt="Logo" className="w-full h-full object-contain" />
             ) : (
