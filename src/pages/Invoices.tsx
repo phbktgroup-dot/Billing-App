@@ -473,8 +473,8 @@ export default function Invoices() {
       <PageHeader 
         title="Invoices" 
         description="View and manage all your generated invoices."
-      >
-        <div className="flex items-center space-x-2">
+      
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -484,10 +484,15 @@ export default function Invoices() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
           <button 
             onClick={() => navigate('/invoices/new')}
-            className="px-4 py-2 bg-primary text-white rounded-xl text-[11px] font-bold flex items-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+            className="btn-primary"
           >
             <Plus size={14} className="mr-1.5" />
             Create Invoice

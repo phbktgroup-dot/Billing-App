@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { FilterIcon } from './icons/FilterIcon';
 import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, subYears, isSameDay } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -17,10 +18,11 @@ interface DateFilterProps {
   customRange: { start: string, end: string };
   setCustomRange: (range: { start: string, end: string }) => void;
   className?: string;
+  iconOnly?: boolean;
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({
-  filterType, setFilterType, day, setDay, year, setYear, customRange, setCustomRange, className
+  filterType, setFilterType, day, setDay, year, setYear, customRange, setCustomRange, className, iconOnly
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -126,12 +128,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm flex items-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95",
-          className?.includes('w-full') && "w-full justify-center"
+          iconOnly 
+            ? "p-2 rounded-full hover:bg-slate-100 transition-all active:scale-95 text-primary"
+            : "bg-white px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 shadow-sm flex items-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95",
+          className?.includes('w-full') && !iconOnly && "w-full justify-center"
         )}
       >
-        <CalendarIcon size={16} className="text-primary" />
-        {getLabel()}
+        <FilterIcon size={iconOnly ? 20 : 16} className="text-primary" />
+        {!iconOnly && getLabel()}
       </button>
 
       {isOpen && (

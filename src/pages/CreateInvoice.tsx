@@ -1194,8 +1194,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       <PageHeader 
         title="Create New Invoice" 
         description="Draft professional invoices with AI assistance."
-      >
-        <div className="flex items-center space-x-4">
+      
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -1205,7 +1205,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-4">
+          
           {isAutosaving && <span className="text-[11px] font-bold text-slate-400 animate-pulse bg-slate-100 px-2 py-1 rounded-md">Saving draft...</span>}
           
           <button 
@@ -1319,7 +1324,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           >
             <div className="xl:col-span-2 space-y-6 pr-2">
               {/* Customer & Details Section */}
-              <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="p-1.5 bg-blue-50 text-blue-600 rounded-xl">
@@ -1604,7 +1609,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               </div>
 
               {/* Items Section */}
-              <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -2139,7 +2144,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             exit={{ opacity: 0, scale: 0.95 }}
             className="max-w-4xl mx-auto"
           >
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 min-h-[800px] flex flex-col relative overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 min-h-[800px] flex flex-col relative overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h2 className="text-lg font-bold text-slate-900">Invoice Preview</h2>
                 <div className="flex space-x-3">
@@ -2322,7 +2327,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-xs w-full mx-4"
+              className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-xs w-full mx-4"
             >
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -278,8 +278,8 @@ export default function Inventory() {
       <PageHeader 
         title="Inventory Management" 
         description="Track stock levels, movements, and low stock alerts."
-      >
-        <div className="flex items-center space-x-2">
+      
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -289,15 +289,20 @@ export default function Inventory() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
           <button 
             onClick={() => setShowStockHistory(true)}
-            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 flex items-center text-[10px]"
+            className="btn-secondary"
           >
             <ArrowUpDown size={14} className="mr-1" />
             Stock History
           </button>
-          <button className="btn-primary flex items-center text-[10px] px-2.5 py-1.5 rounded-lg" onClick={() => openModal()}>
+          <button className="btn-primary" onClick={() => openModal()}>
             <Plus size={14} className="mr-1" />
             Add Product
           </button>

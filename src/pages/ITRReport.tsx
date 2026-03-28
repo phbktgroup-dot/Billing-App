@@ -888,7 +888,7 @@ export default function ITRReport() {
           </div>
 
           {/* Content Area */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6 print-container">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6 print-container">
             <div className="p-8 overflow-x-auto print-content">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -1122,7 +1122,7 @@ export default function ITRReport() {
       </div>
 
       {/* Bulk Download Section */}
-      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 no-print">
+      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 no-print">
         <div className="text-center md:text-left">
           <h3 className="text-lg font-bold text-slate-900">Download All Reports</h3>
           <p className="text-sm text-slate-500 mt-1">Get Balance Sheet, Annexures, and P&L in a single file</p>

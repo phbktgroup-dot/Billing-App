@@ -267,8 +267,8 @@ export default function Customers() {
       <PageHeader 
         title="Customer Management" 
         description="Manage your clients, their contact info, and GST details."
-      >
-        <div className="flex items-center space-x-2">
+      
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -278,8 +278,13 @@ export default function Customers() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
-          <button className="btn-primary flex items-center px-4 py-2 text-sm" onClick={() => openModal()}>
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
+          <button className="btn-primary" onClick={() => openModal()}>
             <Plus size={16} className="mr-1.5" />
             Add Customer
           </button>

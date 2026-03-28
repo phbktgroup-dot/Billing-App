@@ -207,8 +207,8 @@ export default function Suppliers() {
       <PageHeader 
         title="Suppliers" 
         description="Manage your vendors and suppliers."
-      >
-        <div className="flex items-center space-x-2">
+      
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -218,8 +218,13 @@ export default function Suppliers() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
-          <button className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all" onClick={() => openModal()}>
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
+          <button className="btn-primary" onClick={() => openModal()}>
             <Plus size={14} className="mr-1.5" />
             Add Supplier
           </button>

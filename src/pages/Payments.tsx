@@ -313,7 +313,7 @@ export default function Payments() {
       >
         <button 
           onClick={() => setIsDrawerOpen(true)}
-          className="px-4 py-2 bg-primary text-white rounded-xl text-[11px] font-bold flex items-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+          className="btn-primary"
         >
           <Plus size={14} className="mr-1.5" />
           Record Payment

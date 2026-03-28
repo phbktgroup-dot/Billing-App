@@ -927,8 +927,8 @@ Return as JSON format: {
       <PageHeader 
         title="Purchases" 
         description="Manage your purchase invoices and expenses."
-      >
-        <div className="flex items-center space-x-2">
+      
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -938,10 +938,15 @@ Return as JSON format: {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
           <button 
             onClick={() => document.getElementById('purchase-file-input')?.click()}
-            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm text-xs"
+            className="btn-secondary"
           >
             <Scan size={14} className="mr-1.5 text-primary" />
             Scan Bill
@@ -957,7 +962,7 @@ Return as JSON format: {
               };
             }
           }} />
-          <button className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all" onClick={() => openModal()}>
+          <button className="btn-primary" onClick={() => openModal()}>
             <Plus size={14} className="mr-1.5" />
             Record Purchase
           </button>

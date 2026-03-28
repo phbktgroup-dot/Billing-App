@@ -997,15 +997,7 @@ export default function GSTReports() {
           </div>
         }
         description="Generate and download GSTR-1, GSTR-3B, and GSTR-2A reports for filing."
-      >
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={downloadAllAsZip}
-            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[11px] font-bold hover:bg-slate-800 transition-all flex items-center shadow-lg shadow-slate-200"
-          >
-            <Download size={14} className="mr-2" />
-            Download All Reports (ZIP)
-          </button>
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -1015,7 +1007,19 @@ export default function GSTReports() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={downloadAllAsZip}
+            className="btn-primary"
+          >
+            <Download size={14} className="mr-2" />
+            Download All Reports (ZIP)
+          </button>
+          
         </div>
       </PageHeader>
 

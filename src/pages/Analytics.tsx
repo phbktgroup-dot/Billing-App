@@ -104,8 +104,7 @@ export default function Analytics() {
           </>
         }
         description="Next-generation insights powered by Google Gemini AI."
-      >
-        <div className="flex items-center space-x-2">
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -115,7 +114,12 @@ export default function Analytics() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
           <div className="flex items-center space-x-1.5 bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
             <Sparkles className="text-primary" size={14} />
             <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Powered</span>

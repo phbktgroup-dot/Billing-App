@@ -742,22 +742,23 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           </div>
         }
         description={current.description}
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+          />
+        }
       >
         <div className="flex flex-wrap items-center gap-3">
-          {type !== 'itr' && (
-            <DateFilter 
-              filterType={filterType}
-              setFilterType={setFilterType}
-              day={day}
-              setDay={setDay}
-              year={year}
-              setYear={setYear}
-              customRange={customRange}
-              setCustomRange={setCustomRange}
-            />
-          )}
           {type === 'itr' && (
-            <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center">
+            <button className="btn-secondary">
               <Info size={18} className="mr-2" />
               Help Guide
             </button>
@@ -765,13 +766,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           {type === 'itr' && (
             <button 
               onClick={() => navigate('/itr-data-entry')}
-              className="px-4 py-2 bg-white border border-primary/20 text-primary rounded-xl font-medium hover:bg-primary/5 flex items-center transition-colors"
+              className="btn-secondary text-primary border-primary/20 hover:bg-primary/5"
             >
               <FileText size={18} className="mr-2" />
               Complete ITR Profile
             </button>
           )}
-          <button className="btn-primary flex items-center" onClick={handleGenerateAll} disabled={isGenerating}>
+          <button className="btn-primary" onClick={handleGenerateAll} disabled={isGenerating}>
             {isGenerating ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
             ) : (

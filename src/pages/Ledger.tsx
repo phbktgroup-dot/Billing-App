@@ -307,6 +307,20 @@ export default function Ledger() {
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
         description={`Detailed statement of accounts for each ${ledgerType}.`}
+      
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+          />
+        }
       >
         <div className="flex items-center space-x-4">
           <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -329,16 +343,7 @@ export default function Ledger() {
               Supplier
             </button>
           </div>
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-          />
+          
           <div className="flex items-center space-x-2">
             <button 
               onClick={handleExportPDF}

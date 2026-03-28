@@ -176,8 +176,7 @@ export default function Reports() {
           </div>
         }
         description="Comprehensive insights into your business performance."
-      >
-        <div className="flex items-center space-x-2">
+        dateFilter={
           <DateFilter 
             filterType={filterType}
             setFilterType={setFilterType}
@@ -187,17 +186,22 @@ export default function Reports() {
             setYear={setYear}
             customRange={customRange}
             setCustomRange={setCustomRange}
+            iconOnly={true}
           />
+        }
+      >
+        <div className="flex items-center space-x-2">
+          
           <button 
             onClick={() => generateProfitLossPDF(summary, profile?.business_profiles || { name: 'Business' })}
-            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm"
+            className="btn-secondary"
           >
             <Download size={14} className="mr-1.5" />
             Export PDF
           </button>
           <button 
             onClick={() => generateProfitLossExcel(summary, profile?.business_profiles || { name: 'Business' })}
-            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm"
+            className="btn-secondary"
           >
             <Download size={14} className="mr-1.5" />
             Export Excel
