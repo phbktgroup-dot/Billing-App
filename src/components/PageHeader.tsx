@@ -13,7 +13,7 @@ interface PageHeaderProps {
 export default function PageHeader({ title, description, children, dateFilter, className, isDateFilterOpen }: PageHeaderProps) {
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-2 bg-white py-6 px-4 sm:p-3 rounded-2xl shadow-sm border border-slate-200 relative mb-2 sm:mb-2 text-slate-900 min-h-[140px] sm:min-h-0",
+      "flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white py-3 px-2 sm:p-2 rounded-xl shadow-sm border border-slate-200 relative mb-1 sm:mb-1 text-slate-900 min-h-[60px] sm:min-h-0",
       className
     )}>
       <div className="relative z-10">
