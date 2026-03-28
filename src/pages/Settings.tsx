@@ -371,21 +371,21 @@ export default function Settings() {
         <div className="col-span-1 space-y-1.5">
           <button 
             onClick={() => setActiveTab('profile')}
-            className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'profile' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
+            className={cn("w-full text-left px-3 h-10 sm:h-9 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'profile' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
           >
             <Building2 size={16} />
             <span>Business Profile</span>
           </button>
           <button 
             onClick={() => setActiveTab('security')}
-            className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'security' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
+            className={cn("w-full text-left px-3 h-10 sm:h-9 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'security' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
           >
             <Lock size={16} />
             <span>Security</span>
           </button>
           <button 
             onClick={() => setActiveTab('invoice')}
-            className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'invoice' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
+            className={cn("w-full text-left px-3 h-10 sm:h-9 rounded-lg text-sm font-medium flex items-center space-x-2.5 transition-colors", activeTab === 'invoice' ? "bg-primary text-white" : "text-slate-600 hover:bg-slate-100")}
           >
             <FileText size={16} />
             <span>Invoice Settings</span>
@@ -416,7 +416,7 @@ export default function Settings() {
                       <button 
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 transition-opacity rounded-lg"
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 transition-opacity rounded-lg h-10 sm:h-9 w-10"
                       >
                         <ImageIcon className="text-white" size={24} />
                       </button>
@@ -440,7 +440,7 @@ export default function Settings() {
                             setIsLoading(false);
                           }
                         }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:bg-red-600 transition-colors z-20"
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:bg-red-600 transition-colors z-20 h-10 sm:h-9 w-10 flex items-center justify-center"
                         title="Remove Logo"
                       >
                         <AlertCircle size={14} />
@@ -585,7 +585,7 @@ export default function Settings() {
                         ...formData, 
                         bankAccounts: [...formData.bankAccounts, { bankName: '', accountNo: '', ifsc: '', branch: '' }]
                       })}
-                      className="flex items-center space-x-1 text-xs text-primary font-bold hover:underline"
+                      className="flex items-center space-x-1 text-xs text-primary font-bold hover:underline h-10 sm:h-9"
                     >
                       <Plus size={14} />
                       <span>Add Account</span>
@@ -602,7 +602,7 @@ export default function Settings() {
                             newAccs.splice(index, 1);
                             setFormData({ ...formData, bankAccounts: newAccs });
                           }}
-                          className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity h-10 sm:h-9 w-10 flex items-center justify-center"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -677,7 +677,7 @@ export default function Settings() {
                         ...formData, 
                         upiIds: [...formData.upiIds, { upiId: '', label: '' }]
                       })}
-                      className="flex items-center space-x-1 text-xs text-primary font-bold hover:underline"
+                      className="flex items-center space-x-1 text-xs text-primary font-bold hover:underline h-10 sm:h-9"
                     >
                       <Plus size={14} />
                       <span>Add UPI ID</span>
@@ -694,7 +694,7 @@ export default function Settings() {
                             newUpis.splice(index, 1);
                             setFormData({ ...formData, upiIds: newUpis });
                           }}
-                          className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity h-10 sm:h-9 w-10 flex items-center justify-center"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -736,7 +736,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <button type="submit" disabled={isLoading} className="btn-primary px-6 py-2 text-sm">
+                <button type="submit" disabled={isLoading} className="btn-primary px-6 h-10 sm:h-9 text-sm flex items-center justify-center">
                   {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </form>
@@ -869,7 +869,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <button type="submit" disabled={isLoading} className="btn-primary px-6 py-2 text-sm">
+                <button type="submit" disabled={isLoading} className="btn-primary px-6 h-10 sm:h-9 text-sm flex items-center justify-center">
                   {isLoading ? 'Saving...' : 'Save Invoice Settings'}
                 </button>
               </form>
@@ -890,7 +890,7 @@ export default function Settings() {
                           setInvoiceSeries(invoiceSeries.filter(s => s.id !== series.id));
                           setIsLoading(false);
                         }}
-                        className="text-[10px] text-red-600 hover:text-red-700"
+                        className="text-[10px] text-red-600 hover:text-red-700 h-10 sm:h-9 w-10 flex items-center justify-center"
                       >
                         Delete
                       </button>
@@ -967,7 +967,7 @@ export default function Settings() {
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Confirm New Password</label>
                     <input type="password" required className="input-field text-xs py-2" value={passwordData.confirmPassword} onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})} />
                   </div>
-                  <button type="submit" disabled={isLoading} className="btn-primary px-6 py-2 text-sm">{isLoading ? 'Updating...' : 'Update Password'}</button>
+                  <button type="submit" disabled={isLoading} className="btn-primary px-6 h-10 sm:h-9 text-sm flex items-center justify-center">{isLoading ? 'Updating...' : 'Update Password'}</button>
                 </form>
 
                 {/* Advanced Security */}
@@ -978,7 +978,7 @@ export default function Settings() {
                       <p className="text-xs font-bold text-slate-900">Two-Factor Authentication (2FA)</p>
                       <p className="text-[10px] text-slate-500">Add an extra layer of security to your account.</p>
                     </div>
-                    <button className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-600 cursor-not-allowed">Coming Soon</button>
+                    <button className="px-3 h-10 sm:h-9 bg-slate-200 rounded-full text-[10px] font-bold text-slate-600 cursor-not-allowed flex items-center justify-center">Coming Soon</button>
                   </div>
                   
                   {/* API Keys */}
@@ -1021,7 +1021,7 @@ export default function Settings() {
                         <button 
                           onClick={handleTestKey}
                           disabled={isTestingKey || !formData.geminiApiKey}
-                          className="px-4 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center"
+                          className="px-4 h-10 sm:h-9 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center justify-center"
                         >
                           {isTestingKey ? <Loader2 size={12} className="animate-spin mr-1.5" /> : <ShieldCheck size={12} className="mr-1.5" />}
                           Test Connection

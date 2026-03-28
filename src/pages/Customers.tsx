@@ -287,7 +287,7 @@ export default function Customers() {
       >
         <div className="flex items-center space-x-2">
           
-          <button className="btn-primary" onClick={() => openModal()}>
+          <button className="btn-primary h-10 sm:h-9" onClick={() => openModal()}>
             <Plus size={16} className="mr-1.5" />
             Add Customer
           </button>
@@ -311,7 +311,7 @@ export default function Customers() {
             {selectedCustomers.length > 0 && (
               <button 
                 onClick={confirmBulkDelete}
-                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all"
+                className="bg-red-600 text-white px-3 h-10 sm:h-9 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all"
               >
                 <Trash2 size={14} />
                 Bulk Delete ({selectedCustomers.length})
@@ -454,7 +454,7 @@ export default function Customers() {
             <button 
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all text-xs"
+              className="px-6 h-10 sm:h-9 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all text-xs"
             >
               Cancel
             </button>
@@ -464,7 +464,7 @@ export default function Customers() {
                 handleSave(e as any);
               }}
               disabled={isSaving}
-              className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-xs"
+              className="px-6 h-10 sm:h-9 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-xs"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
               {editingCustomer ? 'Update' : 'Save'}

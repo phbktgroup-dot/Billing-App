@@ -310,7 +310,7 @@ export default function Login() {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="btn-primary w-full py-2 text-sm flex items-center justify-center space-x-2"
+                className="btn-primary w-full text-sm flex items-center justify-center space-x-2 h-10 sm:h-9"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -327,7 +327,7 @@ export default function Login() {
                   setIsForgotPassword(false);
                   setForgotPasswordStep('email');
                 }}
-                className="w-full text-xs text-slate-500 hover:text-slate-900"
+                className="w-full text-xs text-slate-500 hover:text-slate-900 h-10 sm:h-9"
               >
                 Back to Login
               </button>
@@ -365,7 +365,7 @@ export default function Login() {
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -380,7 +380,7 @@ export default function Login() {
                 <button 
                   type="button" 
                   onClick={() => setIsForgotPassword(true)}
-                  className="text-xs font-bold text-primary hover:underline"
+                  className="text-xs font-bold text-primary hover:underline h-10 sm:h-9"
                 >
                   Forgot Password?
                 </button>
@@ -389,7 +389,7 @@ export default function Login() {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="btn-primary w-full py-2 text-sm flex items-center justify-center space-x-2"
+                className="btn-primary w-full text-sm flex items-center justify-center space-x-2 h-10 sm:h-9"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -408,7 +408,7 @@ export default function Login() {
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className="text-xs text-slate-500 hover:text-slate-900"
+                  className="text-xs text-slate-600 hover:text-primary font-bold h-10 sm:h-9"
                 >
                   {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
                 </button>

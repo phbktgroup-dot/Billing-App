@@ -235,7 +235,7 @@ export default function Expenses() {
               });
               setShowAddModal(true);
             }}
-            className="btn-primary"
+            className="btn-primary h-10 sm:h-9"
           >
             <Plus size={14} className="mr-1.5" />
             Add Expense
@@ -292,7 +292,7 @@ export default function Expenses() {
           {selectedExpenses.length > 0 && (
             <button 
               onClick={confirmBulkDelete}
-              className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 shadow-sm"
+              className="bg-red-600 text-white px-3 h-10 sm:h-9 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 shadow-sm"
             >
               <Trash2 size={14} />
               Bulk Delete ({selectedExpenses.length})
@@ -300,11 +300,11 @@ export default function Expenses() {
           )}
         </div>
         <div className="flex items-center space-x-2">
-          <button className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
+          <button className="px-3 h-10 sm:h-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
             <Filter size={14} className="mr-1.5" />
             Filter
           </button>
-          <button className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
+          <button className="px-3 h-10 sm:h-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
             <Download size={14} className="mr-1.5" />
             Export
           </button>
@@ -426,7 +426,7 @@ export default function Expenses() {
             type="submit" 
             form="expense-form"
             disabled={isSubmitting}
-            className="w-full py-2.5 bg-primary text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
+            className="w-full h-10 sm:h-9 bg-primary text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
           >
             {isSubmitting ? (
               <Loader2 className="animate-spin mr-2" size={16} />

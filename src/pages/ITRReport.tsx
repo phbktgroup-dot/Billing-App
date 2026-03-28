@@ -833,7 +833,7 @@ export default function ITRReport() {
             <button 
               onClick={() => downloadExcel('all')}
               disabled={loading}
-              className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+              className="px-4 h-10 sm:h-9 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
             >
               <FileSpreadsheet size={18} className="mr-2 text-emerald-600" />
               Excel
@@ -841,7 +841,7 @@ export default function ITRReport() {
             <button 
               onClick={() => downloadPDF('all')}
               disabled={loading}
-              className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+              className="px-4 h-10 sm:h-9 bg-white border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
             >
               <Download size={18} className="mr-2 text-red-600" />
               PDF
@@ -876,7 +876,7 @@ export default function ITRReport() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "px-4 py-2 text-xs font-bold rounded-lg transition-all",
+                    "px-4 h-10 sm:h-9 text-xs font-bold rounded-lg transition-all",
                     activeTab === tab
                       ? "bg-white text-primary shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
@@ -1105,7 +1105,7 @@ export default function ITRReport() {
             <button 
               onClick={() => downloadExcel('single')}
               disabled={loading}
-              className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+              className="px-6 h-10 sm:h-9 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
             >
               <FileSpreadsheet size={20} className="mr-2 text-emerald-600" />
               Download Current (Excel)
@@ -1113,7 +1113,7 @@ export default function ITRReport() {
             <button 
               onClick={() => downloadPDF('single')}
               disabled={loading}
-              className="px-6 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+              className="px-6 h-10 sm:h-9 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
             >
               <Download size={20} className="mr-2 text-red-600" />
               Download Current (PDF)
@@ -1131,7 +1131,7 @@ export default function ITRReport() {
         <div className="flex flex-wrap items-center gap-4">
           <button
             onClick={() => downloadExcel('all')}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 font-bold"
+            className="flex items-center gap-2 px-6 h-10 sm:h-9 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 font-bold"
           >
             <FileSpreadsheet size={20} />
             All Excel Report
@@ -1139,7 +1139,7 @@ export default function ITRReport() {
           <button
             onClick={() => downloadPDF('all')}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/10 font-bold disabled:opacity-50"
+            className="flex items-center gap-2 px-6 h-10 sm:h-9 bg-primary text-white rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/10 font-bold disabled:opacity-50"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1248,7 +1248,7 @@ function EditableTable({
       </div>
       <button
         onClick={onAddRow}
-        className="flex items-center gap-2 text-primary font-bold text-xs hover:underline no-print"
+        className="flex items-center gap-2 text-primary font-bold text-xs hover:underline no-print h-10 sm:h-9"
       >
         <Plus size={14} /> Add Row at End
       </button>

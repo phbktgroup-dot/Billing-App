@@ -495,7 +495,7 @@ export default function Invoices() {
           
           <button 
             onClick={() => navigate('/invoices/new')}
-            className="btn-primary"
+            className="btn-primary h-10 sm:h-9"
           >
             <Plus size={14} className="mr-1.5" />
             Create Invoice
@@ -552,7 +552,7 @@ export default function Invoices() {
             {selectedInvoices.length > 0 && (
               <button 
                 onClick={confirmBulkDelete}
-                className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 shadow-sm"
+                className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 shadow-sm h-10 sm:h-9"
               >
                 <Trash2 size={14} />
                 Bulk Delete ({selectedInvoices.length})
@@ -571,7 +571,7 @@ export default function Invoices() {
               <option value="overdue">Overdue</option>
             </select>
             <div className="flex items-center space-x-2">
-              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
                 <Filter size={16} />
               </button>
               <div className="h-4 w-[1px] bg-slate-200 mx-2"></div>
@@ -619,7 +619,7 @@ export default function Invoices() {
                     <p className="text-slate-500 font-medium text-xs">No invoices found</p>
                     <button 
                       onClick={() => navigate('/invoices/new')}
-                      className="text-primary text-xs font-bold mt-2 hover:underline"
+                      className="text-primary text-xs font-bold mt-2 hover:underline h-10 sm:h-9"
                     >
                       Create your first invoice
                     </button>
@@ -685,14 +685,14 @@ export default function Invoices() {
                         <div className="flex items-center justify-end space-x-2">
                           <button 
                             onClick={() => handlePreview(invoice)}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                             title="Preview"
                           >
                             <Eye size={16} />
                           </button>
                           <button 
                             onClick={() => handleDownloadPDF(invoice)}
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                             title="Download PDF"
                           >
                             <Download size={16} />
@@ -700,7 +700,7 @@ export default function Invoices() {
                           {invoice.total > (ewaySettings?.ewayThreshold || 50000) && (
                             <button 
                               onClick={() => handleDownloadEwayBill(invoice)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                               title="Download E-way Bill JSON"
                             >
                               <Package size={16} />
@@ -708,7 +708,7 @@ export default function Invoices() {
                           )}
                           <button 
                             onClick={() => confirmDelete(invoice.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -721,7 +721,7 @@ export default function Invoices() {
                                 setActiveMenu(activeMenu === invoice.id ? null : invoice.id);
                               }}
                               className={cn(
-                                "p-2 rounded-xl transition-all",
+                                "p-2 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center",
                                 activeMenu === invoice.id ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                               )}
                             >
@@ -747,7 +747,7 @@ export default function Invoices() {
                                       handleWhatsAppShare(invoice);
                                       setActiveMenu(null);
                                     }}
-                                    className="w-full flex items-center px-3 py-2.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                                    className="w-full flex items-center px-3 py-2.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors h-10 sm:h-9"
                                   >
                                     <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center mr-3 text-emerald-600">
                                       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -765,7 +765,7 @@ export default function Invoices() {
                                       handleSystemShare(invoice);
                                       setActiveMenu(null);
                                     }}
-                                    className="w-full flex items-center px-3 py-2.5 text-xs text-slate-700 hover:bg-primary/5 hover:text-primary transition-colors"
+                                    className="w-full flex items-center px-3 py-2.5 text-xs text-slate-700 hover:bg-primary/5 hover:text-primary transition-colors h-10 sm:h-9"
                                   >
                                     <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mr-3 text-primary">
                                       <Plus size={16} />

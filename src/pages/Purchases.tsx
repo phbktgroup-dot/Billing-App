@@ -949,7 +949,7 @@ Return as JSON format: {
           
           <button 
             onClick={() => document.getElementById('purchase-file-input')?.click()}
-            className="btn-secondary"
+            className="btn-secondary h-10 sm:h-9"
           >
             <Scan size={14} className="mr-1.5 text-primary" />
             Scan Bill
@@ -965,7 +965,7 @@ Return as JSON format: {
               };
             }
           }} />
-          <button className="btn-primary" onClick={() => openModal()}>
+          <button className="btn-primary h-10 sm:h-9" onClick={() => openModal()}>
             <Plus size={14} className="mr-1.5" />
             Record Purchase
           </button>
@@ -988,7 +988,7 @@ Return as JSON format: {
             {selectedPurchases.length > 0 && (
               <button 
                 onClick={confirmBulkDelete}
-                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0"
+                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 h-10 sm:h-9"
               >
                 <Trash2 size={14} />
                 Bulk Delete ({selectedPurchases.length})
@@ -1091,19 +1091,19 @@ Return as JSON format: {
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(purchase)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Edit"
                         >
                           <Edit size={14} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(purchase.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Delete"
                         >
                           <Trash2 size={14} />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
                           <MoreVertical size={14} />
                         </button>
                       </div>
@@ -1530,14 +1530,14 @@ Return as JSON format: {
                 <button 
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all"
+                  className="px-4 h-10 sm:h-9 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all flex items-center justify-center"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleSave}
                   disabled={isSaving || (!formData.supplier_id && !formData.supplier_name)}
-                  className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-black flex items-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                  className="px-6 h-10 sm:h-9 bg-primary text-white rounded-xl text-xs font-black flex items-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
                 >
                   {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   {editingPurchase ? 'Update Record' : 'Save Purchase'}

@@ -170,7 +170,7 @@ export default function Transporters() {
         title="Transporter Management" 
         description="Manage your logistics partners, track transporter IDs, and streamline e-way bill generation."
       >
-        <button className="btn-primary flex items-center px-4 py-2 text-sm" onClick={() => openModal()}>
+        <button className="btn-primary flex items-center px-4 h-10 sm:h-9 text-sm" onClick={() => openModal()}>
           <Plus size={16} className="mr-1.5" />
           Add Transporter
         </button>
@@ -218,7 +218,7 @@ export default function Transporters() {
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <Truck className="w-12 h-12 mx-auto text-slate-200 mb-2" />
                     <p className="text-slate-500 font-medium">No transporters found</p>
-                    <button onClick={() => openModal()} className="text-primary text-sm font-bold mt-2 hover:underline">Add your first transporter</button>
+                    <button onClick={() => openModal()} className="text-primary text-sm font-bold mt-2 hover:underline h-10 sm:h-9">Add your first transporter</button>
                   </td>
                 </tr>
               ) : (
@@ -262,14 +262,14 @@ export default function Transporters() {
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(transporter)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Edit"
                         >
                           <Edit size={16} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(transporter.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Delete"
                         >
                           <Trash2 size={16} />
@@ -296,7 +296,7 @@ export default function Transporters() {
             <button 
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="flex-1 px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
+              className="flex-1 px-6 h-10 sm:h-9 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center"
             >
               Cancel
             </button>
@@ -304,7 +304,7 @@ export default function Transporters() {
               type="submit"
               form="transporter-form"
               disabled={isSaving}
-              className="flex-1 px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center justify-center disabled:opacity-50"
+              className="flex-1 px-6 h-10 sm:h-9 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all flex items-center justify-center disabled:opacity-50"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
               {editingTransporter ? 'Update' : 'Save'}

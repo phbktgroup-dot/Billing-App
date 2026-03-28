@@ -762,7 +762,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       >
         <div className="flex flex-wrap items-center gap-3">
           {type === 'itr' && (
-            <button className="btn-secondary">
+            <button className="btn-secondary h-10 sm:h-9">
               <Info size={18} className="mr-2" />
               Help Guide
             </button>
@@ -776,7 +776,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               Complete ITR Profile
             </button>
           )}
-          <button className="btn-primary" onClick={handleGenerateAll} disabled={isGenerating}>
+          <button className="btn-primary h-10 sm:h-9" onClick={handleGenerateAll} disabled={isGenerating}>
             {isGenerating ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
             ) : (
@@ -828,7 +828,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                       <button 
                         onClick={() => handleDownloadReport(report.id, report.name, report.format)}
                         disabled={downloadingReport === report.id}
-                        className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all disabled:opacity-50 shadow-sm"
+                        className="w-10 h-10 sm:h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all disabled:opacity-50 shadow-sm"
                         title={`Download ${report.format}`}
                       >
                         {downloadingReport === report.id ? (
@@ -887,7 +887,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                       {portalDocs[doc.id] ? (
                         <button 
                           onClick={() => removePortalDoc(doc.id)}
-                          className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Remove Document"
                         >
                           <Trash2 size={18} />
@@ -953,7 +953,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             <div className="space-y-2">
               <button 
                 onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
-                className="w-full text-left px-4 py-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
+                className="w-full text-left px-4 h-10 sm:h-9 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
               >
                 <div className="flex items-center">
                   <ExternalLink size={18} className="mr-3 text-emerald-500" />
@@ -963,7 +963,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               </button>
               <button 
                 onClick={() => window.open('https://www.gst.gov.in/', '_blank')}
-                className="w-full text-left px-4 py-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
+                className="w-full text-left px-4 h-10 sm:h-9 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
               >
                 <div className="flex items-center">
                   <ExternalLink size={18} className="mr-3 text-emerald-500" />
@@ -980,7 +980,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
                   };
                   window.open(urls[type], '_blank');
                 }}
-                className="w-full text-left px-4 py-3 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
+                className="w-full text-left px-4 h-10 sm:h-9 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
               >
                 <div className="flex items-center">
                   <FileCheck size={18} className="mr-3 text-emerald-500" />
@@ -1016,15 +1016,15 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               <div className="glass-card p-6">
                 <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
                 <div className="space-y-2">
-                  <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                  <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
                     Update Tax Rates
                     <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
                   </button>
-                  <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                  <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
                     View HSN Codes
                     <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
                   </button>
-                  <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                  <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
                     Manage Branches
                     <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
                   </button>

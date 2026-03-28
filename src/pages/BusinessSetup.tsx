@@ -237,7 +237,7 @@ export default function BusinessSetup() {
       <div className="absolute top-4 right-4">
         <button
           onClick={() => signOut()}
-          className="flex items-center space-x-1.5 text-slate-500 hover:text-red-600 transition-colors font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 text-xs"
+          className="flex items-center space-x-1.5 text-slate-500 hover:text-red-600 transition-colors font-medium px-3 h-10 sm:h-9 rounded-lg hover:bg-red-50 text-xs"
         >
           <LogOut size={14} />
           <span>Logout</span>
@@ -509,7 +509,7 @@ export default function BusinessSetup() {
             <button 
               type="submit" 
               disabled={isLoading || isUploading}
-              className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
+              className="w-full h-10 sm:h-9 bg-primary text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all hover:bg-primary/90 disabled:opacity-50"
             >
               {isLoading || isUploading ? (
                 <>

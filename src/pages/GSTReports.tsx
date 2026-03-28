@@ -821,7 +821,7 @@ export default function GSTReports() {
             <h3 className="text-xs font-bold text-slate-900">B2B Invoices Summary</h3>
             <button 
               onClick={exportGSTR1AsZip}
-              className="px-3 py-1.5 bg-primary text-white rounded-lg text-[10px] font-bold flex items-center hover:bg-primary/90 transition-all"
+              className="px-3 h-10 sm:h-9 bg-primary text-white rounded-lg text-[10px] font-bold flex items-center hover:bg-primary/90 transition-all"
             >
               <Download size={12} className="mr-1.5" />
               Download GSTR-1 Report
@@ -918,7 +918,7 @@ export default function GSTReports() {
             </div>
             <button 
               onClick={exportGSTR3BAsZip}
-              className="px-4 py-2 bg-white text-slate-900 rounded-xl text-[11px] font-bold hover:bg-slate-100 transition-all flex items-center"
+              className="px-4 h-10 sm:h-9 bg-white text-slate-900 rounded-xl text-[11px] font-bold hover:bg-slate-100 transition-all flex items-center"
             >
               <Download size={14} className="mr-2" />
               Download GSTR-3B Report
@@ -937,7 +937,7 @@ export default function GSTReports() {
             <h3 className="text-xs font-bold text-slate-900">GSTR-2A Auto-populated Data (Purchases)</h3>
             <button 
               onClick={exportGSTR2AAsZip}
-              className="px-3 py-1.5 bg-primary text-white rounded-lg text-[10px] font-bold flex items-center hover:bg-primary/90 transition-all"
+              className="px-3 h-10 sm:h-9 bg-primary text-white rounded-lg text-[10px] font-bold flex items-center hover:bg-primary/90 transition-all"
             >
               <Download size={12} className="mr-1.5" />
               Download GSTR-2A Report
@@ -1018,7 +1018,7 @@ export default function GSTReports() {
         <div className="flex items-center space-x-3">
           <button 
             onClick={downloadAllAsZip}
-            className="btn-primary"
+            className="btn-primary h-10 sm:h-9"
           >
             <Download size={14} className="mr-2" />
             Download All Reports (ZIP)
@@ -1036,7 +1036,7 @@ export default function GSTReports() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-[11px] font-bold transition-all",
+                  "px-4 h-10 sm:h-9 rounded-lg text-[11px] font-bold transition-all",
                   activeTab === tab 
                     ? "bg-white text-primary shadow-sm" 
                     : "text-slate-500 hover:text-slate-700"

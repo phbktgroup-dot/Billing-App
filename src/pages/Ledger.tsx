@@ -330,7 +330,7 @@ export default function Ledger() {
             <button 
               onClick={() => setLedgerType('customer')}
               className={cn(
-                "px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                "px-4 h-10 sm:h-9 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center",
                 ledgerType === 'customer' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
@@ -339,7 +339,7 @@ export default function Ledger() {
             <button 
               onClick={() => setLedgerType('supplier')}
               className={cn(
-                "px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                "px-4 h-10 sm:h-9 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center",
                 ledgerType === 'supplier' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
@@ -351,7 +351,7 @@ export default function Ledger() {
             <button 
               onClick={handleExportPDF}
               disabled={loading || isExporting || !selectedPartyId}
-              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50"
+              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50 h-10 sm:h-9 w-10 flex items-center justify-center"
               title="Export PDF"
             >
               <FileText size={16} />
@@ -359,7 +359,7 @@ export default function Ledger() {
             <button 
               onClick={handleExportExcel}
               disabled={loading || isExporting || !selectedPartyId}
-              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50"
+              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50 h-10 sm:h-9 w-10 flex items-center justify-center"
               title="Export Excel"
             >
               <Download size={16} />

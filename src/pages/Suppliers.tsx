@@ -227,7 +227,7 @@ export default function Suppliers() {
       >
         <div className="flex items-center space-x-2">
           
-          <button className="btn-primary" onClick={() => openModal()}>
+          <button className="btn-primary h-10 sm:h-9" onClick={() => openModal()}>
             <Plus size={14} className="mr-1.5" />
             Add Supplier
           </button>
@@ -250,7 +250,7 @@ export default function Suppliers() {
             {selectedSuppliers.length > 0 && (
               <button 
                 onClick={confirmBulkDelete}
-                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0"
+                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 h-10 sm:h-9"
               >
                 <Trash2 size={14} />
                 Bulk Delete ({selectedSuppliers.length})
@@ -258,7 +258,7 @@ export default function Suppliers() {
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
+            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
               <Filter size={16} />
             </button>
             <div className="h-5 w-[1px] bg-slate-200"></div>
@@ -353,19 +353,19 @@ export default function Suppliers() {
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(supplier)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Edit"
                         >
                           <Edit size={14} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(supplier.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Delete"
                         >
                           <Trash2 size={14} />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
                           <MoreVertical size={14} />
                         </button>
                       </div>
@@ -389,7 +389,7 @@ export default function Suppliers() {
             <button 
               type="button"
               onClick={closeModal}
-              className="px-3 py-1.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors text-xs"
+              className="px-3 h-10 sm:h-9 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors text-xs flex items-center justify-center"
             >
               Cancel
             </button>
@@ -399,7 +399,7 @@ export default function Suppliers() {
                 handleSave(e as any);
               }}
               disabled={isSaving}
-              className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center disabled:opacity-50"
+              className="px-3 h-10 sm:h-9 bg-primary text-white rounded-lg text-xs font-bold flex items-center disabled:opacity-50 justify-center"
             >
               {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
               {editingSupplier ? 'Update Supplier' : 'Save Supplier'}

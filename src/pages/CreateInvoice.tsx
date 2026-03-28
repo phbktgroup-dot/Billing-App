@@ -1713,7 +1713,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="md:col-span-2 flex items-end">
                       <button 
                         onClick={addItem}
-                        className="w-full py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center hover:shadow-lg hover:shadow-emerald-500/30 transition-all active:scale-95"
+                        className="w-full h-10 sm:h-9 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center hover:shadow-lg hover:shadow-emerald-500/30 transition-all active:scale-95"
                       >
                         <Plus size={16} className="mr-1.5" strokeWidth={2.5} /> Add Item
                       </button>
@@ -2115,7 +2115,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <button 
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="w-full py-2.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-bold flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 transition-all group active:scale-95 text-xs"
+                        className="w-full h-10 sm:h-9 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-bold flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 transition-all group active:scale-95 text-xs"
                       >
                         {isSaving ? (
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -2128,7 +2128,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       </button>
                       <button
                         onClick={handlePreview}
-                        className="w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 text-xs shadow-sm"
+                        className="w-full h-10 sm:h-9 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 text-xs shadow-sm"
                       >
                         <Eye size={14} className="mr-2" strokeWidth={2.5} />
                         Preview Invoice
@@ -2157,14 +2157,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 <div className="flex space-x-3">
                   <button 
                     onClick={() => setViewMode('edit')}
-                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
+                    className="px-4 h-10 sm:h-9 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
                   >
                     Back to Edit
                   </button>
                   <button 
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-xs font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50 active:scale-95"
+                    className="px-4 h-10 sm:h-9 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-xs font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50 active:scale-95"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
                     Save & Download

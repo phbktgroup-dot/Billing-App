@@ -176,7 +176,7 @@ export default function Analytics() {
             <p className="text-xs text-blue-100 leading-relaxed">
               AI suggests reducing stock for "Wireless Mouse" by 15% and increasing "4K Monitors" by 20% based on seasonal demand trends.
             </p>
-            <button className="mt-3 flex items-center text-xs font-bold hover:underline">
+            <button className="mt-3 flex items-center text-xs font-bold hover:underline h-10 sm:h-9">
               Apply Suggestion <ArrowRight size={14} className="ml-1.5" />
             </button>
           </div>
@@ -257,7 +257,7 @@ export default function Analytics() {
             <button 
               onClick={askAI}
               disabled={isThinking || !query.trim()}
-              className="px-4 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all disabled:opacity-50"
+              className="px-4 h-10 sm:h-9 bg-primary text-white rounded-lg text-xs font-bold flex items-center hover:bg-primary/90 transition-all disabled:opacity-50"
             >
               Analyze
               <ArrowRight size={14} className="ml-1.5" />

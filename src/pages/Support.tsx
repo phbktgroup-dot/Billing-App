@@ -145,7 +145,7 @@ export default function Support() {
             <p className="text-sm text-slate-500">
               For enterprise customers, we provide dedicated account managers and 24/7 priority support.
             </p>
-            <button className="w-full py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">
+            <button className="w-full h-10 sm:h-9 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors flex items-center justify-center">
               Upgrade Plan
             </button>
           </div>

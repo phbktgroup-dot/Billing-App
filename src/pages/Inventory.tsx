@@ -300,12 +300,12 @@ export default function Inventory() {
           
           <button 
             onClick={() => setShowStockHistory(true)}
-            className="btn-secondary"
+            className="btn-secondary h-10 sm:h-9"
           >
             <ArrowUpDown size={14} className="mr-1" />
             Stock History
           </button>
-          <button className="btn-primary" onClick={() => openModal()}>
+          <button className="btn-primary h-10 sm:h-9" onClick={() => openModal()}>
             <Plus size={14} className="mr-1" />
             Add Product
           </button>
@@ -320,7 +320,7 @@ export default function Inventory() {
               {lowStockAlerts.length} items are running low on stock!
             </p>
           </div>
-          <button onClick={() => setLowStockAlerts([])} className="text-orange-600 hover:text-orange-800">
+          <button onClick={() => setLowStockAlerts([])} className="text-orange-600 hover:text-orange-800 h-10 sm:h-9 w-10 flex items-center justify-center">
             <X size={14} />
           </button>
         </div>
@@ -372,14 +372,14 @@ export default function Inventory() {
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsBulkEditModalOpen(true)}
-                  className="bg-primary text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-all"
+                  className="bg-primary text-white px-3 h-10 sm:h-9 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-primary/90 transition-all"
                 >
                   <Edit size={12} />
                   Bulk Edit ({selectedProducts.length})
                 </button>
                 <button 
                   onClick={confirmBulkDelete}
-                  className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all"
+                  className="bg-red-600 text-white px-3 h-10 sm:h-9 rounded-lg text-[10px] font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all"
                 >
                   <Trash2 size={12} />
                   Bulk Delete
@@ -388,7 +388,7 @@ export default function Inventory() {
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
+            <button className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
               <Filter size={12} />
             </button>
             <div className="h-3 w-[1px] bg-slate-200"></div>
@@ -436,7 +436,7 @@ export default function Inventory() {
                   <td colSpan={8} className="px-3 py-6 text-center">
                     <Package className="w-8 h-8 mx-auto text-slate-200 mb-1.5" />
                     <p className="text-slate-500 font-medium text-[10px]">No products found</p>
-                    <button onClick={() => openModal()} className="text-primary text-[10px] font-bold mt-0.5 hover:underline">Add your first product</button>
+                    <button onClick={() => openModal()} className="text-primary text-[10px] font-bold mt-0.5 hover:underline h-10 sm:h-9">Add your first product</button>
                   </td>
                 </tr>
               ) : (
@@ -507,13 +507,13 @@ export default function Inventory() {
                       <div className="flex items-center space-x-1">
                         <button 
                           onClick={() => openModal(product)}
-                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded transition-all"
+                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                         >
                           <Edit size={12} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(product.id)}
-                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -538,7 +538,7 @@ export default function Inventory() {
           <>
             <button 
               onClick={() => setIsBulkEditModalOpen(false)} 
-              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
+              className="px-4 h-10 sm:h-9 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px]"
             >
               Cancel
             </button>
@@ -561,7 +561,7 @@ export default function Inventory() {
                   setSelectedProducts([]);
                 }
               }}
-              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center text-[10px]"
+              className="px-6 h-10 sm:h-9 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center text-[10px]"
             >
               <Save className="w-3.5 h-3.5 mr-1.5" />
               Apply Changes
@@ -622,7 +622,7 @@ export default function Inventory() {
             <button 
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px] shadow-sm"
+              className="px-4 h-10 sm:h-9 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all text-[10px] shadow-sm"
             >
               Cancel
             </button>
@@ -632,7 +632,7 @@ export default function Inventory() {
                 handleSave(e as any);
               }}
               disabled={isSaving}
-              className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px] shadow-lg shadow-primary/20"
+              className="px-6 h-10 sm:h-9 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all flex items-center disabled:opacity-50 text-[10px] shadow-lg shadow-primary/20"
             >
               {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
               {editingProduct ? 'Update Product' : 'Save Product'}

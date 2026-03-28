@@ -198,14 +198,14 @@ export default function Reports() {
           
           <button 
             onClick={() => generateProfitLossPDF(summary, profile?.business_profiles || { name: 'Business' })}
-            className="btn-secondary"
+            className="btn-secondary h-10 sm:h-9"
           >
             <Download size={14} className="mr-1.5" />
             Export PDF
           </button>
           <button 
             onClick={() => generateProfitLossExcel(summary, profile?.business_profiles || { name: 'Business' })}
-            className="btn-secondary"
+            className="btn-secondary h-10 sm:h-9"
           >
             <Download size={14} className="mr-1.5" />
             Export Excel
@@ -380,7 +380,7 @@ export default function Reports() {
               Quick Actions
             </h4>
             <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+              <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
                 View Detailed P&L
                 <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
               </button>

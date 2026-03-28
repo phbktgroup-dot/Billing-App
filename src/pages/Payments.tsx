@@ -313,7 +313,7 @@ export default function Payments() {
       >
         <button 
           onClick={() => setIsDrawerOpen(true)}
-          className="btn-primary"
+          className="btn-primary h-10 sm:h-9"
         >
           <Plus size={14} className="mr-1.5" />
           Record Payment
@@ -434,7 +434,7 @@ export default function Payments() {
                           setPaymentToDelete(payment.id);
                           setIsDeleteModalOpen(true);
                         }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -466,7 +466,7 @@ export default function Payments() {
                   setPartyInvoices([]);
                 }}
                 className={cn(
-                  "py-2 rounded-xl text-xs font-bold border-2 transition-all",
+                  "py-2 rounded-xl text-xs font-bold border-2 transition-all h-10 sm:h-9",
                   formData.type === 'receipt' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-100 text-slate-500"
                 )}
               >
@@ -479,7 +479,7 @@ export default function Payments() {
                   setPartyInvoices([]);
                 }}
                 className={cn(
-                  "py-2 rounded-xl text-xs font-bold border-2 transition-all",
+                  "py-2 rounded-xl text-xs font-bold border-2 transition-all h-10 sm:h-9",
                   formData.type === 'payment' ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-100 text-slate-500"
                 )}
               >
@@ -661,7 +661,7 @@ export default function Payments() {
           <button
             type="submit"
             disabled={isSaving}
-            className="w-full py-3 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center justify-center"
+            className="w-full h-10 sm:h-9 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center justify-center"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
             Save Transaction

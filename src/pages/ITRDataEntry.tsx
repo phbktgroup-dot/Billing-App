@@ -140,7 +140,7 @@ export default function ITRDataEntry() {
       <div className="flex items-center space-x-4">
         <button 
           onClick={() => navigate('/tax-tools')}
-          className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+          className="p-2 h-10 sm:h-9 hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center"
         >
           <ArrowLeft size={20} className="text-slate-500" />
         </button>
@@ -344,7 +344,7 @@ export default function ITRDataEntry() {
           <button 
             type="submit" 
             disabled={isSaving}
-            className="btn-primary flex items-center px-6"
+            className="btn-primary h-10 sm:h-9 flex items-center px-6"
           >
             <Save size={18} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save ITR Profile'}

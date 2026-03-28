@@ -648,16 +648,16 @@ export default function Dashboard() {
           {loading && <Loader2 className="w-4 h-4 animate-spin text-primary hidden sm:block" />}
           <button 
             onClick={() => navigate('/invoices/new')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 active:scale-95 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 border border-blue-500/50"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 border border-blue-500/50"
           >
-            <Plus size={18} className="mr-2" />
+            <Plus size={16} className="mr-1.5" />
             <span>Create Invoice</span>
           </button>
           <button 
             onClick={() => setShowScanOptions(true)}
-            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 active:scale-95 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 border border-emerald-500/50"
+            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 border border-emerald-500/50"
           >
-            <Scan size={18} className="mr-2 text-white" />
+            <Scan size={16} className="mr-1.5 text-white" />
             <span>Scan Invoice</span>
           </button>
         </div>
