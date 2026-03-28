@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { FilterIcon } from './icons/FilterIcon';
 import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, subYears, isSameDay } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
+import 'react-day-picker/style.css';
 import { cn } from '../lib/utils';
 
 type FilterType = 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'last7Days' | 'last30Days' | 'day' | 'custom' | 'year';
@@ -31,6 +31,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalSetIsOpen || setInternalIsOpen;
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'presets' | 'date' | 'range' | 'year'>('presets');
   
   const parseDateString = (dateStr: string) => {
@@ -49,7 +50,8 @@ export const DateFilter: React.FC<DateFilterProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       if (!document.contains(target)) return; // Ignore clicks on elements removed from DOM
-      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(target) && 
+          portalRef.current && !portalRef.current.contains(target)) {
         setIsOpen(false);
       }
     };
@@ -129,7 +131,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   ];
 
   const dialogContent = isOpen && (
-    <>
+    <div ref={portalRef}>
       {/* Mobile Backdrop */}
       <div 
         className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9998] sm:hidden" 
@@ -214,7 +216,6 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               selected={selectedDate}
               onSelect={handleDateSelect}
               className="border-0 p-3"
-              captionLayout="dropdown"
               fromYear={1900}
               toYear={2100}
             />
@@ -228,7 +229,6 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               selected={selectedRange}
               onSelect={handleRangeSelect}
               className="border-0 p-3"
-              captionLayout="dropdown"
               fromYear={1900}
               toYear={2100}
             />
@@ -270,7 +270,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
         )}
       </div>
     </div>
-  </>
+    </div>
   );
 
   return (
