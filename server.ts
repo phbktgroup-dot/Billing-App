@@ -416,7 +416,7 @@ app.post("/api/auth/check-email", async (req, res) => {
 
 app.post("/api/scan", async (req, res) => {
   try {
-    const { base64Data, mimeType, prompt, apiKey } = req.body;
+    const { base64Data, mimeType, prompt, apiKey, config = {} } = req.body;
     
     // Use the provided API key or fallback to the server's environment variable
     const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY;
@@ -438,7 +438,8 @@ app.post("/api/scan", async (req, res) => {
         }
       ],
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        ...config
       }
     });
 

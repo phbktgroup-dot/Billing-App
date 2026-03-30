@@ -81,15 +81,16 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   
   // Table columns (from 88 to 197)
   doc.line(20, 88, 20, 197); // S.N.
-  doc.line(95, 88, 95, 197); // Description end
-  doc.line(130, 88, 130, 197); // Product Code end
-  doc.line(150, 88, 150, 197); // Qty end
-  doc.line(175, 88, 175, 197); // Price end
+  doc.line(85, 88, 85, 197); // Description end
+  doc.line(105, 88, 105, 197); // HSN Code end
+  doc.line(125, 88, 125, 197); // GST Rate end
+  doc.line(145, 88, 145, 197); // Qty end
+  doc.line(170, 88, 170, 197); // Price end
   doc.line(200, 92, 200, 212); // Table end (Keep right border)
   
   // Vertical line for Total row (Qty column)
-  doc.line(150, 205, 150, 212);
-  doc.line(175, 205, 175, 212);
+  doc.line(145, 205, 145, 212);
+  doc.line(170, 205, 170, 212);
   
   // Footer middle
   doc.line(120, 265, 120, 292);
@@ -108,15 +109,6 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
     } catch (e) {
       console.error("Failed to load logo image", e);
     }
-  } else {
-    doc.setFillColor(30, 30, 30);
-    doc.rect(15, 12, 22, 22, 'F');
-    doc.setDrawColor(218, 165, 32);
-    doc.setLineWidth(1);
-    doc.circle(26, 23, 6, 'S');
-    doc.setFontSize(10);
-    doc.setTextColor(218, 165, 32);
-    doc.text("H", 26, 26, { align: 'center' });
   }
   
   doc.setTextColor(0);
@@ -205,11 +197,12 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.text("S.N.", 15, 94, { align: 'center' });
-  doc.text("Description of Goods", 57.5, 94, { align: 'center' });
-  doc.text("HSN Code", 112.5, 94, { align: 'center' });
-  doc.text("Qty.", 140, 94, { align: 'center' });
-  doc.text("Price", 162.5, 94, { align: 'center' });
-  doc.text("Amount\n(Rs.)", 187.5, 92, { align: 'center' });
+  doc.text("Description of Goods", 52.5, 94, { align: 'center' });
+  doc.text("HSN Code", 95, 94, { align: 'center' });
+  doc.text("GST Rate", 115, 94, { align: 'center' });
+  doc.text("Qty.", 135, 94, { align: 'center' });
+  doc.text("Price", 157.5, 94, { align: 'center' });
+  doc.text("Amount\n(Rs.)", 185, 92, { align: 'center' });
 
   // Table Items
   doc.setFont("helvetica", "normal");
@@ -218,9 +211,10 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
     if (currentY > 190) return; // Prevent items from overflowing table
     doc.text((index + 1).toString(), 15, currentY, { align: 'center' });
     doc.text(item.name, 22, currentY);
-    doc.text(item.hsnCode || "-", 112.5, currentY, { align: 'center' });
-    doc.text(item.quantity.toString(), 140, currentY, { align: 'center' });
-    doc.text(item.rate.toFixed(2), 173, currentY, { align: 'right' });
+    doc.text(item.hsnCode || "-", 95, currentY, { align: 'center' });
+    doc.text(`${item.gstRate || 0}%`, 115, currentY, { align: 'center' });
+    doc.text(item.quantity.toString(), 135, currentY, { align: 'center' });
+    doc.text(item.rate.toFixed(2), 168, currentY, { align: 'right' });
     doc.text((item.quantity * item.rate).toFixed(2), 198, currentY, { align: 'right' });
     
     currentY += 6;
@@ -239,7 +233,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   doc.text("Total Amount :", 25, 209);
   
   const totalQty = invoice.items.reduce((sum, i) => sum + i.quantity, 0);
-  doc.text(totalQty.toString(), 140, 209, { align: 'center' });
+  doc.text(totalQty.toString(), 135, 209, { align: 'center' });
   doc.text(invoice.subtotal.toFixed(2), 198, 209, { align: 'right' });
 
   // Tax and Grand Total (Stacked on the right)
@@ -254,26 +248,20 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
 
   if (gstRates.length > 0) {
     if (!invoice.is_inter_state) {
-      const cgstRate = isSingleRate ? totalGstRate / 2 : 0;
-      const sgstRate = isSingleRate ? totalGstRate / 2 : 0;
-      const cgstText = isSingleRate ? `CGST ${cgstRate}%` : "CGST Variable%";
-      const sgstText = isSingleRate ? `SGST ${sgstRate}%` : "SGST Variable%";
       const cgstVal = invoice.cgst_amount || 0;
       const sgstVal = invoice.sgst_amount || 0;
 
-      doc.text(`Add :${cgstText} :`, 130, summaryY);
+      doc.text(`Add :CGST :`, 130, summaryY);
       doc.text(cgstVal.toFixed(2), 198, summaryY, { align: 'right' });
       summaryY += 6;
 
-      doc.text(`Add :${sgstText} :`, 130, summaryY);
+      doc.text(`Add :SGST :`, 130, summaryY);
       doc.text(sgstVal.toFixed(2), 198, summaryY, { align: 'right' });
       summaryY += 6;
     } else {
-      const igstRate = isSingleRate ? totalGstRate : 0;
-      const igstText = isSingleRate ? `IGST ${igstRate}%` : "IGST Variable%";
       const igstVal = invoice.igst_amount || 0;
 
-      doc.text(`Add :${igstText} :`, 130, summaryY);
+      doc.text(`Add :IGST :`, 130, summaryY);
       doc.text(igstVal.toFixed(2), 198, summaryY, { align: 'right' });
       summaryY += 6;
     }
@@ -289,6 +277,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
     doc.text("0.00", 198, summaryY, { align: 'right' });
     summaryY += 8;
   }
+
 
   // Grand Total Row
   const words = numberToWords(Math.round(invoice.total)).toUpperCase();

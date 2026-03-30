@@ -737,7 +737,7 @@ export default function Invoices() {
                                     setActiveMenu(null);
                                   }}
                                 />
-                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[70] animate-in fade-in zoom-in duration-200 origin-top-right">
+                                <div className="absolute right-0 top-full mt-2 w-56 !bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right opacity-100">
                                   <div className="px-3 py-2 mb-1 border-bottom border-slate-50">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Actions</p>
                                   </div>

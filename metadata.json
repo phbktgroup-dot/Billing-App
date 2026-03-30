@@ -1,6 +1,6 @@
 {
   "name": "Billing pro+",
-  "description": "A production-ready SaaS platform for business management, billing, inventory, and AI analytics.",
+  "description": "A production-ready SaaS platform for business management, billing, inventory, and AI analytics. Now with support for Excel, CSV, and PDF data import and viewing.",
   "requestFramePermissions": [
     "camera"
   ]

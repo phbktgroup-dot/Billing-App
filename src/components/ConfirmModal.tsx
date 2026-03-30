@@ -6,7 +6,7 @@ import Drawer from './Drawer';
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
   confirmText?: string;
@@ -19,7 +19,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   onConfirm,
   onCancel,
-  confirmText = 'Delete',
+  confirmText = 'Confirm',
   confirmVariant = 'danger'
 }) => {
   const variantClasses = {
@@ -29,23 +29,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   const footer = (
-    <>
+    <div className="flex items-center justify-end space-x-3 w-full">
       <button
         onClick={onCancel}
-        className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        className="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
       >
         Cancel
       </button>
       <button
         onClick={() => {
           onConfirm();
-          onCancel();
         }}
-        className={cn("px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm", variantClasses[confirmVariant])}
+        className={cn("px-6 py-2 text-xs font-bold text-white rounded-xl transition-all shadow-lg", variantClasses[confirmVariant])}
       >
         {confirmText}
       </button>
-    </>
+    </div>
   );
 
   return (
@@ -55,10 +54,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       title={title}
       icon={<AlertTriangle size={18} className={cn(confirmVariant === 'danger' ? "text-red-600" : confirmVariant === 'success' ? "text-emerald-600" : "text-primary")} />}
       footer={footer}
-      maxWidth="max-w-sm"
+      maxWidth="max-w-md"
     >
-      <div className="py-4">
-        <p className="text-slate-600 text-sm">{message}</p>
+      <div className="py-2">
+        {typeof message === 'string' ? (
+          <p className="text-slate-600 text-[11px] font-medium leading-relaxed">{message}</p>
+        ) : (
+          message
+        )}
       </div>
     </Drawer>
   );

@@ -671,7 +671,7 @@ export default function Purchases() {
         supplier_address: '',
         invoice_number: purchase.invoice_number || '',
         bill_date: purchase.bill_date || purchase.date || new Date().toISOString().split('T')[0],
-        upload_date: purchase.upload_date || new Date(purchase.created_at).toISOString().split('T')[0],
+        upload_date: purchase.upload_date || (purchase.created_at ? new Date(purchase.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         total_amount: purchase.total_amount || 0,
         cgst_total: purchase.cgst_amount || 0,
         sgst_total: purchase.sgst_amount || 0,

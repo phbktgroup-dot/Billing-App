@@ -1326,7 +1326,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           >
             <div className="xl:col-span-2 space-y-6 pr-2">
               {/* Customer & Details Section */}
-              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                 <div className="flex items-center justify-between mb-5 relative z-10">
                   <div className="flex items-center space-x-3">
@@ -1346,10 +1346,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative z-20">
                   <div className="space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Series</label>
-                    <div className="relative">
+                    <div className="relative z-[100]">
                       <input 
                         type="text"
                         className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
@@ -1389,16 +1389,16 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       
                       {/* Custom Dropdown List */}
                       {showSeriesList && invoiceSeries.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl transition-all max-h-40 overflow-y-auto">
-                          <div className="p-1">
-                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50">
+                        <div className="absolute z-[9999] left-0 right-0 mt-1 !bg-white border border-slate-300 rounded-lg shadow-2xl transition-all max-h-40 overflow-y-auto opacity-100">
+                          <div className="p-1 !bg-white">
+                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 !bg-white sticky top-0">
                               Series List
                             </div>
                             {invoiceSeries.map(series => (
                               <button
                                 key={series.id}
                                 type="button"
-                                className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between"
+                                className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between !bg-white"
                                 onClick={() => {
                                   setInvoiceNumber(formatSeriesNumber(series));
                                   setSelectedSeriesId(series.id);
@@ -1422,7 +1422,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </div>
                   <div className="space-y-0.5 md:col-span-2">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
-                    <div className="relative">
+                    <div className="relative z-[100]">
                       <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input 
                         type="text" 
@@ -1457,9 +1457,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       
                       {/* Custom Customer Dropdown */}
                       {showCustomerList && customers.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl transition-all max-h-48 overflow-y-auto">
-                          <div className="p-1">
-                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50">
+                        <div className="absolute z-[9999] left-0 right-0 mt-1 !bg-white border border-slate-300 rounded-lg shadow-2xl max-h-48 overflow-y-auto opacity-100">
+                          <div className="p-1 !bg-white">
+                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 sticky top-0 !bg-white">
                               Select Customer
                             </div>
                             {customers
@@ -1468,7 +1468,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 <button
                                   key={c.id}
                                   type="button"
-                                  className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between group"
+                                  className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between group !bg-white"
                                   onClick={() => {
                                     setCustomer({
                                       id: c.id,
@@ -1496,7 +1496,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 </button>
                               ))}
                             {customers.filter(c => c.name.toLowerCase().includes((customer.name || '').toLowerCase())).length === 0 && (
-                              <div className="px-2 py-3 text-center">
+                              <div className="px-2 py-3 text-center !bg-white">
                                 <p className="text-[9px] text-slate-400 font-medium italic">No matching customers</p>
                               </div>
                             )}

@@ -196,7 +196,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 onClick={() => setShowNotifications(false)}
               />
               
-              <div className="fixed inset-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full h-full sm:h-auto sm:w-96 bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-200 z-[110] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+              <div className="fixed inset-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full h-full sm:h-auto sm:w-96 !bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-200 z-[110] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden opacity-100">
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                   <div className="flex items-center space-x-3">
                     <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
@@ -317,7 +317,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
           {/* Click Dropdown for Logout */}
           {showMenu && (
-            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 transition-all z-50 p-2">
+            <div className="absolute top-full right-0 mt-2 w-48 !bg-white rounded-xl shadow-xl border border-slate-100 transition-all z-[100] p-2 opacity-100">
               <button onClick={() => { navigate('/settings'); setShowMenu(false); }} className="w-full flex items-center space-x-3 px-4 py-2 text-xs text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                 <Settings size={16} />
                 <span>Setting</span>

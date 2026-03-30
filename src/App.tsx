@@ -24,6 +24,7 @@ import ITRDataEntry from './pages/ITRDataEntry';
 import ITRReport from './pages/ITRReport';
 import Expenses from './pages/Expenses';
 // import Grow from './pages/Grow';
+import { Toaster } from 'sonner';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
 import { useState, useEffect } from 'react';
@@ -97,6 +98,7 @@ export default function App() {
 
   return (
     <HashRouter>
+      <Toaster position="top-right" richColors closeButton />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/setup" element={<ProtectedRoute><BusinessSetup /></ProtectedRoute>} />
