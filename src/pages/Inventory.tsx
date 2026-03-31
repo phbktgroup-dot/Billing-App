@@ -60,6 +60,16 @@ export default function Inventory() {
   });
   const [lowStockAlerts, setLowStockAlerts] = useState<Product[]>([]);
 
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
   const businessId = profile?.business_id;
 
   const [formData, setFormData] = useState({
@@ -265,14 +275,26 @@ export default function Inventory() {
   const outOfStockCount = products.filter(p => p.stock === 0).length;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 pt-2 relative"
-    >
+    <div className="space-y-4">
       <PageHeader 
         title="Inventory Management" 
         description="Track your stock levels, manage product variants, and monitor inventory movements."
+        isDateFilterOpen={isDateFilterOpen}
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
+          />
+        }
       >
         <div className="flex items-center space-x-2">
           

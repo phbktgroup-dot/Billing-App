@@ -48,6 +48,16 @@ export default function Ledger() {
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
   const businessId = profile?.business_id;
 
   const fetchParties = React.useCallback(async () => {
@@ -294,14 +304,26 @@ export default function Ledger() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 pt-2 relative"
-    >
+    <div className="space-y-6">
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
         description="View detailed transaction history, track outstanding balances, and reconcile accounts for your business partners."
+        isDateFilterOpen={isDateFilterOpen}
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
+          />
+        }
       >
         <div className="flex items-center space-x-4">
           <div className="flex bg-slate-100 p-1 rounded-xl">

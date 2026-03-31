@@ -26,6 +26,15 @@ type GSTReportType = 'GSTR-1' | 'GSTR-3B' | 'GSTR-2A';
 export default function GSTReports() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<GSTReportType>('GSTR-1');
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -978,11 +987,7 @@ export default function GSTReports() {
   const netGstPayable = Math.max(0, totalOutputTax - totalInputTax);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 pt-2 relative"
-    >
+    <div className="space-y-6">
       <PageHeader 
         title={
           <div className="flex items-center space-x-3">
@@ -993,6 +998,22 @@ export default function GSTReports() {
           </div>
         }
         description="Generate GST-ready reports, track input tax credits, and simplify your tax filing process."
+        isDateFilterOpen={isDateFilterOpen}
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
+          />
+        }
       >
         <div className="flex items-center space-x-3">
           <button 

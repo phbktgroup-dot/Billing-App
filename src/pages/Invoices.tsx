@@ -73,6 +73,16 @@ export default function Invoices() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
+  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [day, setDay] = useState<string>(getLocalToday());
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [ewaySettings, setEwaySettings] = useState<any>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -460,11 +470,27 @@ export default function Invoices() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 pt-2 relative"
+      className="p-3 space-y-3"
     >
       <PageHeader 
         title="Invoices" 
         description="Manage your sales invoices, track payments, and generate professional billing documents."
+        isDateFilterOpen={isDateFilterOpen}
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
+          />
+        }
       >
         <div className="flex items-center space-x-2">
           
