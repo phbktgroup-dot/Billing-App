@@ -1,10 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, User, LogOut, Search, Settings, ShieldCheck, HelpCircle, Lock, Menu, X, CheckCircle2, LogIn, RefreshCw, Calendar } from 'lucide-react';
+import { Bell, User, LogOut, Search, Settings, ShieldCheck, HelpCircle, Lock, Menu, X, CheckCircle2, LogIn, RefreshCw, Calendar, FileText, Users, Package, Loader2 } from 'lucide-react';
 import { cn, FilterType } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { DateFilter } from './DateFilter';
+
+interface SearchResult {
+  id: string;
+  type: 'invoice' | 'customer' | 'product';
+  title: string;
+  subtitle?: string;
+  path: string;
+}
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -19,6 +27,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Search States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Date Filter States for Notifications
   const [filterType, setFilterType] = useState<FilterType>('thisMonth');
@@ -112,10 +127,92 @@ export default function Header({ onMenuClick }: HeaderProps) {
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Global Search Logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        handleSearch(searchQuery);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const handleSearch = async (query: string) => {
+    if (!profile?.business_id) return;
+    
+    setIsSearching(true);
+    setShowSearchResults(true);
+    
+    try {
+      const businessId = profile.business_id;
+      
+      // Search Invoices
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, customers(name)')
+        .eq('business_id', businessId)
+        .ilike('invoice_number', `%${query}%`)
+        .limit(3);
+
+      // Search Customers
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, name, phone')
+        .eq('business_id', businessId)
+        .ilike('name', `%${query}%`)
+        .limit(3);
+
+      // Search Products
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, name, sku')
+        .eq('business_id', businessId)
+        .ilike('name', `%${query}%`)
+        .limit(3);
+
+      const results: SearchResult[] = [
+        ...(invoices?.map(inv => ({
+          id: inv.id,
+          type: 'invoice' as const,
+          title: inv.invoice_number,
+          subtitle: (inv.customers as any)?.name,
+          path: '/invoices'
+        })) || []),
+        ...(customers?.map(cust => ({
+          id: cust.id,
+          type: 'customer' as const,
+          title: cust.name,
+          subtitle: cust.phone,
+          path: '/customers'
+        })) || []),
+        ...(products?.map(prod => ({
+          id: prod.id,
+          type: 'product' as const,
+          title: prod.name,
+          subtitle: prod.sku,
+          path: '/inventory'
+        })) || [])
+      ];
+
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search error:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -142,34 +239,90 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-16 md:h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky z-[60] px-4 md:px-8 flex items-center justify-between",
+        "h-12 md:h-12 bg-white/80 backdrop-blur-xl sticky z-[60] px-4 md:px-8 flex items-center justify-between border-b border-slate-100",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
         <div className="absolute inset-0 -z-10 pointer-events-none" />
       {/* Left Section: Menu Toggle (Mobile) & Search (Desktop) */}
-      <div className="flex items-center space-x-4">
-        <button 
-          onClick={onMenuClick}
-          className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
-        >
-          <Menu size={20} />
-        </button>
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={onMenuClick}
+            className="lg:hidden p-2 text-primary hover:bg-slate-100 rounded-xl transition-all"
+          >
+            <Menu size={20} />
+          </button>
 
-        <div className="hidden md:flex items-center relative">
-          <input 
-            type="text"
-            placeholder="Search anything..."
-            className="bg-slate-100/50 border border-slate-200 rounded-full py-2 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:bg-white transition-all w-72"
-          />
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <div className="hidden md:flex items-center relative" ref={searchRef}>
+            <input 
+              type="text"
+              placeholder="Search anything..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.trim().length >= 2 && setShowSearchResults(true)}
+              className="bg-slate-100/50 border border-slate-200 rounded-full py-1.5 pl-9 pr-4 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:bg-white transition-all w-64"
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (
+              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Search Results</p>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {searchResults.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Search size={24} className="text-slate-200 mx-auto mb-2" />
+                      <p className="text-[11px] text-slate-500">No results found for "{searchQuery}"</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-50">
+                      {searchResults.map((result) => (
+                        <button
+                          key={`${result.type}-${result.id}`}
+                          onClick={() => {
+                            navigate(result.path);
+                            setShowSearchResults(false);
+                            setSearchQuery('');
+                          }}
+                          className="w-full flex items-center p-3 hover:bg-slate-50 transition-colors text-left group"
+                        >
+                          <div className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center mr-3 shrink-0 transition-transform group-hover:scale-110",
+                            result.type === 'invoice' ? "bg-blue-50 text-blue-500" :
+                            result.type === 'customer' ? "bg-emerald-50 text-emerald-500" :
+                            "bg-purple-50 text-purple-500"
+                          )}>
+                            {result.type === 'invoice' ? <FileText size={16} /> :
+                             result.type === 'customer' ? <Users size={16} /> :
+                             <Package size={16} />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold text-slate-900 truncate">{result.title}</p>
+                            {result.subtitle && (
+                              <p className="text-[10px] text-slate-500 truncate">{result.subtitle}</p>
+                            )}
+                          </div>
+                          <div className="text-[10px] font-medium text-slate-300 uppercase tracking-widest ml-2">
+                            {result.type}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Right Actions */}
       <div className="flex items-center space-x-4">
         <button 
           onClick={handleRefresh}
-          className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+          className="p-2 text-primary hover:bg-slate-100 rounded-xl transition-all"
         >
           <RefreshCw size={20} />
         </button>
@@ -178,7 +331,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             onClick={() => {
               setShowNotifications(!showNotifications);
             }}
-            className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all relative"
+            className="p-2 text-primary hover:bg-slate-100 rounded-xl transition-all relative"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -294,24 +447,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
         )}
       </div>
       
-      <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
+      <div className="h-8 w-[2px] bg-black mx-2 lg:hidden hidden"></div>
 
         <div 
           ref={menuRef}
           className="flex items-center space-x-3 cursor-pointer relative"
           onClick={() => setShowMenu(!showMenu)}
         >
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-slate-900 hover:text-primary transition-colors">
-              {profile?.name || user?.email?.split('@')[0] || 'Admin User'}
-            </p>
-            <p className="text-xs text-slate-500 font-medium">{profile?.business_profiles?.name || 'PHBKT Group Ltd'}</p>
-          </div>
-          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-primary/10 hover:text-primary transition-all overflow-hidden border border-slate-200 shadow-sm">
+          <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 transition-all overflow-hidden border border-slate-200 shadow-sm">
             {profile?.business_profiles?.logo_url ? (
               <img src={profile.business_profiles.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              <User size={20} />
+              <User size={16} />
             )}
           </div>
 

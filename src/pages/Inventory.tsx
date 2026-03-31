@@ -60,16 +60,6 @@ export default function Inventory() {
   });
   const [lowStockAlerts, setLowStockAlerts] = useState<Product[]>([]);
 
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  const getLocalToday = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-  const [day, setDay] = useState<string>(getLocalToday());
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-
   const businessId = profile?.business_id;
 
   const [formData, setFormData] = useState({
@@ -275,26 +265,14 @@ export default function Inventory() {
   const outOfStockCount = products.filter(p => p.stock === 0).length;
 
   return (
-    <div className="space-y-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-2 pt-2 relative"
+    >
       <PageHeader 
         title="Inventory Management" 
         description="Track your stock levels, manage product variants, and monitor inventory movements."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-2">
           
@@ -327,28 +305,28 @@ export default function Inventory() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div className="glass-card p-2.5 border-l-4 border-blue-500">
-          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Total Items</p>
-          <h3 className="text-sm font-bold text-slate-900 mt-0">{products.length}</h3>
-          <div className="flex items-center text-[8px] text-emerald-600 font-bold mt-0.5">
-            <ArrowUpRight size={8} className="mr-1" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-[32px] shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Items</p>
+          <h3 className="text-2xl font-black text-slate-900 mt-0.5">{products.length}</h3>
+          <div className="flex items-center text-[10px] text-emerald-600 font-bold mt-1">
+            <ArrowUpRight size={10} className="mr-1" />
             Active products
           </div>
         </div>
-        <div className="glass-card p-2.5 border-l-4 border-orange-500">
-          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Low Stock Alerts</p>
-          <h3 className="text-sm font-bold text-slate-900 mt-0">{lowStockCount} Items</h3>
-          <div className="flex items-center text-[8px] text-orange-600 font-bold mt-0.5">
-            <AlertTriangle size={8} className="mr-1" />
+        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-orange-600 rounded-[32px] shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Low Stock Alerts</p>
+          <h3 className="text-2xl font-black text-slate-900 mt-0.5">{lowStockCount}</h3>
+          <div className="flex items-center text-[10px] text-orange-600 font-bold mt-1">
+            <AlertTriangle size={10} className="mr-1" />
             Action required
           </div>
         </div>
-        <div className="glass-card p-2.5 border-l-4 border-red-500">
-          <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Out of Stock</p>
-          <h3 className="text-sm font-bold text-slate-900 mt-0">{outOfStockCount} Items</h3>
-          <div className="flex items-center text-[8px] text-red-600 font-bold mt-0.5">
-            <ArrowDownRight size={8} className="mr-1" />
+        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-red-600 rounded-[32px] shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Out of Stock</p>
+          <h3 className="text-2xl font-black text-slate-900 mt-0.5">{outOfStockCount}</h3>
+          <div className="flex items-center text-[10px] text-red-600 font-bold mt-1">
+            <ArrowDownRight size={10} className="mr-1" />
             Loss of revenue
           </div>
         </div>
@@ -399,7 +377,7 @@ export default function Inventory() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
+              <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                 <th className="px-2.5 py-1.5">
                   <input 
                     type="checkbox" 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical, User } from 'lucide-react';
+import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical, User, FileText, Image as ImageIcon, Zap, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,6 +67,7 @@ export default function Purchases() {
   });
 
   const [showScannedReview, setShowScannedReview] = useState(false);
+  const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [scannedData, setScannedData] = useState<{
     supplier: any;
     items: any[];
@@ -78,8 +79,14 @@ export default function Purchases() {
     igstTotal: number;
   } | null>(null);
 
-  const ScannedReviewModal = ({ data, onClose, onConfirm }: { data: any, onClose: () => void, onConfirm: (finalData: any) => void }) => {
-    const [editedData, setEditedData] = useState(data);
+  const ScannedReviewModal = ({ data, scannedImage, onClose, onConfirm }: { data: any, scannedImage: string | null, onClose: () => void, onConfirm: (finalData: any) => void }) => {
+    const [editedData, setEditedData] = useState<any>(null);
+
+    useEffect(() => {
+      if (data) {
+        setEditedData(JSON.parse(JSON.stringify(data)));
+      }
+    }, [data]);
 
     return (
       <div className="fixed inset-0 z-[60] flex items-stretch justify-end bg-slate-900/60 backdrop-blur-md">
@@ -91,230 +98,197 @@ export default function Purchases() {
           className="bg-white shadow-2xl overflow-hidden flex flex-col h-full"
           style={{ width: 'calc(100% - var(--sidebar-width))' }}
         >
-          <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center space-x-2">
-              <div className="p-1.5 bg-primary/10 text-primary rounded-lg">
-                <Scan size={16} strokeWidth={2.5} />
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                <Scan size={20} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xs font-bold text-slate-900">Review Scanned Bill</h2>
-                <p className="text-[9px] text-slate-500 font-medium">Verify and edit the extracted information</p>
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Review Scanned Bill</h2>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-60">Verify and edit the extracted information</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all">
-              <X size={16} />
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-xl transition-all">
+              <X size={20} />
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Supplier Section */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
-                  <User size={12} className="mr-1.5" /> Supplier Information
-                </h3>
-                {(() => {
-                  const supplierName = editedData.supplier.name;
-                  const existingSupplier = suppliers.find(s => s.name.trim().toLowerCase() === supplierName.trim().toLowerCase());
-                  if (!existingSupplier) {
-                    return <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tighter">New Supplier</span>;
-                  }
-                  return null;
-                })()}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div className="space-y-0.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Supplier Name</label>
-                  <input 
-                    type="text"
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium"
-                    value={editedData.supplier.name}
-                    onChange={e => setEditedData({...editedData, supplier: {...editedData.supplier, name: e.target.value}})}
-                  />
+          <div className="flex-1 overflow-y-auto">
+            {editedData && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+                {/* Left Column: Image Preview */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="flex items-center space-x-2 text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 w-fit">
+                    <ImageIcon size={16} strokeWidth={2.5} />
+                    <h4 className="text-[10px] font-black uppercase tracking-widest">Bill Preview</h4>
+                  </div>
+                  <div className="aspect-[3/4] rounded-[2rem] border-2 border-slate-200 overflow-hidden bg-slate-50 shadow-inner relative group">
+                    {scannedImage ? (
+                      <img 
+                        src={scannedImage} 
+                        alt="Scanned Bill" 
+                        className="w-full h-full object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                        <FileText size={48} className="mb-2 opacity-20" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest">No Preview Available</p>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
+                  </div>
+                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 space-y-2">
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Zap size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">AI Tip</span>
+                    </div>
+                    <p className="text-[10px] text-blue-700 leading-relaxed font-medium">
+                      Review the extracted items and supplier details. You can adjust quantities or rates if needed.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-0.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GST Number</label>
-                  <input 
-                    type="text"
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium uppercase"
-                    value={editedData.supplier.gstin}
-                    onChange={e => setEditedData({...editedData, supplier: {...editedData.supplier, gstin: e.target.value.toUpperCase()}})}
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
-                  <input 
-                    type="text"
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium"
-                    value={editedData.invoiceNumber}
-                    onChange={e => setEditedData({...editedData, invoiceNumber: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bill Date</label>
-                  <input 
-                    type="date"
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs font-medium"
-                    value={editedData.date}
-                    onChange={e => setEditedData({...editedData, date: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* Items Section */}
-            <div className="space-y-2">
-              <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
-                <Package size={12} className="mr-1.5" /> Items Detected
-              </h3>
-              <div className="border border-slate-100 rounded-xl overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
-                  <thead>
-                    <tr className="bg-slate-50 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="px-2.5 py-1.5">Item Name</th>
-                      <th className="px-2.5 py-1.5 w-12 text-center">HSN</th>
-                      <th className="px-2.5 py-1.5 w-12 text-center">Qty</th>
-                      <th className="px-2.5 py-1.5 w-16 text-right">Rate</th>
-                      <th className="px-2.5 py-1.5 w-16 text-right">CGST</th>
-                      <th className="px-2.5 py-1.5 w-16 text-right">SGST</th>
-                      <th className="px-2.5 py-1.5 w-16 text-right">IGST</th>
-                      <th className="px-2.5 py-1.5 w-20 text-right">Amount</th>
-                      <th className="px-2.5 py-1.5 w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {editedData.items.map((item: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="text"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-medium p-0"
-                            value={item.particular}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].particular = e.target.value;
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="text"
-                            placeholder="HSN"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-center p-0"
-                            value={item.hsn}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].hsn = e.target.value;
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="number"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-center p-0"
-                            value={item.quantity}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].quantity = Number(e.target.value);
-                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="number"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
-                            value={item.rate}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].rate = Number(e.target.value);
-                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="number"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
-                            value={item.cgst}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].cgst = Number(e.target.value);
-                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="number"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
-                            value={item.sgst}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].sgst = Number(e.target.value);
-                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5">
-                          <input 
-                            type="number"
-                            className="w-full bg-transparent border-none focus:ring-0 text-[10px] font-bold text-right p-0"
-                            value={item.igst}
-                            onChange={e => {
-                              const newItems = [...editedData.items];
-                              newItems[idx].igst = Number(e.target.value);
-                              newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                          />
-                        </td>
-                        <td className="px-2.5 py-1.5 text-right text-[10px] font-black text-primary">
-                          {formatCurrency(item.amount)}
-                        </td>
-                        <td className="px-2.5 py-1.5 text-right">
-                          <button 
-                            onClick={() => {
-                              const newItems = editedData.items.filter((_: any, i: number) => i !== idx);
-                              setEditedData({...editedData, items: newItems});
-                            }}
-                            className="text-slate-300 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Right Column: Extracted Data */}
+                <div className="lg:col-span-8 space-y-8">
+                  {/* Supplier Section */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
+                        <UserPlus size={16} strokeWidth={2.5} />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest">Supplier Information</h4>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier Name</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                          value={editedData.supplier.name}
+                          onChange={e => setEditedData({ ...editedData, supplier: { ...editedData.supplier, name: e.target.value } })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">GSTIN</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all uppercase"
+                          value={editedData.supplier.gstin}
+                          onChange={e => setEditedData({ ...editedData, supplier: { ...editedData.supplier, gstin: e.target.value.toUpperCase() } })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Invoice Number</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                          value={editedData.invoiceNumber}
+                          onChange={e => setEditedData({ ...editedData, invoiceNumber: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bill Date</label>
+                        <input 
+                          type="date" 
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                          value={editedData.date}
+                          onChange={e => setEditedData({ ...editedData, date: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Items Section */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 w-fit">
+                        <Package size={16} strokeWidth={2.5} />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest">Bill Items</h4>
+                      </div>
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {editedData.items.length} Items Extracted
+                      </div>
+                    </div>
+                    <div className="border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm bg-white">
+                      <table className="w-full text-left border-collapse min-w-[500px]">
+                        <thead>
+                          <tr className="bg-slate-900 text-white border-b border-slate-800">
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest">Particular</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest w-20 text-center">Qty</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest w-24">Rate</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-widest w-28 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {editedData.items.map((item: any, idx: number) => (
+                            <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                              <td className="px-4 py-3">
+                                <input 
+                                  type="text" 
+                                  className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 transition-all outline-none"
+                                  value={item.particular}
+                                  onChange={e => {
+                                    const newItems = [...editedData.items];
+                                    newItems[idx].particular = e.target.value;
+                                    setEditedData({ ...editedData, items: newItems });
+                                  }}
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input 
+                                  type="number" 
+                                  className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 transition-all outline-none text-center"
+                                  value={item.quantity}
+                                  onChange={e => {
+                                    const newItems = [...editedData.items];
+                                    newItems[idx].quantity = Number(e.target.value);
+                                    newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
+                                    setEditedData({ ...editedData, items: newItems });
+                                  }}
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <input 
+                                  type="number" 
+                                  className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 transition-all outline-none"
+                                  value={item.rate}
+                                  onChange={e => {
+                                    const newItems = [...editedData.items];
+                                    newItems[idx].rate = Number(e.target.value);
+                                    newItems[idx].amount = (newItems[idx].quantity * newItems[idx].rate) + (newItems[idx].cgst || 0) + (newItems[idx].sgst || 0) + (newItems[idx].igst || 0);
+                                    setEditedData({ ...editedData, items: newItems });
+                                  }}
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-right text-xs font-black text-slate-900 bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                                {formatCurrency(item.amount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <div className="text-[10px] font-bold text-slate-500">
-              Total: <span className="text-primary ml-1">{formatCurrency(editedData.items.reduce((sum: number, i: any) => sum + i.amount, 0))}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={onClose}
-                className="px-3 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-all"
-              >
-                Discard
-              </button>
-              <button 
-                onClick={() => onConfirm(editedData)}
-                className="px-4 py-1.5 bg-primary text-white rounded-lg text-[10px] font-black shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-              >
-                Confirm Details
-              </button>
-            </div>
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end space-x-4">
+            <button 
+              onClick={onClose}
+              className="px-8 py-3 text-xs font-black text-slate-500 hover:bg-slate-200 rounded-2xl transition-all uppercase tracking-widest"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={() => onConfirm(editedData)}
+              className="px-10 py-3 bg-primary text-white rounded-2xl text-xs font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest flex items-center gap-3"
+            >
+              <CheckCircle2 size={18} />
+              Confirm & Continue
+            </button>
           </div>
         </motion.div>
       </div>
@@ -671,7 +645,7 @@ export default function Purchases() {
         supplier_address: '',
         invoice_number: purchase.invoice_number || '',
         bill_date: purchase.bill_date || purchase.date || new Date().toISOString().split('T')[0],
-        upload_date: purchase.upload_date || (purchase.created_at ? new Date(purchase.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+        upload_date: purchase.upload_date || new Date(purchase.created_at).toISOString().split('T')[0],
         total_amount: purchase.total_amount || 0,
         cgst_total: purchase.cgst_amount || 0,
         sgst_total: purchase.sgst_amount || 0,
@@ -954,7 +928,7 @@ Return as JSON format: {
             <Scan size={14} className="mr-1.5 text-primary" />
             Scan Bill
           </button>
-          <input id="purchase-file-input" type="file" className="hidden" onChange={(e) => {
+          <input id="purchase-file-input" type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => {
             if (e.target.files?.[0]) {
               const file = e.target.files[0];
               const reader = new FileReader();
@@ -972,15 +946,15 @@ Return as JSON format: {
         </div>
       </PageHeader>
 
-      <div className="glass-card overflow-hidden">
-        <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between bg-white gap-4">
           <div className="flex items-center gap-3 w-full max-w-2xl">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <div className="relative w-full max-w-md group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
               <input 
                 type="text" 
                 placeholder="Search by invoice number or supplier..." 
-                className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-xs transition-all shadow-sm"
+                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-xs font-bold text-slate-900 transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -988,44 +962,49 @@ Return as JSON format: {
             {selectedPurchases.length > 0 && (
               <button 
                 onClick={confirmBulkDelete}
-                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 transition-all shrink-0 h-10 sm:h-9"
+                className="bg-red-500 text-white px-5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-red-600 hover:shadow-lg hover:shadow-red-200 transition-all shrink-0 active:scale-95"
               >
-                <Trash2 size={14} />
+                <Trash2 size={16} />
                 Bulk Delete ({selectedPurchases.length})
               </button>
             )}
           </div>
-          <div className="flex items-center space-x-2">
-            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
-              <Filter size={16} />
-            </button>
-            <div className="h-5 w-[1px] bg-slate-200"></div>
-            <p className="text-xs text-slate-500">Showing {filteredPurchases.length} of {purchases.length} purchases</p>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+              <button className="p-2 text-slate-500 hover:bg-white hover:text-primary hover:shadow-sm rounded-lg transition-all">
+                <Filter size={16} />
+              </button>
+            </div>
+            <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
+              {filteredPurchases.length} of {purchases.length} Records
+            </p>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-2.5 py-1.5 w-10">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
-                    checked={filteredPurchases.length > 0 && selectedPurchases.length === filteredPurchases.length}
-                    onChange={toggleSelectAll}
-                  />
+              <tr className="bg-slate-900 text-white border-b border-slate-800">
+                <th className="px-6 py-5 w-12">
+                  <div className="flex items-center justify-center">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded-md border-slate-700 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-slate-900 cursor-pointer transition-all"
+                      checked={filteredPurchases.length > 0 && selectedPurchases.length === filteredPurchases.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </div>
                 </th>
-                <th className="px-2.5 py-1.5">Bill Date</th>
-                <th className="px-2.5 py-1.5">Upload Date</th>
-                <th className="px-2.5 py-1.5">Invoice #</th>
-                <th className="px-2.5 py-1.5">Supplier</th>
-                <th className="px-2.5 py-1.5">CGST</th>
-                <th className="px-2.5 py-1.5">SGST</th>
-                <th className="px-2.5 py-1.5">IGST</th>
-                <th className="px-2.5 py-1.5">Amount</th>
-                <th className="px-2.5 py-1.5">Status</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Bill Date</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Upload Date</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Invoice #</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Supplier</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">CGST</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">SGST</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">IGST</th>
+                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">Total Amount</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1058,30 +1037,30 @@ Return as JSON format: {
                         onChange={() => toggleSelectPurchase(purchase.id)}
                       />
                     </td>
-                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
                       {new Date(purchase.date).toLocaleDateString()}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-400">
+                    <td className="px-2.5 py-1.5 text-[8px] text-slate-400">
                       {new Date(purchase.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-2.5 py-1.5 text-xs font-medium text-slate-900">{purchase.invoice_number}</td>
-                    <td className="px-2.5 py-1.5 text-xs text-slate-600">
+                    <td className="px-2.5 py-1.5 text-[10px] font-medium text-slate-900">{purchase.invoice_number}</td>
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600">
                       {purchase.suppliers?.name || 'Unknown Supplier'}
                     </td>
-                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
                       {formatCurrency(purchase.cgst_amount || 0)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
                       {formatCurrency(purchase.sgst_amount || 0)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-xs text-slate-500">
+                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
                       {formatCurrency(purchase.igst_amount || 0)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-xs font-bold text-slate-900">
+                    <td className="px-2.5 py-1.5 text-[10px] font-bold text-slate-900">
                       {formatCurrency(purchase.total_amount)}
                     </td>
                     <td className="px-2.5 py-1.5">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
                         purchase.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
                       }`}>
                         {purchase.status}
@@ -1091,20 +1070,20 @@ Return as JSON format: {
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(purchase)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
+                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Edit"
                         >
-                          <Edit size={14} />
+                          <Edit size={12} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(purchase.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Delete"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-                          <MoreVertical size={14} />
+                        <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
+                          <MoreVertical size={12} />
                         </button>
                       </div>
                     </td>
@@ -1575,6 +1554,7 @@ Return as JSON format: {
         {showScannedReview && scannedData && (
           <ScannedReviewModal 
             data={scannedData}
+            scannedImage={scannedImage}
             onClose={() => setShowScannedReview(false)}
             onConfirm={(finalData) => {
               // Find or create supplier

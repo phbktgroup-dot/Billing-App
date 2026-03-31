@@ -132,20 +132,23 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     transactionType: 1,
     supplyType: 'O',
     subSupplyType: '1',
+    fromPincode: '',
+    toPincode: '',
+    fromStateCode: '',
+    toStateCode: '',
+    actualFromStateCode: '',
+    actualToStateCode: '',
+    totalValue: 0,
+    cgstValue: 0,
+    sgstValue: 0,
+    igstValue: 0,
+    cessValue: 0,
+    taxableValue: 0,
     TotNonAdvolVal: 0,
     OthValue: 0
   });
 
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  const getLocalToday = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-  const [day, setDay] = useState<string>(getLocalToday());
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -153,7 +156,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       // Prefer INV- series as default
       const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
       const series = invSeries || invoiceSeries[0];
-      setInvoiceNumber(formatSeriesNumber(series));
+      setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix));
       setSelectedSeriesId(series.id);
     }
   }, [invoiceSeries, invoiceNumber, isScannedInvoiceNumberFound]);
@@ -167,7 +170,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     if (!currentInvoiceNumber) {
       const selectedSeries = invoiceSeries.find(s => s.id === selectedSeriesId);
       if (selectedSeries) {
-        currentInvoiceNumber = formatSeriesNumber(selectedSeries);
+        currentInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix);
       } else {
         const prefix = businessProfile?.invoice_prefix || 'INV';
         const number = Date.now().toString().slice(-6);
@@ -178,7 +181,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
     const invoiceData = {
       invoice_number: currentInvoiceNumber,
-      date: new Date(day).toISOString(),
+      date: new Date().toISOString(),
       customer_name: customer.name || 'Walk-in Customer',
       customer_gstin: customer.gst,
       customer_address: [customer.address1, customer.address2, [customer.city, customer.pincode].filter(Boolean).join(', ')].filter(Boolean).join('\n'),
@@ -498,7 +501,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               // If it exists, use the next number from current series
               const series = currentSeries || invoiceSeries.find(s => s.prefix === 'INV-') || invoiceSeries[0];
               if (series) {
-                finalScannedInvoiceNumber = formatSeriesNumber(series);
+                finalScannedInvoiceNumber = formatSeriesNumber(series.current_number, series.prefix);
                 setSelectedSeriesId(series.id);
               }
             }
@@ -843,6 +846,26 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     customerState
   } = calculateTotals();
 
+  // Auto-populate E-way bill data
+  useEffect(() => {
+    if (includeEwayBill) {
+      setEwayData(prev => ({
+        ...prev,
+        fromPincode: businessProfile?.pincode || prev.fromPincode,
+        toPincode: customer.pincode || prev.toPincode,
+        fromStateCode: businessProfile?.gst_number?.substring(0, 2) || prev.fromStateCode,
+        toStateCode: customer.stateCode || prev.toStateCode,
+        actualFromStateCode: businessProfile?.gst_number?.substring(0, 2) || prev.actualFromStateCode,
+        actualToStateCode: customer.stateCode || prev.actualToStateCode,
+        totalValue: total,
+        cgstValue: cgstAmount,
+        sgstValue: sgstAmount,
+        igstValue: igstAmount,
+        taxableValue: taxableAmount
+      }));
+    }
+  }, [includeEwayBill, customer.pincode, customer.stateCode, total, taxableAmount, cgstAmount, sgstAmount, igstAmount, businessProfile]);
+
   const handleSave = async () => {
     if (!businessId || !businessProfile) {
       setModal({ isOpen: true, title: 'Error', message: 'Business profile not found. Please ensure your business setup is complete.', type: 'error' });
@@ -941,7 +964,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       let finalInvoiceNumber = invoiceNumber;
       if (!finalInvoiceNumber) {
         if (selectedSeries) {
-          finalInvoiceNumber = formatSeriesNumber(selectedSeries);
+          finalInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix);
         } else {
           const prefix = businessProfile?.invoice_prefix || 'INV';
           finalInvoiceNumber = `${prefix}-${Date.now().toString().slice(-6)}`;
@@ -978,7 +1001,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           customer_id: customerId,
           invoice_series_id: selectedSeriesId || null,
           invoice_number: finalInvoiceNumber,
-          date: day,
+          date: date,
           subtotal: taxableAmount,
           discount: totalDiscount,
           discount_percentage: discountType === 'percentage' ? discount : 0,
@@ -1126,7 +1149,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             to_place: customer.city || '',
             to_pincode: parseInt(customer.pincode) || 0,
             to_state_code: toState,
-            from_state_code: fromState
+            from_state_code: fromState,
+            from_addr1: businessProfile?.address1 || '',
+            from_addr2: businessProfile?.address2 || '',
+            from_place: businessProfile?.city || '',
+            from_pincode: parseInt(businessProfile?.pincode) || 0,
+            actual_from_state_code: fromState,
+            actual_to_state_code: toState
           }]);
       }
 
@@ -1189,27 +1218,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full space-y-6 pb-10"
+      className="flex flex-col gap-2 pt-2 relative"
     >
       {/* Header */}
       <PageHeader 
         title="Create New Invoice" 
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
+        description="Fill in the details below to generate a new invoice."
       >
         <div className="flex items-center space-x-4">
           
@@ -1217,10 +1231,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           
           <button 
             onClick={handleScanClick}
-            className="px-5 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-sm font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
+            className="px-5 py-2 w-48 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-sm font-bold flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
           >
             <Scan size={18} className="mr-2" strokeWidth={2.5} />
-            AI Scan
+            AI Scan Invoice
           </button>
         </div>
       </PageHeader>
@@ -1324,7 +1338,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             exit={{ opacity: 0, x: 20 }}
             className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start"
           >
-            <div className="xl:col-span-2 space-y-6 pr-2">
+            <div className="xl:col-span-2 space-y-6 pr-2 xl:h-[calc(100vh-150px)] xl:overflow-y-auto">
               {/* Customer & Details Section */}
               <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
@@ -1346,8 +1360,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative z-20">
-                  <div className="space-y-0.5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-20">
+                  <div className="md:col-span-3 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Series</label>
                     <div className="relative z-[100]">
                       <input 
@@ -1400,7 +1414,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between !bg-white"
                                 onClick={() => {
-                                  setInvoiceNumber(formatSeriesNumber(series));
+                                  setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix));
                                   setSelectedSeriesId(series.id);
                                   setIsScannedInvoiceNumberFound(false);
                                   setShowSeriesList(false);
@@ -1411,7 +1425,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                   <span className="text-[8px] text-slate-500 font-medium">Prefix: {series.prefix}</span>
                                 </div>
                                 <span className="text-[8px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
-                                  {formatSeriesNumber(series)}
+                                  {formatSeriesNumber(series.current_number, series.prefix)}
                                 </span>
                               </button>
                             ))}
@@ -1420,7 +1434,19 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       )}
                     </div>
                   </div>
-                  <div className="space-y-0.5 md:col-span-2">
+                  <div className="md:col-span-3 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Date</label>
+                    <div className="relative">
+                      <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="date" 
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        value={date}
+                        onChange={e => setDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
                     <div className="relative z-[100]">
                       <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1457,9 +1483,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       
                       {/* Custom Customer Dropdown */}
                       {showCustomerList && customers.length > 0 && (
-                        <div className="absolute z-[9999] left-0 right-0 mt-1 !bg-white border border-slate-300 rounded-lg shadow-2xl max-h-48 overflow-y-auto opacity-100">
-                          <div className="p-1 !bg-white">
-                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 sticky top-0 !bg-white">
+                        <div className="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                          <div className="p-1 bg-white">
+                            <div className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
                               Select Customer
                             </div>
                             {customers
@@ -1468,7 +1494,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 <button
                                   key={c.id}
                                   type="button"
-                                  className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between group !bg-white"
+                                  className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg transition-colors flex items-center justify-between group bg-white"
                                   onClick={() => {
                                     setCustomer({
                                       id: c.id,
@@ -1485,19 +1511,19 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                   }}
                                 >
                                   <div className="flex flex-col">
-                                    <span className="text-[10px] font-bold text-slate-900 group-hover:text-primary transition-colors">{c.name}</span>
-                                    {c.phone && <span className="text-[8px] text-slate-500 font-medium">{c.phone}</span>}
+                                    <span className="text-[12px] font-bold text-slate-900 group-hover:text-primary transition-colors">{c.name}</span>
+                                    {c.phone && <span className="text-[10px] text-slate-500 font-medium">{c.phone}</span>}
                                   </div>
                                   {c.gstin && (
-                                    <span className="text-[7px] font-bold text-slate-400 bg-slate-50 px-1 py-0.5 rounded group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-primary/5 group-hover:text-primary transition-colors">
                                       {c.gstin}
                                     </span>
                                   )}
                                 </button>
                               ))}
                             {customers.filter(c => c.name.toLowerCase().includes((customer.name || '').toLowerCase())).length === 0 && (
-                              <div className="px-2 py-3 text-center !bg-white">
-                                <p className="text-[9px] text-slate-400 font-medium italic">No matching customers</p>
+                              <div className="px-3 py-6 text-center bg-white">
+                                <p className="text-[11px] text-slate-400 font-medium italic">No matching customers found</p>
                               </div>
                             )}
                           </div>
@@ -1505,19 +1531,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       )}
                     </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Date</label>
-                    <div className="relative">
-                      <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input 
-                        type="date" 
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
-                        value={day}
-                        onChange={e => setDay(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-0.5">
+                  <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
                     <div className="relative">
                       <Phone size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1534,7 +1548,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       />
                     </div>
                   </div>
-                  <div className="space-y-0.5">
+                  <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">GSTIN</label>
                     <input 
                       type="text" 
@@ -1548,8 +1562,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 </div>
                 
                 {/* Customer Address Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 relative z-10">
-                  <div className="space-y-0.5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-slate-100 relative z-10">
+                  <div className="md:col-span-8 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
@@ -1559,7 +1573,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('address1', e.target.value)}
                     />
                   </div>
-                  <div className="space-y-0.5">
+                  <div className="md:col-span-4 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
@@ -1569,7 +1583,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('address2', e.target.value)}
                     />
                   </div>
-                  <div className="space-y-0.5">
+                  <div className="md:col-span-4 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">City {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
@@ -1579,34 +1593,32 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('city', e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
-                      <input 
-                        type="text" 
-                        placeholder="Pincode"
-                        maxLength={6}
-                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
-                        value={customer.pincode || ''}
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          handleCustomerChange('pincode', val);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
-                      <select
-                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
-                        value={customer.stateCode || ''}
-                        onChange={e => handleCustomerChange('stateCode', e.target.value)}
-                      >
-                        <option value="">Select State</option>
-                        {Object.entries(STATE_CODES).map(([code, name]) => (
-                          <option key={code} value={code}>{code} - {name}</option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className="md:col-span-4 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <input 
+                      type="text" 
+                      placeholder="Pincode"
+                      maxLength={6}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                      value={customer.pincode || ''}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        handleCustomerChange('pincode', val);
+                      }}
+                    />
+                  </div>
+                  <div className="md:col-span-4 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <select
+                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                      value={customer.stateCode || ''}
+                      onChange={e => handleCustomerChange('stateCode', e.target.value)}
+                    >
+                      <option value="">Select State</option>
+                      {Object.entries(STATE_CODES).map(([code, name]) => (
+                        <option key={code} value={code}>{code} - {name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1832,176 +1844,216 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     </div>
                     
                     {includeEwayBill && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-gradient-to-br from-indigo-50/50 to-white rounded-2xl border border-indigo-100 shadow-sm">
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">E-way Bill Number</label>
-                          <input 
-                            type="text" 
-                            placeholder="12-digit E-way Bill No."
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all placeholder:text-[11px]"
-                            value={ewayData.ewayBillNo}
-                            onChange={e => setEwayData({...ewayData, ewayBillNo: e.target.value})}
-                          />
+                      <div className="space-y-6">
+                        {/* Basic & Supply Info */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-bottom border-slate-100">
+                            <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                            <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Basic & Supply Information</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">E-way Bill Number</label>
+                              <input 
+                                type="text" 
+                                placeholder="12-digit E-way Bill No."
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all placeholder:text-slate-400"
+                                value={ewayData.ewayBillNo}
+                                onChange={e => setEwayData({...ewayData, ewayBillNo: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transaction Type</label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                value={ewayData.transactionType}
+                                onChange={e => setEwayData({...ewayData, transactionType: parseInt(e.target.value) || 1})}
+                              >
+                                <option value={1}>1 - Regular</option>
+                                <option value={2}>2 - Bill To - Ship To</option>
+                                <option value={3}>3 - Bill From - Dispatch From</option>
+                                <option value={4}>4 - Combination of 2 and 3</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Supply Type</label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                value={ewayData.supplyType}
+                                onChange={e => setEwayData({...ewayData, supplyType: e.target.value})}
+                              >
+                                <option value="O">O - Outward</option>
+                                <option value="I">I - Inward</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sub Supply Type</label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                value={ewayData.subSupplyType}
+                                onChange={e => setEwayData({...ewayData, subSupplyType: e.target.value})}
+                              >
+                                <option value="1">1 - Supply</option>
+                                <option value="2">2 - Import</option>
+                                <option value="3">3 - Export</option>
+                                <option value="4">4 - Job Work</option>
+                                <option value="5">5 - For Own Use</option>
+                                <option value="6">6 - SKD/CKD</option>
+                                <option value="7">7 - Recipient Not Known</option>
+                                <option value="8">8 - Exhibition or Fairs</option>
+                                <option value="9">9 - Line Sales</option>
+                                <option value="10">10 - Others</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Transaction Type</label>
-                          <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transactionType}
-                            onChange={e => setEwayData({...ewayData, transactionType: parseInt(e.target.value) || 1})}
-                          >
-                            <option value={1}>1 - Regular</option>
-                            <option value={2}>2 - Bill To - Ship To</option>
-                            <option value={3}>3 - Bill From - Dispatch From</option>
-                            <option value={4}>4 - Combination of 2 and 3</option>
-                          </select>
+
+                        {/* Transporter Details */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-bottom border-slate-100">
+                            <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                            <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Transporter Details</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Transporter</label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                onChange={e => {
+                                  const trans = transporters.find(t => t.id === e.target.value);
+                                  if (trans) {
+                                    setEwayData({
+                                      ...ewayData,
+                                      transporterId: trans.transporter_id || '',
+                                      transporterName: trans.name || ''
+                                    });
+                                  }
+                                }}
+                              >
+                                <option value="">-- Select Transporter --</option>
+                                {transporters.map(t => (
+                                  <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transporter ID</label>
+                              <input 
+                                type="text" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.transporterId}
+                                onChange={e => setEwayData({...ewayData, transporterId: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transporter Name</label>
+                              <input 
+                                type="text" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.transporterName}
+                                onChange={e => setEwayData({...ewayData, transporterName: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trans Mode</label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                value={ewayData.transMode}
+                                onChange={e => setEwayData({...ewayData, transMode: e.target.value})}
+                              >
+                                <option value="1">1 - Road</option>
+                                <option value="2">2 - Rail</option>
+                                <option value="3">3 - Air</option>
+                                <option value="4">4 - Ship</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Distance (in km)</label>
+                              <input 
+                                type="number" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.transDistance}
+                                onChange={e => setEwayData({...ewayData, transDistance: parseInt(e.target.value) || 0})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc No</label>
+                              <input 
+                                type="text" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.transDocNo}
+                                onChange={e => setEwayData({...ewayData, transDocNo: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc Date</label>
+                              <input 
+                                type="date" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.transDocDate}
+                                onChange={e => setEwayData({...ewayData, transDocDate: e.target.value})}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Supply Type</label>
-                          <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.supplyType}
-                            onChange={e => setEwayData({...ewayData, supplyType: e.target.value})}
-                          >
-                            <option value="O">O - Outward</option>
-                            <option value="I">I - Inward</option>
-                          </select>
+
+                        {/* Vehicle Details */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-bottom border-slate-100">
+                            <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                            <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Vehicle Details</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Number</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. GJ01AA1234"
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all placeholder:text-slate-400"
+                                value={ewayData.vehicleNo}
+                                onChange={e => setEwayData({...ewayData, vehicleNo: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Type</label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                value={ewayData.vehicleType}
+                                onChange={e => setEwayData({...ewayData, vehicleType: e.target.value})}
+                              >
+                                <option value="R">R - Regular</option>
+                                <option value="O">O - ODC</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Sub Supply Type</label>
-                          <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.subSupplyType}
-                            onChange={e => setEwayData({...ewayData, subSupplyType: e.target.value})}
-                          >
-                            <option value="1">1 - Supply</option>
-                            <option value="2">2 - Import</option>
-                            <option value="3">3 - Export</option>
-                            <option value="4">4 - Job Work</option>
-                            <option value="5">5 - For Own Use</option>
-                            <option value="6">6 - SKD/CKD</option>
-                            <option value="7">7 - Recipient Not Known</option>
-                            <option value="8">8 - Exhibition or Fairs</option>
-                            <option value="9">9 - Line Sales</option>
-                            <option value="10">10 - Others</option>
-                          </select>
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Trans Mode</label>
-                          <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transMode}
-                            onChange={e => setEwayData({...ewayData, transMode: e.target.value})}
-                          >
-                            <option value="1">1 - Road</option>
-                            <option value="2">2 - Rail</option>
-                            <option value="3">3 - Air</option>
-                            <option value="4">4 - Ship</option>
-                          </select>
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Distance (in km)</label>
-                          <input 
-                            type="number" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transDistance}
-                            onChange={e => setEwayData({...ewayData, transDistance: parseInt(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Select Transporter</label>
-                          <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            onChange={e => {
-                              const trans = transporters.find(t => t.id === e.target.value);
-                              if (trans) {
-                                setEwayData({
-                                  ...ewayData,
-                                  transporterId: trans.transporter_id || '',
-                                  transporterName: trans.name || ''
-                                });
-                              }
-                            }}
-                          >
-                            <option value="">-- Select Transporter --</option>
-                            {transporters.map(t => (
-                              <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Transporter ID</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transporterId}
-                            onChange={e => setEwayData({...ewayData, transporterId: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Transporter Name</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transporterName}
-                            onChange={e => setEwayData({...ewayData, transporterName: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc No</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transDocNo}
-                            onChange={e => setEwayData({...ewayData, transDocNo: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc Date</label>
-                          <input 
-                            type="date" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.transDocDate}
-                            onChange={e => setEwayData({...ewayData, transDocDate: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Number</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.vehicleNo}
-                            onChange={e => setEwayData({...ewayData, vehicleNo: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Type</label>
-                          <select 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.vehicleType}
-                            onChange={e => setEwayData({...ewayData, vehicleType: e.target.value})}
-                          >
-                            <option value="R">R - Regular</option>
-                            <option value="O">O - ODC</option>
-                          </select>
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">TotNonAdvolVal</label>
-                          <input 
-                            type="number" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.TotNonAdvolVal}
-                            onChange={e => setEwayData({...ewayData, TotNonAdvolVal: parseFloat(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Other Value</label>
-                          <input 
-                            type="number" 
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none text-[11px] transition-all"
-                            value={ewayData.OthValue}
-                            onChange={e => setEwayData({...ewayData, OthValue: parseFloat(e.target.value) || 0})}
-                          />
+
+                        {/* Additional Values */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-bottom border-slate-100">
+                            <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+                            <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Additional Values</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">TotNonAdvolVal</label>
+                              <input 
+                                type="number" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.TotNonAdvolVal}
+                                onChange={e => setEwayData({...ewayData, TotNonAdvolVal: parseFloat(e.target.value) || 0})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Other Value</label>
+                              <input 
+                                type="number" 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                value={ewayData.OthValue}
+                                onChange={e => setEwayData({...ewayData, OthValue: parseFloat(e.target.value) || 0})}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

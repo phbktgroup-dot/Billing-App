@@ -51,9 +51,6 @@ const menuItems = [
   { icon: FileText, label: 'ITR Report', path: '/itr-report', adminOnly: true },
   { icon: PieChart, label: 'Analytics', path: '/analytics' },
   { icon: ShieldCheck, label: 'Admin Panel', path: '/admin', adminOnly: true },
-];
-
-const bottomMenuItems = [
   { icon: HelpCircle, label: 'Help & Support', path: '/support' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
@@ -128,13 +125,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         variants={sidebarVariants}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-[70] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
+          "fixed lg:sticky top-0 left-0 h-screen bg-[#4D2152] z-[70] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
           !isOpen && "lg:translate-x-0"
         )}
       >
         {/* Logo Section / Top Left Menu */}
         <div className={cn(
-          "h-16 md:h-14 flex items-center border-b border-slate-200 transition-all duration-300 relative",
+          "h-16 md:h-16 flex items-center transition-all duration-300 relative",
           (isCollapsed && !isOpen) ? "justify-center px-0" : "px-4"
         )}>
           <div className={cn("flex items-center w-full overflow-hidden", (isCollapsed && !isOpen) ? "justify-center" : "gap-3")}>
@@ -146,7 +143,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   toggleSidebar();
                 }
               }}
-              className="p-1 text-slate-500 hover:bg-slate-100 rounded-xl transition-all shrink-0 flex items-center justify-center"
+              className="p-1 text-white/70 hover:bg-white/10 rounded-xl transition-all shrink-0 flex items-center justify-center"
             >
               {profile?.business_profiles?.logo_url || appSettings?.logo_url ? (
                 <img 
@@ -165,7 +162,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <motion.span 
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="font-bold text-slate-900 text-sm truncate pr-2"
+                  className="font-bold text-white text-sm truncate pr-2"
                 >
                   {appSettings?.app_name || 'Billing Pro+'}
                 </motion.span>
@@ -176,7 +173,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Menu Items */}
         <div className={cn(
-          "flex-1 overflow-y-auto py-2 space-y-1 custom-scrollbar",
+          "flex-1 overflow-y-auto py-2 space-y-1 scrollbar-hide",
           (isCollapsed && !isOpen) ? "px-2" : "px-3"
         )}>
           {filteredMenuItems.map((item) => (
@@ -191,8 +188,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 "flex items-center rounded-xl transition-all group relative",
                 (isCollapsed && !isOpen) ? "h-10 justify-center" : "py-3 px-3",
                 isActive 
-                  ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  ? "bg-[#3D1A41] text-white shadow-lg shadow-black/20" 
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
               <item.icon size={18} className={cn("shrink-0", (isCollapsed && !isOpen) ? "" : "mr-3")} />
@@ -206,50 +203,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
             </NavLink>
           ))}
-
-          <div className="border-t border-slate-100 my-2" />
-
-          {bottomMenuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => cn(
-                "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group relative",
-                isActive 
-                  ? "bg-primary text-white shadow-md shadow-primary/20" 
-                  : "text-slate-600 hover:bg-slate-50 hover:text-primary"
-              )}
-            >
-              <item.icon size={20} className={cn(
-                "min-w-[20px] transition-transform duration-200 group-hover:scale-110",
-                !isCollapsed && "mr-1"
-              )} />
-              {!isCollapsed && (
-                <span className="font-medium text-sm whitespace-nowrap overflow-hidden">
-                  {item.label}
-                </span>
-              )}
-              {isCollapsed && (
-                <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
-                  {item.label}
-                </div>
-              )}
-            </NavLink>
-          ))}
         </div>
 
         {/* Collapse Toggle */}
-        <div className="hidden lg:block border-t border-slate-100">
+        <div className="hidden lg:block">
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               toggleSidebar();
             }}
-            className="flex h-7 w-full items-center justify-center text-slate-400 hover:text-primary hover:bg-slate-50 transition-all cursor-pointer"
+            className="flex h-7 w-full items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors">
               {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </div>
           </button>

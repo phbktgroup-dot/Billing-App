@@ -269,7 +269,7 @@ export default function Suppliers() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+              <tr className="bg-slate-50/50 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
                 <th className="px-2.5 py-1.5 w-10">
                   <input 
                     type="checkbox" 
@@ -317,12 +317,12 @@ export default function Suppliers() {
                     </td>
                     <td className="px-2.5 py-1.5">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs mr-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-[10px] mr-3">
                           {supplier.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900">{supplier.name}</p>
-                          <p className="text-[10px] text-slate-500">{supplier.email || 'No email'}</p>
+                          <p className="text-[10px] font-bold text-slate-900">{supplier.name}</p>
+                          <p className="text-[8px] text-slate-500">{supplier.email || 'No email'}</p>
                         </div>
                       </div>
                     </td>
@@ -353,20 +353,20 @@ export default function Suppliers() {
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(supplier)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
+                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Edit"
                         >
-                          <Edit size={14} />
+                          <Edit size={12} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(supplier.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Delete"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-                          <MoreVertical size={14} />
+                        <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
+                          <MoreVertical size={12} />
                         </button>
                       </div>
                     </td>

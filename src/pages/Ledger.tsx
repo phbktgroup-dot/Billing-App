@@ -48,16 +48,6 @@ export default function Ledger() {
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  const getLocalToday = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-  const [day, setDay] = useState<string>(getLocalToday());
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-
   const businessId = profile?.business_id;
 
   const fetchParties = React.useCallback(async () => {
@@ -304,26 +294,14 @@ export default function Ledger() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-2 pt-2 relative"
+    >
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
         description="View detailed transaction history, track outstanding balances, and reconcile accounts for your business partners."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-4">
           <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -409,17 +387,17 @@ export default function Ledger() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-4 py-3 border-b border-slate-100">Date</th>
-                <th className="px-4 py-3 border-b border-slate-100">Particulars</th>
-                <th className="px-4 py-3 border-b border-slate-100">Voucher Type</th>
-                <th className="px-4 py-3 border-b border-slate-100">Voucher No.</th>
-                <th className="px-4 py-3 border-b border-slate-100 text-right">Debit</th>
-                <th className="px-4 py-3 border-b border-slate-100 text-right">Credit</th>
-                <th className="px-4 py-3 border-b border-slate-100 text-right">Balance</th>
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-2 whitespace-nowrap">Date</th>
+                <th className="px-4 py-2 whitespace-nowrap">Particulars</th>
+                <th className="px-4 py-2 whitespace-nowrap">Voucher Type</th>
+                <th className="px-4 py-2 whitespace-nowrap">Voucher No.</th>
+                <th className="px-4 py-2 text-right whitespace-nowrap">Debit</th>
+                <th className="px-4 py-2 text-right whitespace-nowrap">Credit</th>
+                <th className="px-4 py-2 text-right whitespace-nowrap">Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
@@ -445,31 +423,31 @@ export default function Ledger() {
                 <>
                   {ledgerEntries.map((entry) => (
                     <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 text-xs text-slate-600">
+                      <td className="px-4 py-0.5 text-[11px] text-slate-600">
                         {new Date(entry.date).toLocaleDateString('en-GB')}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium text-slate-900">
+                      <td className="px-4 py-0.5 text-[11px] font-medium text-slate-900">
                         <span className="text-slate-400 w-6 inline-block">{entry.debit > 0 ? 'To' : 'By'}</span>
                         {entry.voucherType === 'Sales' ? `Sales A/c` : 
                          entry.voucherType === 'Purchase' ? `Purchase A/c` : 
                          entry.particulars}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-0.5">
                         <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                          "px-1 py-0.5 rounded-md text-[9px] font-bold uppercase",
                           (entry.voucherType === 'Sales' || entry.voucherType === 'Payment') ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
                         )}>
                           {entry.voucherType}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{entry.voucherNo}</td>
-                      <td className="px-4 py-3 text-xs font-bold text-right text-slate-900">
+                      <td className="px-4 py-0.5 text-[11px] text-slate-500">{entry.voucherNo}</td>
+                      <td className="px-4 py-0.5 text-[11px] font-bold text-right text-slate-900">
                         {entry.debit > 0 ? formatCurrency(entry.debit) : '-'}
                       </td>
-                      <td className="px-4 py-3 text-xs font-bold text-right text-slate-900">
+                      <td className="px-4 py-0.5 text-[11px] font-bold text-right text-slate-900">
                         {entry.credit > 0 ? formatCurrency(entry.credit) : '-'}
                       </td>
-                      <td className="px-4 py-3 text-xs font-bold text-right text-slate-900">
+                      <td className="px-4 py-0.5 text-[11px] font-bold text-right text-slate-900">
                         {formatCurrency(Math.abs(entry.balance))} {entry.balance >= 0 ? 'Dr' : 'Cr'}
                       </td>
                     </tr>

@@ -197,15 +197,15 @@ export default function Transporters() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-2.5 py-1.5">Transporter Name</th>
-                <th className="px-2.5 py-1.5">Transporter ID / GSTIN</th>
-                <th className="px-2.5 py-1.5">Contact Info</th>
-                <th className="px-2.5 py-1.5">Address</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-2.5 py-2 whitespace-nowrap">Transporter Name</th>
+                <th className="px-2.5 py-2 whitespace-nowrap">Transporter ID / GSTIN</th>
+                <th className="px-2.5 py-2 whitespace-nowrap">Contact Info</th>
+                <th className="px-2.5 py-2 whitespace-nowrap">Address</th>
+                <th className="px-2.5 py-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center">
@@ -224,24 +224,24 @@ export default function Transporters() {
               ) : (
                 filteredTransporters.map((transporter) => (
                   <tr key={transporter.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-2.5 py-0.5">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 text-xs">
+                        <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-2 text-[10px]">
                           {transporter.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900">{transporter.name}</p>
+                          <p className="text-[11px] font-bold text-slate-900">{transporter.name}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <div className="flex items-center text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700 w-fit">
+                    <td className="px-2.5 py-0.5">
+                      <div className="flex items-center text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 w-fit">
                         <IdCard size={10} className="mr-1.5 text-slate-400" />
                         {transporter.transporter_id}
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <div className="space-y-1">
+                    <td className="px-2.5 py-0.5">
+                      <div className="space-y-0.5">
                         <div className="flex items-center text-[10px] text-slate-600">
                           <Phone size={10} className="mr-1.5 text-slate-400" />
                           {transporter.phone || 'N/A'}
@@ -252,27 +252,27 @@ export default function Transporters() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-2.5 py-0.5">
                       <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
                         <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{transporter.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-right">
+                    <td className="px-2.5 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(transporter)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
+                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
                           title="Edit"
                         >
-                          <Edit size={16} />
+                          <Edit size={14} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(transporter.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
                           title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>

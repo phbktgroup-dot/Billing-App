@@ -64,7 +64,7 @@ import {
   PieChart,
   Pie
 } from 'recharts';
-import { cn, formatCurrency, formatCompactCurrency, getDateRange, FilterType } from '../lib/utils';
+import { cn, formatCurrency, formatCompactCurrency, formatCurrencyNoDecimals, formatNumber, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -531,8 +531,8 @@ export default function Dashboard() {
       change: '+12.5%', 
       trend: 'up',
       color: 'text-white',
-      bg: 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30',
-      cardBg: 'bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border-blue-100/50',
+      bg: 'bg-blue-500',
+      cardBg: 'bg-blue-50/30 border-blue-100/50',
       isCurrency: true
     },
     { 
@@ -542,8 +542,8 @@ export default function Dashboard() {
       change: `${businessSummary?.profitAndLoss.change.toFixed(1)}%`, 
       trend: (businessSummary?.profitAndLoss.change || 0) >= 0 ? 'up' : 'down',
       color: 'text-white',
-      bg: 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg shadow-emerald-500/30',
-      cardBg: 'bg-gradient-to-br from-emerald-50/50 to-teal-50/50 border-emerald-100/50',
+      bg: 'bg-emerald-500',
+      cardBg: 'bg-emerald-50/30 border-emerald-100/50',
       isCurrency: true
     },
     { 
@@ -553,8 +553,8 @@ export default function Dashboard() {
       change: '+5.4%', 
       trend: 'up',
       color: 'text-white',
-      bg: 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-purple-500/30',
-      cardBg: 'bg-gradient-to-br from-violet-50/50 to-purple-50/50 border-purple-100/50'
+      bg: 'bg-violet-500',
+      cardBg: 'bg-violet-50/30 border-violet-100/50'
     },
     { 
       label: 'Low Stock Items', 
@@ -563,8 +563,8 @@ export default function Dashboard() {
       change: '-2.1%', 
       trend: 'down',
       color: 'text-white',
-      bg: 'bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-500/30',
-      cardBg: 'bg-gradient-to-br from-orange-50/50 to-amber-50/50 border-orange-100/50'
+      bg: 'bg-orange-500',
+      cardBg: 'bg-orange-50/30 border-orange-100/50'
     },
     { 
       label: 'Paid Invoices', 
@@ -574,8 +574,8 @@ export default function Dashboard() {
       change: '85%', 
       trend: 'up',
       color: 'text-white',
-      bg: 'bg-gradient-to-br from-teal-400 to-teal-600 shadow-lg shadow-teal-500/30',
-      cardBg: 'bg-gradient-to-br from-teal-50/50 to-cyan-50/50 border-teal-100/50',
+      bg: 'bg-teal-500',
+      cardBg: 'bg-teal-50/30 border-teal-100/50',
       isCurrency: true
     },
     { 
@@ -586,8 +586,8 @@ export default function Dashboard() {
       change: '15%', 
       trend: 'down',
       color: 'text-white',
-      bg: 'bg-gradient-to-br from-rose-400 to-rose-600 shadow-lg shadow-rose-500/30',
-      cardBg: 'bg-gradient-to-br from-rose-50/50 to-pink-50/50 border-rose-100/50',
+      bg: 'bg-rose-500',
+      cardBg: 'bg-rose-50/30 border-rose-100/50',
       isCurrency: true
     }
   ];
@@ -618,14 +618,14 @@ export default function Dashboard() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-2 relative"
+      className="flex flex-col gap-2 pt-2 relative"
     >
-
-      {/* Welcome Section */}
+      <div className="flex flex-col gap-2">
+        {/* Welcome Section */}
       <PageHeader 
         title="Business Performance" 
         description="Overview of your business health, revenue, and key performance indicators."
-        className="bg-white border-slate-200 text-slate-900"
+        className="shadow-sm"
         isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
@@ -647,24 +647,17 @@ export default function Dashboard() {
         <div className="flex flex-row items-center gap-3 justify-end relative z-20 w-full sm:w-auto md:mt-0">
           {loading && <Loader2 className="w-4 h-4 animate-spin text-primary hidden sm:block" />}
           <button 
-            onClick={() => navigate('/invoices/new')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 border border-blue-500/50"
-          >
-            <Plus size={16} className="mr-1.5" />
-            <span>Create Invoice</span>
-          </button>
-          <button 
             onClick={() => setShowScanOptions(true)}
-            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 border border-emerald-500/50"
+            className="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-sm"
           >
-            <Scan size={16} className="mr-1.5 text-white" />
+            <Scan size={16} className="mr-1.5 text-slate-500" />
             <span>Scan Invoice</span>
           </button>
         </div>
       </PageHeader>
 
       {/* Core Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-1.5">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -673,13 +666,13 @@ export default function Dashboard() {
             transition={{ delay: i * 0.1 }}
             className={cn("p-2.5 sm:p-4 rounded-2xl border shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full hover:-translate-y-1 group", stat.cardBg || "bg-white border-slate-200")}
           >
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className={cn("p-1.5 sm:p-2 rounded-xl transition-transform duration-300 group-hover:scale-110", stat.bg)}>
-                <stat.icon size={16} className={stat.color} />
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className={cn("p-2 sm:p-2.5 rounded-full transition-transform duration-300 group-hover:scale-110", stat.bg)}>
+                <stat.icon size={20} className={stat.color} />
               </div>
               <div className={cn(
-                "text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex items-center shadow-sm backdrop-blur-sm",
-                stat.trend === 'up' ? "bg-emerald-100/80 text-emerald-700 border border-emerald-200" : "bg-red-100/80 text-red-700 border border-red-200"
+                "text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex items-center",
+                stat.trend === 'up' ? "bg-emerald-100/80 text-emerald-700" : "bg-red-100/80 text-red-700"
               )}>
                 {stat.trend === 'up' ? <ArrowUpRight size={8} className="mr-0.5" /> : <ArrowDownRight size={8} className="mr-0.5" />}
                 {stat.change}
@@ -687,10 +680,10 @@ export default function Dashboard() {
             </div>
             <div className="space-y-0 mt-auto overflow-hidden min-w-0 w-full">
               <p className="text-[9px] sm:text-[10px] font-semibold text-slate-600 uppercase tracking-wider truncate">{stat.label}</p>
-              <h3 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight truncate">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">
                 {stat.isCurrency
-                  ? formatCompactCurrency(stat.value as number) 
-                  : stat.value}
+                  ? formatCurrencyNoDecimals(stat.value as number) 
+                  : formatNumber(stat.value as number)}
               </h3>
               <div className="h-3">
                 {stat.subValue && (
@@ -701,11 +694,12 @@ export default function Dashboard() {
           </motion.div>
         ))}
       </div>
+      </div>
 
       {/* Quick Actions (Vyapar-like) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Quick Actions</h2>
+          <h2 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</h2>
           <div className="flex flex-row sm:grid sm:grid-cols-4 md:grid-cols-8 gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {[
               { icon: Plus, label: 'Sale', color: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200', path: '/invoices/new' },
@@ -743,7 +737,7 @@ export default function Dashboard() {
       {/* Business Summary & Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Business Performance Summary */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden group">
+        <div className="lg:col-span-2 bg-white rounded-[32px] border border-black/10 border-l-[6px] border-black shadow-sm p-4 relative overflow-hidden group">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-slate-100 rounded-lg border border-slate-200">
@@ -1051,22 +1045,22 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Monthly Burn Rate</p>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-bold text-slate-900 tracking-tight">{formatCurrency(businessSummary?.runway.burnRate || 0)}</p>
+                    <div className="flex items-end justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-bold text-slate-500 mb-0.5 uppercase tracking-wider truncate">Monthly Burn</p>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <p className="text-xs font-bold text-slate-900 tracking-tight truncate">{formatCurrency(businessSummary?.runway.burnRate || 0)}</p>
                           <span className={cn(
-                            "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+                            "text-[8px] font-bold px-1 py-0.5 rounded uppercase tracking-wider",
                             businessSummary?.runway.burnTrend === 'decreasing' ? "bg-emerald-100/80 text-emerald-700" : "bg-red-100/80 text-red-700"
                           )}>
                             {businessSummary?.runway.burnTrend}
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Cash on Hand</p>
-                        <p className="text-xs font-bold text-slate-700">{formatCurrency(businessSummary?.runway.cashOnHand || 0)}</p>
+                      <div className="text-right min-w-0">
+                        <p className="text-[9px] font-bold text-slate-500 mb-0.5 uppercase tracking-wider truncate">Cash on Hand</p>
+                        <p className="text-xs font-bold text-slate-700 truncate">{formatCurrency(businessSummary?.runway.cashOnHand || 0)}</p>
                       </div>
                     </div>
                     
@@ -1164,8 +1158,8 @@ export default function Dashboard() {
         </div>
 
         {/* Proactive Actions */}
-        <div className="lg:col-span-1 bg-gradient-to-br from-white to-slate-50/50 rounded-2xl border border-slate-200/60 shadow-sm p-4 md:p-6 flex flex-col hover:shadow-md transition-all duration-300">
-          <div className="flex items-center justify-between mb-6">
+        <div className="lg:col-span-1 bg-white rounded-[32px] border border-black/10 border-l-[6px] border-black shadow-sm p-4 flex flex-col hover:shadow-md transition-all duration-300">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg shadow-sm border border-orange-100/50">
                 <Zap size={16} className="text-orange-500" />

@@ -26,15 +26,6 @@ type GSTReportType = 'GSTR-1' | 'GSTR-3B' | 'GSTR-2A';
 export default function GSTReports() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<GSTReportType>('GSTR-1');
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  const getLocalToday = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-  const [day, setDay] = useState<string>(getLocalToday());
-  const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -798,21 +789,21 @@ export default function GSTReports() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="glass-card p-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Taxable Value</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(totalTaxable)}</p>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm border-l-4 border-blue-500">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Taxable Value</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalTaxable)}</p>
           </div>
-          <div className="glass-card p-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Tax (Output)</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(totalTax)}</p>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm border-l-4 border-emerald-500">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tax (Output)</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalTax)}</p>
           </div>
-          <div className="glass-card p-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase">B2B Invoices</p>
-            <p className="text-lg font-bold text-slate-900">{b2bCount}</p>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm border-l-4 border-purple-500">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">B2B Invoices</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{b2bCount}</p>
           </div>
-          <div className="glass-card p-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase">B2C Invoices</p>
-            <p className="text-lg font-bold text-slate-900">{b2cCount}</p>
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm border-l-4 border-orange-500">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">B2C Invoices</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{b2cCount}</p>
           </div>
         </div>
 
@@ -830,24 +821,24 @@ export default function GSTReports() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px]">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="px-2.5 py-1.5">GSTIN</th>
-                  <th className="px-2.5 py-1.5">Invoice #</th>
-                  <th className="px-2.5 py-1.5">Date</th>
-                  <th className="px-2.5 py-1.5">Taxable Value</th>
-                  <th className="px-2.5 py-1.5">Tax Amount</th>
-                  <th className="px-2.5 py-1.5">Total Value</th>
+                <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                  <th className="px-2.5 py-2 whitespace-nowrap">GSTIN</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Invoice #</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Date</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Taxable Value</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Tax Amount</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Total Value</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-500">
                 {gstr1Data.b2b.map((inv, i) => (
                   <tr key={i} className="hover:bg-slate-50/50">
-                    <td className="px-2.5 py-1.5 font-medium">{inv.customers?.gstin}</td>
-                    <td className="px-2.5 py-1.5">{inv.invoice_number}</td>
-                    <td className="px-2.5 py-1.5">{new Date(inv.date).toLocaleDateString()}</td>
-                    <td className="px-2.5 py-1.5">{formatCurrency(inv.subtotal)}</td>
-                    <td className="px-2.5 py-1.5">{formatCurrency(inv.tax_amount)}</td>
-                    <td className="px-2.5 py-1.5 font-bold">{formatCurrency(inv.total)}</td>
+                    <td className="px-2.5 py-0.5 font-medium">{inv.customers?.gstin}</td>
+                    <td className="px-2.5 py-0.5">{inv.invoice_number}</td>
+                    <td className="px-2.5 py-0.5">{new Date(inv.date).toLocaleDateString()}</td>
+                    <td className="px-2.5 py-0.5">{formatCurrency(inv.subtotal)}</td>
+                    <td className="px-2.5 py-0.5">{formatCurrency(inv.tax_amount)}</td>
+                    <td className="px-2.5 py-0.5 font-bold">{formatCurrency(inv.total)}</td>
                   </tr>
                 ))}
                 {gstr1Data.b2b.length === 0 && (
@@ -874,45 +865,45 @@ export default function GSTReports() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="glass-card p-6">
-            <h3 className="text-xs font-bold text-slate-900 mb-4 flex items-center">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-primary">
+            <h3 className="text-xs font-bold text-slate-900 mb-4 flex items-center uppercase tracking-wider">
               <FileText size={14} className="mr-2 text-primary" />
               3.1 Details of Outward Supplies
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500">Total Taxable Value</span>
-                <span className="font-bold">{formatCurrency(outwardTaxable)}</span>
+                <span className="text-slate-500 font-medium">Total Taxable Value</span>
+                <span className="font-bold text-slate-900">{formatCurrency(outwardTaxable)}</span>
               </div>
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500">Total Output Tax</span>
+                <span className="text-slate-500 font-medium">Total Output Tax</span>
                 <span className="font-bold text-red-600">{formatCurrency(outwardTax)}</span>
               </div>
             </div>
           </div>
-          <div className="glass-card p-6">
-            <h3 className="text-xs font-bold text-slate-900 mb-4 flex items-center">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-emerald-500">
+            <h3 className="text-xs font-bold text-slate-900 mb-4 flex items-center uppercase tracking-wider">
               <CheckCircle2 size={14} className="mr-2 text-emerald-500" />
               4. Eligible ITC
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500">Total Inward Taxable Value</span>
-                <span className="font-bold">{formatCurrency(inwardTaxable)}</span>
+                <span className="text-slate-500 font-medium">Total Inward Taxable Value</span>
+                <span className="font-bold text-slate-900">{formatCurrency(inwardTaxable)}</span>
               </div>
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500">Total Input Tax Credit (ITC)</span>
+                <span className="text-slate-500 font-medium">Total Input Tax Credit (ITC)</span>
                 <span className="font-bold text-emerald-600">{formatCurrency(inwardTax)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="glass-card p-6 bg-slate-900 text-white">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-xl border-l-4 border-indigo-500 text-white">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Net GST Payable / (Credit)</p>
-              <p className="text-2xl font-bold mt-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net GST Payable / (Credit)</p>
+              <p className="text-3xl font-bold mt-2 tracking-tight">
                 {formatCurrency(outwardTax - inwardTax)}
               </p>
             </div>
@@ -932,9 +923,9 @@ export default function GSTReports() {
   const renderGSTR2A = () => {
     return (
       <div className="space-y-6">
-        <div className="glass-card overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm border-l-4 border-indigo-500 overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-900">GSTR-2A Auto-populated Data (Purchases)</h3>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">GSTR-2A Auto-populated Data (Purchases)</h3>
             <button 
               onClick={exportGSTR2AAsZip}
               className="px-3 h-10 sm:h-9 bg-primary text-white rounded-lg text-[10px] font-bold flex items-center hover:bg-primary/90 transition-all"
@@ -946,24 +937,24 @@ export default function GSTReports() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[11px]">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="px-2.5 py-1.5">Supplier GSTIN</th>
-                  <th className="px-2.5 py-1.5">Supplier Name</th>
-                  <th className="px-2.5 py-1.5">Invoice #</th>
-                  <th className="px-2.5 py-1.5">Date</th>
-                  <th className="px-2.5 py-1.5">Taxable Value</th>
-                  <th className="px-2.5 py-1.5">ITC Available</th>
+                <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                  <th className="px-2.5 py-2 whitespace-nowrap">Supplier GSTIN</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Supplier Name</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Invoice #</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Date</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">Taxable Value</th>
+                  <th className="px-2.5 py-2 whitespace-nowrap">ITC Available</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-500">
                 {purchases.map((pur, i) => (
                   <tr key={i} className="hover:bg-slate-50/50">
-                    <td className="px-2.5 py-1.5 font-medium">{pur.suppliers?.gstin}</td>
-                    <td className="px-2.5 py-1.5">{pur.suppliers?.name}</td>
-                    <td className="px-2.5 py-1.5">{pur.invoice_number}</td>
-                    <td className="px-2.5 py-1.5">{new Date(pur.date).toLocaleDateString()}</td>
-                    <td className="px-2.5 py-1.5">{formatCurrency(pur.subtotal)}</td>
-                    <td className="px-2.5 py-1.5 font-bold text-emerald-600">{formatCurrency(pur.tax_amount)}</td>
+                    <td className="px-2.5 py-0.5 font-medium">{pur.suppliers?.gstin}</td>
+                    <td className="px-2.5 py-0.5">{pur.suppliers?.name}</td>
+                    <td className="px-2.5 py-0.5">{pur.invoice_number}</td>
+                    <td className="px-2.5 py-0.5">{new Date(pur.date).toLocaleDateString()}</td>
+                    <td className="px-2.5 py-0.5">{formatCurrency(pur.subtotal)}</td>
+                    <td className="px-2.5 py-0.5 font-bold text-emerald-600">{formatCurrency(pur.tax_amount)}</td>
                   </tr>
                 ))}
                 {purchases.length === 0 && (
@@ -987,7 +978,11 @@ export default function GSTReports() {
   const netGstPayable = Math.max(0, totalOutputTax - totalInputTax);
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-2 pt-2 relative"
+    >
       <PageHeader 
         title={
           <div className="flex items-center space-x-3">
@@ -998,22 +993,6 @@ export default function GSTReports() {
           </div>
         }
         description="Generate GST-ready reports, track input tax credits, and simplify your tax filing process."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-3">
           <button 
@@ -1063,8 +1042,8 @@ export default function GSTReports() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="glass-card p-6 border-primary/20 bg-primary/5">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-primary">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center uppercase tracking-wider">
               <Calculator size={18} className="mr-2 text-primary" />
               GST Summary
             </h4>
@@ -1087,8 +1066,8 @@ export default function GSTReports() {
             </div>
           </div>
 
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-blue-500">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center uppercase tracking-wider">
               <Clock size={18} className="mr-2 text-primary" />
               GST Calendar
             </h4>
@@ -1114,8 +1093,8 @@ export default function GSTReports() {
             </div>
           </div>
 
-          <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
-            <h4 className="font-bold text-slate-900 mb-3 flex items-center">
+          <div className="bg-gradient-to-br from-primary/10 to-transparent rounded-2xl p-6 border border-primary/20 shadow-sm border-l-4 border-primary">
+            <h4 className="font-bold text-slate-900 mb-3 flex items-center uppercase tracking-wider">
               <FileCheck size={18} className="mr-2 text-primary" />
               Pro Tip
             </h4>
@@ -1124,8 +1103,8 @@ export default function GSTReports() {
             </p>
           </div>
 
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-slate-400">
+            <h4 className="font-bold text-slate-900 mb-4 uppercase tracking-wider">Quick Actions</h4>
             <div className="space-y-2">
               <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
                 Reconcile ITC
@@ -1147,29 +1126,29 @@ export default function GSTReports() {
           How GST Reporting Works
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-all">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-4 border border-blue-100">
               <span className="font-bold">01</span>
             </div>
-            <h4 className="font-bold text-slate-900 mb-2">Sync Invoices</h4>
+            <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider">Sync Invoices</h4>
             <p className="text-sm text-slate-500 leading-relaxed">
               Ensure all your sales and purchase invoices are entered for the selected period.
             </p>
           </div>
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 mb-4">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-purple-500 hover:shadow-md transition-all">
+            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 mb-4 border border-purple-100">
               <span className="font-bold">02</span>
             </div>
-            <h4 className="font-bold text-slate-900 mb-2">Verify Analysis</h4>
+            <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider">Verify Analysis</h4>
             <p className="text-sm text-slate-500 leading-relaxed">
               Review the GSTR-1 and GSTR-3B summaries to verify taxable values and tax amounts.
             </p>
           </div>
-          <div className="glass-card p-6 border-slate-100 hover:border-primary/20 transition-all">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-emerald-500 hover:shadow-md transition-all">
+            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 mb-4 border border-emerald-100">
               <span className="font-bold">03</span>
             </div>
-            <h4 className="font-bold text-slate-900 mb-2">Download ZIP</h4>
+            <h4 className="font-bold text-slate-900 mb-2 uppercase tracking-wider">Download ZIP</h4>
             <p className="text-sm text-slate-500 leading-relaxed">
               Download the reports as ZIP containing CSV files ready for the GST Offline Tool.
             </p>

@@ -19,7 +19,8 @@ import {
   TrendingUp,
   CreditCard,
   AlertTriangle,
-  Package
+  Package,
+  ArrowUpRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatCurrency, getDateRange, FilterType, downloadFile } from '../lib/utils';
@@ -71,16 +72,6 @@ export default function Invoices() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
-
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  const getLocalToday = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-  const [day, setDay] = useState<string>(getLocalToday());
-  const [year, setYear] = useState<number>(new Date().getFullYear());
 
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [ewaySettings, setEwaySettings] = useState<any>(null);
@@ -469,27 +460,11 @@ export default function Invoices() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="flex flex-col gap-2 pt-2 relative"
     >
       <PageHeader 
         title="Invoices" 
         description="Manage your sales invoices, track payments, and generate professional billing documents."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-2">
           
@@ -504,39 +479,47 @@ export default function Invoices() {
       </PageHeader>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-card p-4 flex items-center space-x-4">
-          <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><FileText size={20} /></div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Invoices</p>
-            <p className="text-lg font-bold text-slate-900">{invoices.length}</p>
-          </div>
-        </div>
-        <div className="glass-card p-4 flex items-center space-x-4">
-          <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><CheckCircle2 size={20} /></div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Paid</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.paid)}</p>
-          </div>
-        </div>
-        <div className="glass-card p-4 flex items-center space-x-4">
-          <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><Clock size={20} /></div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Unpaid</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.unpaid)}</p>
-          </div>
-        </div>
-        <div className="glass-card p-4 flex items-center space-x-4">
-          <div className="p-2 bg-red-100 rounded-lg text-red-600"><AlertTriangle size={20} /></div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Overdue</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.overdue)}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Invoices', value: invoices.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50/50', border: 'border-blue-200/50', accent: 'border-l-blue-600', trend: 'Active invoices', trendIcon: ArrowUpRight, trendColor: 'text-emerald-600' },
+          { label: 'Paid', value: formatCurrency(totals.paid), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-200/50', accent: 'border-l-emerald-600', trend: 'Completed payments', trendIcon: ArrowUpRight, trendColor: 'text-emerald-600' },
+          { label: 'Unpaid', value: formatCurrency(totals.unpaid), icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50/50', border: 'border-orange-200/50', accent: 'border-l-orange-600', trend: 'Pending collection', trendIcon: Clock, trendColor: 'text-orange-600' },
+          { label: 'Overdue', value: formatCurrency(totals.overdue), icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50/50', border: 'border-red-200/50', accent: 'border-l-red-600', trend: 'Action required', trendIcon: AlertTriangle, trendColor: 'text-red-600' }
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className={cn(
+              "glass-card p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden",
+              stat.border,
+              "border-l-[4px]",
+              stat.accent
+            )}
+          >
+            <div className="flex items-start justify-between mb-4 relative z-10">
+              <div className={cn("p-2.5 rounded-xl bg-white shadow-sm border border-slate-100", stat.color)}>
+                <stat.icon size={18} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 mt-auto relative z-10">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight font-serif">
+                {stat.value}
+              </h3>
+              <div className={cn("flex items-center text-[10px] font-bold mt-2", stat.trendColor)}>
+                <stat.trendIcon size={12} className="mr-1" />
+                <span>{stat.trend}</span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Filters & Search */}
-      <div className="glass-card p-4">
+      <div className="glass-card p-2">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3 w-full md:w-auto flex-1">
             <div className="relative w-full md:w-80">
@@ -586,8 +569,8 @@ export default function Invoices() {
         <div className="overflow-x-auto min-h-[450px] !overflow-visible">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-2.5 py-1.5 w-10">
+              <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="px-2.5 py-2 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -595,13 +578,13 @@ export default function Invoices() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-2.5 py-1.5">Invoice #</th>
-                <th className="px-2.5 py-1.5">Customer</th>
-                <th className="px-2.5 py-1.5">Date</th>
-                <th className="px-2.5 py-1.5">Amount</th>
-                <th className="px-2.5 py-1.5">Status</th>
-                <th className="px-2.5 py-1.5">Payment Mode</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+                <th className="px-2.5 py-2">Invoice #</th>
+                <th className="px-2.5 py-2">Customer</th>
+                <th className="px-2.5 py-2">Date</th>
+                <th className="px-2.5 py-2">Amount</th>
+                <th className="px-2.5 py-2">Status</th>
+                <th className="px-2.5 py-2">Payment Mode</th>
+                <th className="px-2.5 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -638,7 +621,7 @@ export default function Invoices() {
                         selectedInvoices.includes(invoice.id) && "bg-primary/5"
                       )}
                     >
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <input 
                           type="checkbox" 
                           className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -646,28 +629,28 @@ export default function Invoices() {
                           onChange={() => toggleSelectInvoice(invoice.id)}
                         />
                       </td>
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <span className="text-xs font-bold text-slate-900">{invoice.invoice_number}</span>
                       </td>
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <div className="flex items-center">
-                          <User size={14} className="mr-2 text-slate-400" />
+                          <User size={12} className="mr-2 text-slate-400" />
                           <span className="text-xs text-slate-600">{invoice.customers?.name}</span>
                         </div>
                       </td>
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <div className="flex items-center text-xs text-slate-600">
-                          <Calendar size={14} className="mr-2 text-slate-400" />
+                          <Calendar size={12} className="mr-2 text-slate-400" />
                           {new Date(invoice.date).toLocaleDateString()}
                         </div>
                       </td>
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <span className="text-xs font-bold text-slate-900">{formatCurrency(invoice.total)}</span>
                       </td>
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <select 
                           className={cn(
-                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase outline-none cursor-pointer",
+                            "px-2 py-0 rounded-full text-[10px] font-bold uppercase outline-none cursor-pointer",
                             getStatusColor(invoice.status)
                           )}
                           value={invoice.status}
@@ -678,40 +661,40 @@ export default function Invoices() {
                           <option value="overdue">Overdue</option>
                         </select>
                       </td>
-                      <td className="px-2.5 py-1.5">
+                      <td className="px-2.5 py-0">
                         <span className="text-xs text-slate-600">{invoice.payment_mode || 'Cash'}</span>
                       </td>
-                      <td className="px-2.5 py-1.5 text-right relative">
-                        <div className="flex items-center justify-end space-x-2">
+                      <td className="px-2.5 py-0 text-right relative">
+                        <div className="flex items-center justify-end space-x-1">
                           <button 
                             onClick={() => handlePreview(invoice)}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
+                            className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
                             title="Preview"
                           >
-                            <Eye size={16} />
+                            <Eye size={14} />
                           </button>
                           <button 
                             onClick={() => handleDownloadPDF(invoice)}
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
+                            className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
                             title="Download PDF"
                           >
-                            <Download size={16} />
+                            <Download size={14} />
                           </button>
                           {invoice.total > (ewaySettings?.ewayThreshold || 50000) && (
                             <button 
                               onClick={() => handleDownloadEwayBill(invoice)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
+                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
                               title="Download E-way Bill JSON"
                             >
-                              <Package size={16} />
+                              <Package size={14} />
                             </button>
                           )}
                           <button 
                             onClick={() => confirmDelete(invoice.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
                             title="Delete"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                           <div className="relative menu-container">
                             <button 
@@ -721,11 +704,11 @@ export default function Invoices() {
                                 setActiveMenu(activeMenu === invoice.id ? null : invoice.id);
                               }}
                               className={cn(
-                                "p-2 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center",
+                                "p-1 rounded-lg transition-all h-7 w-7 flex items-center justify-center",
                                 activeMenu === invoice.id ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                               )}
                             >
-                              <MoreVertical size={16} />
+                              <MoreVertical size={14} />
                             </button>
                             
                             {activeMenu === invoice.id && (

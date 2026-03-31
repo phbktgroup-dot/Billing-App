@@ -1,19 +1,21 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number) {
+export type FilterType = 'today' | 'yesterday' | 'last7Days' | 'last30Days' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'lastYear' | 'allTime' | 'custom' | 'day' | 'year';
+
+export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
-export function formatCompactCurrency(amount: number) {
+export function formatCompactCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -22,127 +24,131 @@ export function formatCompactCurrency(amount: number) {
   }).format(amount);
 }
 
-export function formatSeriesNumber(series: any, numberToFormat?: number) {
-  if (!series) return '';
-  const num = numberToFormat !== undefined ? numberToFormat : (series.current_number || 1);
-  let padded = num.toString();
-  if (series.name && series.prefix && series.name.startsWith(series.prefix)) {
-    const numPart = series.name.substring(series.prefix.length);
-    if (/^\d+$/.test(numPart)) {
-      padded = num.toString().padStart(numPart.length, '0');
-    }
-  }
-  return `${series.prefix}${padded}`;
+export function formatCurrencyNoDecimals(amount: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-export function formatDate(date: string | Date) {
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+export function formatNumber(amount: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-export type FilterType = 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'last7Days' | 'last30Days' | 'day' | 'custom' | 'year';
-
-export function getDateRange(
-  filterType: FilterType,
-  day: string,
-  year: number,
-  customRange: { start: string; end: string }
-): { startDate: Date; endDate: Date } {
+export function getDateRange(filter: FilterType, day?: string, year?: number, customRange?: { start: string; end: string }) {
   const now = new Date();
-  let startDate: Date;
-  let endDate: Date;
+  let start = new Date();
+  let end = new Date();
 
-  if (filterType === 'thisMonth') {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-  } else if (filterType === 'lastMonth') {
-    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-  } else if (filterType === 'thisYear') {
-    startDate = new Date(now.getFullYear(), 0, 1);
-    endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-  } else if (filterType === 'lastYear') {
-    startDate = new Date(now.getFullYear() - 1, 0, 1);
-    endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
-  } else if (filterType === 'last7Days') {
-    startDate = new Date(now);
-    startDate.setDate(now.getDate() - 7);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
-  } else if (filterType === 'last30Days') {
-    startDate = new Date(now);
-    startDate.setDate(now.getDate() - 30);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
-  } else if (filterType === 'day') {
-    const [y, m, d] = day.split('-').map(Number);
-    startDate = new Date(y, m - 1, d, 0, 0, 0, 0);
-    endDate = new Date(y, m - 1, d, 23, 59, 59, 999);
-  } else if (filterType === 'year') {
-    startDate = new Date(year, 0, 1, 0, 0, 0, 0);
-    endDate = new Date(year, 11, 31, 23, 59, 59, 999);
-  } else {
-    const [startYear, startMonth, startDateNum] = customRange.start.split('-').map(Number);
-    const [endYear, endMonth, endDateNum] = customRange.end.split('-').map(Number);
-    startDate = new Date(startYear, startMonth - 1, startDateNum, 0, 0, 0, 0);
-    endDate = new Date(endYear, endMonth - 1, endDateNum, 23, 59, 59, 999);
-  }
-
-  return { startDate, endDate };
-}
-
-export async function downloadFile(blob: Blob, filename: string) {
-  try {
-    const url = URL.createObjectURL(blob);
-    
-    // 1. Direct Download (Works on Desktop and most Mobile browsers)
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // 2. Web Share API (Convenience for Mobile)
-    // This allows users to easily send the file to WhatsApp, Email, or Save to Files
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile && typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
-      try {
-        const file = new File([blob], filename, { type: blob.type });
-        if (navigator.canShare({ files: [file] })) {
-          // We don't await here to avoid blocking the UI
-          navigator.share({
-            files: [file],
-            title: filename,
-          }).catch((err) => {
-            // Ignore AbortError (user cancelled)
-            if (err.name !== 'AbortError') {
-              console.warn('Share failed:', err);
-            }
-          });
-        }
-      } catch (shareError) {
-        console.warn('Error preparing share:', shareError);
+  switch (filter) {
+    case 'today':
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case 'yesterday':
+      start.setDate(now.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(now.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case 'last7Days':
+      start.setDate(now.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'last30Days':
+      start.setDate(now.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'thisWeek':
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'lastWeek':
+      start.setDate(now.getDate() - now.getDay() - 7);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(now.getDate() - now.getDay() - 1);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case 'thisMonth':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'lastMonth':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0);
+      break;
+    case 'thisQuarter':
+      const currentQuarter = Math.floor(now.getMonth() / 3);
+      start = new Date(now.getFullYear(), currentQuarter * 3, 1);
+      break;
+    case 'lastQuarter':
+      const lastQuarter = Math.floor(now.getMonth() / 3) - 1;
+      start = new Date(now.getFullYear(), lastQuarter * 3, 1);
+      end = new Date(now.getFullYear(), (lastQuarter + 1) * 3, 0);
+      break;
+    case 'thisYear':
+      start = new Date(now.getFullYear(), 0, 1);
+      break;
+    case 'lastYear':
+      start = new Date(now.getFullYear() - 1, 0, 1);
+      end = new Date(now.getFullYear() - 1, 11, 31);
+      break;
+    case 'allTime':
+      start = new Date(2000, 0, 1);
+      break;
+    case 'day':
+      if (day) {
+        const [y, m, d] = day.split('-').map(Number);
+        start = new Date(y, m - 1, d);
+        end = new Date(y, m - 1, d);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
       }
-    }
+      break;
+    case 'year':
+      if (year) {
+        start = new Date(year, 0, 1);
+        end = new Date(year, 11, 31);
+      }
+      break;
+    case 'custom':
+      if (customRange?.start && customRange?.end) {
+        const [sy, sm, sd] = customRange.start.split('-').map(Number);
+        const [ey, em, ed] = customRange.end.split('-').map(Number);
+        start = new Date(sy, sm - 1, sd);
+        end = new Date(ey, em - 1, ed);
+      }
+      break;
+  }
 
-    // Revoke the URL after a delay to ensure the browser has started the download
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  } catch (error) {
-    console.error('Download failed:', error);
+  return {
+    startDate: start,
+    endDate: end
+  };
+}
+
+export function downloadFile(data: string | Blob, filename: string) {
+  const url = typeof data === 'string' ? data : URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  if (typeof data !== 'string') {
+    URL.revokeObjectURL(url);
   }
 }
 
-export async function resizeImage(base64Str: string, maxWidth = 1600, maxHeight = 1600): Promise<string> {
+export function formatSeriesNumber(num: number, prefix: string = '', length: number = 4): string {
+  return `${prefix}${String(num).padStart(length, '0')}`;
+}
+
+export async function resizeImage(file: File | string, maxWidth: number = 800, maxHeight: number = 800): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.src = base64Str;
     img.onload = () => {
       const canvas = document.createElement('canvas');
       let width = img.width;
@@ -163,13 +169,20 @@ export async function resizeImage(base64Str: string, maxWidth = 1600, maxHeight 
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.8));
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
     };
-    img.onerror = (error) => reject(error);
+    img.onerror = reject;
+    
+    if (typeof file === 'string') {
+      img.src = file;
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }
   });
 }

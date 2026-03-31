@@ -5,9 +5,7 @@ import { FilterIcon } from './icons/FilterIcon';
 import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, subYears, isSameDay } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/style.css';
-import { cn } from '../lib/utils';
-
-type FilterType = 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'last7Days' | 'last30Days' | 'day' | 'custom' | 'year';
+import { cn, FilterType } from '../lib/utils';
 
 interface DateFilterProps {
   filterType: FilterType;

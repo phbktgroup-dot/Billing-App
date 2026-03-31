@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   Calendar,
   User,
-  MoreVertical,
   Trash2,
   Loader2,
   CheckCircle2,
@@ -27,7 +26,8 @@ import {
   ChevronDown,
   ExternalLink,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Share2
 } from 'lucide-react';
 import * as pdfjs from 'pdfjs-dist';
 import { useDropzone } from 'react-dropzone';
@@ -1569,15 +1569,15 @@ export default function Payments() {
                       </div>
                       <div className="max-h-[400px] overflow-auto">
                         <table className="w-full text-left border-collapse text-[9px]">
-                          <thead className="sticky top-0 bg-white border-b border-slate-100 z-10">
-                            <tr>
-                              <th className="px-3 py-2 font-bold text-slate-400 uppercase tracking-wider w-10">#</th>
+                          <thead>
+                            <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider sticky top-0 z-10">
+                              <th className="px-3 py-2 w-10">#</th>
                               {mappingHeaders.map((header, idx) => {
                                 const isMapped = Object.values(columnMapping).includes(idx);
                                 return (
                                   <th key={idx} className={cn(
-                                    "px-3 py-2 font-bold uppercase tracking-wider min-w-[120px]",
-                                    isMapped ? "text-primary bg-primary/5" : "text-slate-400"
+                                    "px-3 py-2 min-w-[120px] whitespace-nowrap",
+                                    isMapped ? "text-primary bg-primary/10" : ""
                                   )}>
                                     {header}
                                   </th>
@@ -1585,7 +1585,7 @@ export default function Payments() {
                               })}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-50">
+                          <tbody className="divide-y divide-slate-500">
                             {rawFileData.map((row, rIdx) => (
                               <tr 
                                 key={rIdx} 
@@ -1807,17 +1807,17 @@ export default function Payments() {
                     <div className="border border-slate-100 rounded-xl overflow-hidden">
                       <table className="w-full text-left border-collapse text-[10px]">
                         <thead>
-                          <tr className="bg-slate-50 border-b border-slate-100">
-                            <th className="px-3 py-2 font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                          <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                            <th className="px-3 py-2 whitespace-nowrap">Status</th>
                             {bankTransactions.some(t => t.page_number) && (
-                              <th className="px-3 py-2 font-bold text-slate-500 uppercase tracking-wider">Page</th>
+                              <th className="px-3 py-2 whitespace-nowrap">Page</th>
                             )}
                             {bankColumns.map(col => (
-                              <th key={col} className="px-3 py-2 font-bold text-slate-500 uppercase tracking-wider">{col}</th>
+                              <th key={col} className="px-3 py-2 whitespace-nowrap">{col}</th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-500">
                           {bankTransactions
                             .filter(tx => {
                               const matchesSearch = tx.description.toLowerCase().includes(bankSearch.toLowerCase());
@@ -2145,20 +2145,20 @@ export default function Payments() {
         <>
           {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="glass-card p-4 flex items-center space-x-4">
-          <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><ArrowDownLeft size={20} /></div>
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm border-l-4 border-emerald-500 flex items-center space-x-4">
+          <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600 border border-emerald-100"><ArrowDownLeft size={20} /></div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Receipts (Customers)</p>
-            <p className="text-lg font-bold text-slate-900">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Receipts (Customers)</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">
               {formatCurrency(payments.filter(p => p.type === 'receipt').reduce((sum, p) => sum + p.amount, 0))}
             </p>
           </div>
         </div>
-        <div className="glass-card p-4 flex items-center space-x-4">
-          <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><ArrowUpRight size={20} /></div>
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm border-l-4 border-orange-500 flex items-center space-x-4">
+          <div className="p-2 bg-orange-50 rounded-lg text-orange-600 border border-orange-100"><ArrowUpRight size={20} /></div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Payments (Suppliers)</p>
-            <p className="text-lg font-bold text-slate-900">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Payments (Suppliers)</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">
               {formatCurrency(payments.filter(p => p.type === 'payment').reduce((sum, p) => sum + p.amount, 0))}
             </p>
           </div>
@@ -2197,17 +2197,17 @@ export default function Payments() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Party</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Mode</th>
-                <th className="px-4 py-3">Reference</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-2 whitespace-nowrap">Date</th>
+                <th className="px-4 py-2 whitespace-nowrap">Party</th>
+                <th className="px-4 py-2 whitespace-nowrap">Type</th>
+                <th className="px-4 py-2 whitespace-nowrap">Amount</th>
+                <th className="px-4 py-2 whitespace-nowrap">Mode</th>
+                <th className="px-4 py-2 whitespace-nowrap">Reference</th>
+                <th className="px-4 py-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
@@ -2224,43 +2224,49 @@ export default function Payments() {
                 </tr>
               ) : (
                 filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 text-xs text-slate-600">
+                  <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-4 py-0.5 text-[11px] text-slate-600">
                       {new Date(payment.date).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-bold text-slate-900">
+                    <td className="px-4 py-0.5">
+                      <span className="text-[11px] font-bold text-slate-900">
                         {payment.type === 'receipt' ? payment.customers?.name : payment.suppliers?.name}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-0.5">
                       <span className={cn(
-                        "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                        "px-1 py-0.5 rounded-md text-[9px] font-bold uppercase",
                         payment.type === 'receipt' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
                       )}>
                         {payment.type === 'receipt' ? "Receipt" : "Payment"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-0.5">
                       <span className={cn(
-                        "text-xs font-bold",
+                        "text-[11px] font-bold",
                         payment.type === 'receipt' ? "text-emerald-600" : "text-orange-600"
                       )}>
                         {payment.type === 'receipt' ? "+" : "-"}{formatCurrency(payment.amount)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{payment.payment_mode}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{payment.reference_number || '-'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button 
-                        onClick={() => {
-                          setPaymentToDelete(payment.id);
-                          setIsDeleteModalOpen(true);
-                        }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <td className="px-4 py-0.5 text-[11px] text-slate-600">{payment.payment_mode}</td>
+                    <td className="px-4 py-0.5 text-[11px] text-slate-500">{payment.reference_number || '-'}</td>
+                    <td className="px-4 py-0.5 text-right">
+                      <div className="flex items-center justify-end space-x-1">
+                        <button 
+                          onClick={() => {
+                            setPaymentToDelete(payment.id);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-7 w-7 flex items-center justify-center">
+                          <Share2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

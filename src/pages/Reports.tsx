@@ -217,37 +217,37 @@ export default function Reports() {
         <div className="lg:col-span-3 space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="glass-card p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                  <TrendingUp size={16} />
+            <div className="bg-slate-50/30 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-2xl shadow-sm p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <TrendingUp size={14} />
                 </div>
-                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+12.5%</span>
+                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+12.5%</span>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Sales</p>
-              <h3 className="text-lg font-bold text-slate-900">{formatCurrency(summary.totalSales)}</h3>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Sales</p>
+              <h3 className="text-base font-bold text-slate-900">{formatCurrency(summary.totalSales)}</h3>
             </div>
             
-            <div className="glass-card p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
-                  <BarChartIcon size={16} />
+            <div className="bg-slate-50/30 border border-blue-200 border-l-[6px] border-l-orange-600 rounded-2xl shadow-sm p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+                  <BarChartIcon size={14} />
                 </div>
-                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+5.2%</span>
+                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+5.2%</span>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Purchases</p>
-              <h3 className="text-lg font-bold text-slate-900">{formatCurrency(summary.totalPurchases)}</h3>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Purchases</p>
+              <h3 className="text-base font-bold text-slate-900">{formatCurrency(summary.totalPurchases)}</h3>
             </div>
 
-            <div className="glass-card p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                  <Receipt size={16} />
+            <div className="bg-slate-50/30 border border-blue-200 border-l-[6px] border-l-red-600 rounded-2xl shadow-sm p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                  <Receipt size={14} />
                 </div>
-                <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">+2.1%</span>
+                <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">+2.1%</span>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Expenses</p>
-              <h3 className="text-lg font-bold text-slate-900">{formatCurrency(summary.totalExpenses)}</h3>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Expenses</p>
+              <h3 className="text-base font-bold text-slate-900">{formatCurrency(summary.totalExpenses)}</h3>
             </div>
           </div>
 
@@ -297,10 +297,10 @@ export default function Reports() {
               </div>
               <div className="mt-3 space-y-2">
                 {productData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-[11px]">
+                  <div key={index} className="flex items-center justify-between text-[10px]">
                     <div className="flex items-center">
-                      <div className="w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="text-slate-600">{item.name}</span>
+                      <div className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-slate-600 truncate max-w-[120px]">{item.name}</span>
                     </div>
                     <span className="font-bold text-slate-900">{formatCurrency(item.value)}</span>
                   </div>

@@ -71,7 +71,7 @@ export default function ScanOptionsModal({ onClose, onFileSelect }: ScanOptionsM
         type="file" 
         ref={fileInputRef} 
         onChange={onFileSelect} 
-        accept="image/*" 
+        accept="image/*,application/pdf" 
         className="hidden" 
       />
       <input 

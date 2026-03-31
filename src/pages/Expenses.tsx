@@ -35,16 +35,6 @@ export default function Expenses() {
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  const getLocalToday = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-  const [day, setDay] = useState<string>(getLocalToday());
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-
   const [formData, setFormData] = useState({
     category: 'Other',
     amount: '',
@@ -201,26 +191,14 @@ export default function Expenses() {
   };
 
   return (
-    <div className="space-y-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-2 pt-2 relative"
+    >
       <PageHeader 
         title="Business Expenses" 
         description="Record and categorize your business spending to track profitability and tax deductions."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-2">
           
@@ -245,32 +223,32 @@ export default function Expenses() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-card p-4">
+        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-red-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+            <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-blue-100 flex items-center justify-center text-red-600">
               <DollarSign size={16} />
             </div>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Expenses</p>
-          <h3 className="text-lg font-bold text-slate-900">{formatCurrency(totalExpenses)}</h3>
+          <h3 className="text-xl font-black text-slate-900 tracking-tight">{formatCurrency(totalExpenses)}</h3>
         </div>
-        <div className="glass-card p-4">
+        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+            <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-blue-100 flex items-center justify-center text-blue-600">
               <Receipt size={16} />
             </div>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Expense Count</p>
-          <h3 className="text-lg font-bold text-slate-900">{filteredExpenses.length}</h3>
+          <h3 className="text-xl font-black text-slate-900 tracking-tight">{filteredExpenses.length}</h3>
         </div>
-        <div className="glass-card p-4">
+        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-emerald-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+            <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-blue-100 flex items-center justify-center text-emerald-600">
               <Calendar size={16} />
             </div>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">This Month</p>
-          <h3 className="text-lg font-bold text-slate-900">
+          <h3 className="text-xl font-black text-slate-900 tracking-tight">
             {formatCurrency(expenses.filter(e => e.date.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, e) => s + e.amount, 0))}
           </h3>
         </div>
@@ -316,7 +294,7 @@ export default function Expenses() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-bottom border-slate-100">
+              <tr className="bg-slate-50/50 border-bottom border-slate-100 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
                 <th className="px-2.5 py-1.5 w-10">
                   <input 
                     type="checkbox" 
@@ -325,11 +303,11 @@ export default function Expenses() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Date</th>
-                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Category</th>
-                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Description</th>
-                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Amount</th>
-                <th className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Actions</th>
+                <th className="px-2.5 py-1.5">Date</th>
+                <th className="px-2.5 py-1.5">Category</th>
+                <th className="px-2.5 py-1.5">Description</th>
+                <th className="px-2.5 py-1.5 text-right">Amount</th>
+                <th className="px-2.5 py-1.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -369,40 +347,40 @@ export default function Expenses() {
                     </td>
                     <td className="px-2.5 py-1.5">
                       <div className="flex items-center space-x-2">
-                        <Calendar size={14} className="text-slate-400" />
-                        <span className="text-xs text-slate-600 font-medium">{new Date(expense.date).toLocaleDateString()}</span>
+                        <Calendar size={12} className="text-slate-400" />
+                        <span className="text-[10px] text-slate-600 font-medium">{new Date(expense.date).toLocaleDateString()}</span>
                       </div>
                     </td>
                     <td className="px-2.5 py-1.5">
                       <div className="flex items-center space-x-2">
-                        <Tag size={14} className="text-slate-400" />
-                        <span className="text-xs font-bold text-slate-900">{expense.category}</span>
+                        <Tag size={12} className="text-slate-400" />
+                        <span className="text-[10px] font-bold text-slate-900">{expense.category}</span>
                       </div>
                     </td>
                     <td className="px-2.5 py-1.5">
-                      <span className="text-xs text-slate-500 line-clamp-1">{expense.description || '-'}</span>
+                      <span className="text-[10px] text-slate-500 line-clamp-1">{expense.description || '-'}</span>
                     </td>
                     <td className="px-2.5 py-1.5 text-right">
-                      <span className="text-xs font-bold text-red-600">{formatCurrency(expense.amount)}</span>
+                      <span className="text-[10px] font-bold text-red-600">{formatCurrency(expense.amount)}</span>
                     </td>
                     <td className="px-2.5 py-1.5 text-right">
-                      <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => handleEdit(expense)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                          className="p-1 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Edit"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={12} />
                         </button>
                         <button 
                           onClick={() => confirmDelete(expense.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
                           title="Delete"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-                          <MoreVertical size={14} />
+                        <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
+                          <MoreVertical size={12} />
                         </button>
                       </div>
                     </td>
