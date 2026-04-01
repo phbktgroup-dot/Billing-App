@@ -145,7 +145,11 @@ export default function Dashboard() {
         return;
       }
 
-      // 1. Fetch Raw Data
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+      const startIso = startDate.toISOString();
+      const endIso = endDate.toISOString();
+
+      // 1. Fetch Raw Data with Date Filters
       const [
         { data: invoices, error: invError },
         { count: customerCount, error: custError },
@@ -154,12 +158,12 @@ export default function Dashboard() {
         { data: suppliers, error: supError },
         { data: expensesData, error: expError }
       ] = await Promise.all([
-        supabase.from('invoices').select('*, customers(name)').eq('business_id', businessId),
+        supabase.from('invoices').select('id, total, status, date, created_at, customers(name)').eq('business_id', businessId).gte('date', startIso).lte('date', endIso),
         supabase.from('customers').select('*', { count: 'exact', head: true }).eq('business_id', businessId),
         supabase.from('products').select('id, stock, min_stock').eq('business_id', businessId),
-        supabase.from('purchases').select('*, suppliers(name)').eq('business_id', businessId).order('date', { ascending: false }),
-        supabase.from('suppliers').select('*').eq('business_id', businessId),
-        supabase.from('expenses').select('*').eq('business_id', businessId)
+        supabase.from('purchases').select('id, total_amount, status, date, suppliers(name)').eq('business_id', businessId).gte('date', startIso).lte('date', endIso).order('date', { ascending: false }),
+        supabase.from('suppliers').select('id, name').eq('business_id', businessId),
+        supabase.from('expenses').select('id, amount, date').eq('business_id', businessId).gte('date', startIso).lte('date', endIso)
       ]);
 
       // Fallback logic
@@ -183,12 +187,14 @@ export default function Dashboard() {
         products: productsData
       });
 
-      // 2. Apply Filters
-      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
-
+      // 2. Apply Filters (Local filtering is now mostly redundant but kept for fallback data)
       const filteredInvoices = invoicesData.filter(inv => {
-        const date = new Date(inv.created_at);
-        return date >= startDate && date <= endDate;
+        const date = new Date(inv.date || inv.created_at);
+        // Reset times for date-only comparison
+        const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const s = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const e = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        return d >= s && d <= e;
       });
 
       const filteredPurchases = purchasesData.filter(p => {

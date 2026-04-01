@@ -243,11 +243,15 @@ export default function AdminPanel() {
         fetchUsers();
       } else if (activeTab === 'notifications') {
         fetchNotifications();
-      } else if (activeTab === 'settings') {
-        setNewAppName(appSettings?.app_name || 'My App');
       }
     }
-  }, [currentUser?.id, businessId, isSuperAdmin, activeTab, appSettings]);
+  }, [currentUser?.id, businessId, isSuperAdmin, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      setNewAppName(appSettings?.app_name || 'My App');
+    }
+  }, [activeTab, appSettings]);
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -256,7 +260,7 @@ export default function AdminPanel() {
       if (!isSuperAdmin) {
         query = query.eq('created_by', currentUser?.id);
       }
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       setNotifications(data || []);
     } catch (error: any) {
@@ -372,7 +376,7 @@ export default function AdminPanel() {
     try {
       let query = supabase.from('users').select('*, business_profiles(name)');
 
-      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false }).limit(500);
 
       if (fetchError) {
         throw fetchError;

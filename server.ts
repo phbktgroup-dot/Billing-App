@@ -90,9 +90,11 @@ async function verifyAdmin(req: express.Request) {
     throw new Error("Missing authorization header");
   }
 
-  const token = authHeader.replace('Bearer ', '');
+  const token = authHeader.replace('Bearer ', '').trim();
+  console.log("verifyAdmin token:", token ? "present" : "missing", "length:", token.length);
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
   if (authError || !user) {
+    console.error("verifyAdmin authError:", authError);
     throw new Error("Invalid token: " + (authError?.message || "User not found"));
   }
 

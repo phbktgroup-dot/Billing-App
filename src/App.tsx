@@ -96,6 +96,7 @@ function App() {
           <Route path="/ledger" element={<Ledger />} />
           <Route path="/gst-reports" element={<GSTReports />} />
           <Route path="/tax-tools" element={<TaxTools />} />
+          <Route path="/eway-bill" element={<TaxTools type="eway" />} />
           <Route path="/itr-report" element={<ITRReport />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/admin" element={<AdminPanel />} />

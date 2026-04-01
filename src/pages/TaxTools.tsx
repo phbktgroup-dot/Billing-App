@@ -13,7 +13,8 @@ import {
   FileArchive,
   Upload,
   Trash2,
-  FileUp
+  FileUp,
+  Truck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, getDateRange, FilterType, downloadFile } from '../lib/utils';

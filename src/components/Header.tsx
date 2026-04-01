@@ -215,8 +215,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    signOut();
     navigate('/login');
   };
 

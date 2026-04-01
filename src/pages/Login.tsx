@@ -70,6 +70,7 @@ export default function Login() {
         if (result.error) throw result.error;
         setSuccessMsg('Account created successfully! You can now login.');
         setIsSignUp(false);
+        if (mounted) setIsLoading(false);
         return;
       }
 
@@ -85,12 +86,16 @@ export default function Login() {
       if (result.error) throw result.error;
 
       if (result.data?.user) {
-        console.log('Login successful, waiting for redirect...');
+        console.log('Login successful, waiting for profile fetch and redirect...');
+        // Do not set isLoading to false here. Let the useEffect handle the redirect
+        // when AuthContext finishes loading the profile.
+        return;
       }
+      
+      if (mounted) setIsLoading(false);
     } catch (err: any) {
       console.error('Auth error:', err);
       setError(err.message || 'Failed to login. Please check your credentials.');
-    } finally {
       if (mounted) setIsLoading(false);
     }
   };

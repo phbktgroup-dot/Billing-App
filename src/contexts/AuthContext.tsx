@@ -35,12 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log(`[AuthContext] Fetching profile for ${isImpersonation ? 'impersonated ' : ''}user:`, userId);
       
-      // 1. Fetch the user record from public.users
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // 1. Fetch the user record and business profile in parallel
+      const [userResponse, businessResponse] = await Promise.all([
+        supabase.from('users').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('business_profiles').select('*').eq('user_id', userId).maybeSingle()
+      ]);
+
+      const { data: userData, error: userError } = userResponse;
+      const { data: businessData, error: businessError } = businessResponse;
  
       if (userError) {
         console.error('[AuthContext] Error fetching user from public.users:', userError);
@@ -91,15 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('[AuthContext] No profile found or created for user:', userId);
       }
 
-      // 2. Fetch the business profile separately
+      // 2. Attach business profile
       if (finalProfile) {
-        console.log('[AuthContext] Fetching business profile for user:', userId);
-        const { data: businessData, error: businessError } = await supabase
-          .from('business_profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
-
         if (businessError) {
           console.error('[AuthContext] Error fetching business profile:', businessError);
         } else if (businessData) {
@@ -267,25 +262,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    // Clear state immediately for fast UI response
+    setUser(null);
+    setProfile(null);
+    setImpersonatedUser(null);
+    setImpersonatedProfile(null);
+    setOriginalProfile(null);
+    userIdRef.current = null;
+    localStorage.removeItem('impersonatedUserId');
+    
+    // Clear any potential stale auth data from localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
     try {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Error signing out:', err);
-    } finally {
-      setUser(null);
-      setProfile(null);
-      setImpersonatedUser(null);
-      setImpersonatedProfile(null);
-      setOriginalProfile(null);
-      userIdRef.current = null;
-      localStorage.removeItem('impersonatedUserId');
-      // Clear any potential stale auth data from localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
-          localStorage.removeItem(key);
-        }
-      }
     }
   };
 
