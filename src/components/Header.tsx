@@ -239,7 +239,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-12 md:h-12 bg-white/80 backdrop-blur-xl sticky z-[60] px-4 md:px-8 flex items-center justify-between border-b border-slate-100",
+        "h-16 md:h-12 bg-white/80 backdrop-blur-xl sticky z-[60] px-4 md:px-8 flex items-center justify-between border-b border-slate-100 pt-safe md:pt-0",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
         <div className="absolute inset-0 -z-10 pointer-events-none" />

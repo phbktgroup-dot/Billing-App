@@ -133,13 +133,13 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
             {(isSuperAdmin || isAdmin) && (
               <button 
                 onClick={() => onDelete(user.id)}
-                disabled={!isSuperAdmin && (user.role === 'Admin' || user.role === 'Super Admin')}
+                disabled={!isSuperAdmin && (user.role === 'Super Admin' || user.role === 'Admin')}
                 className={cn("p-1 rounded-lg transition-all", 
-                  (user.role === 'Super Admin' || (!isSuperAdmin && user.role === 'Admin')) 
+                  (!isSuperAdmin && (user.role === 'Super Admin' || user.role === 'Admin')) 
                     ? "text-slate-200 cursor-not-allowed" 
                     : "text-slate-400 hover:text-red-500 hover:bg-red-50"
                 )}
-                title={(!isSuperAdmin && (user.role === 'Admin' || user.role === 'Super Admin')) ? "Cannot delete this user" : "Delete User"}
+                title={(!isSuperAdmin && (user.role === 'Super Admin' || user.role === 'Admin')) ? "Cannot delete this user" : "Delete User"}
               >
                 <Trash2 size={14} />
               </button>
@@ -186,7 +186,9 @@ export default function AdminPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteNotifModalOpen, setDeleteNotifModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [notifToDelete, setNotifToDelete] = useState<string | null>(null);
   const [impersonateModalOpen, setImpersonateModalOpen] = useState(false);
   const [userToImpersonate, setUserToImpersonate] = useState<any | null>(null);
   const [editingApiKeyUser, setEditingApiKeyUser] = useState<any>(null);
@@ -234,6 +236,7 @@ export default function AdminPanel() {
   };
 
   useEffect(() => {
+    checkApiHealth();
     if (currentUser) {
       if (activeTab === 'users') {
         fetchUsers();
@@ -303,8 +306,14 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDeleteNotification = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this notification?')) return;
+  const confirmDeleteNotification = (id: string) => {
+    setNotifToDelete(id);
+    setDeleteNotifModalOpen(true);
+  };
+
+  const handleDeleteNotification = async () => {
+    if (!notifToDelete) return;
+    setIsSubmitting(true);
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -316,16 +325,20 @@ export default function AdminPanel() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: notifToDelete }),
       });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to delete notification');
 
+      setDeleteNotifModalOpen(false);
+      setNotifToDelete(null);
       fetchNotifications();
     } catch (err: any) {
       console.error("Error in handleDeleteNotification:", err);
-      alert(err.message || 'Failed to delete notification');
+      setError(err.message || 'Failed to delete notification');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -406,7 +419,7 @@ export default function AdminPanel() {
       alert('API Key updated successfully!');
       setEditingApiKeyUser(null);
     } catch (err: any) {
-      alert(err.message || 'Failed to update API key');
+      setError(err.message || 'Failed to update API key');
     } finally {
       setIsSavingApiKey(false);
     }
@@ -444,9 +457,8 @@ export default function AdminPanel() {
       setShowAddUser(false);
       setNewUser({ name: '', email: '', password: '', role: 'Business User' });
       fetchUsers();
-      alert('User created successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to create user');
+      setError(err.message || 'Failed to create user');
     } finally {
       setIsSubmitting(false);
     }
@@ -479,9 +491,8 @@ export default function AdminPanel() {
 
       setEditingUser(null);
       fetchUsers();
-      alert('User updated successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to update user');
+      setError(err.message || 'Failed to update user');
     } finally {
       setIsSubmitting(false);
     }
@@ -489,12 +500,18 @@ export default function AdminPanel() {
 
   const confirmDelete = (id: string) => {
     if (!isSuperAdmin && !isAdmin) {
-      alert("Only Admins can delete users.");
+      setError("Only Admins can delete users.");
       return;
     }
 
     if (id === currentUser?.id) {
-      alert("You cannot delete your own account.");
+      setError("You cannot delete your own account.");
+      return;
+    }
+
+    const user = users.find(u => u.id === id);
+    if (user?.role === 'Super Admin' && !isSuperAdmin) {
+      setError("Only Super Admins can delete other Super Admins.");
       return;
     }
 
@@ -504,6 +521,7 @@ export default function AdminPanel() {
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
+    setIsSubmitting(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -523,11 +541,12 @@ export default function AdminPanel() {
         throw new Error(result.error || 'Failed to delete user');
       }
 
+      setDeleteModalOpen(false);
       fetchUsers();
-      alert('User deleted successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to delete user');
+      setError(err.message || 'Failed to delete user');
     } finally {
+      setIsSubmitting(false);
       setUserToDelete(null);
     }
   };
@@ -560,9 +579,8 @@ export default function AdminPanel() {
       if (!response.ok) throw new Error(result.error || 'Failed to update user status');
 
       fetchUsers();
-      alert(`User ${isActive ? 'disabled' : 'enabled'} successfully!`);
     } catch (err: any) {
-      alert(err.message || 'Failed to update user status');
+      setError(err.message || 'Failed to update user status');
     }
   };
 
@@ -607,10 +625,9 @@ export default function AdminPanel() {
       if (updateError) throw updateError;
 
       await refreshAppSettings();
-      alert('Global logo updated successfully!');
     } catch (err: any) {
       console.error('Error uploading logo:', err);
-      alert(err.message || 'Failed to upload logo');
+      setError(err.message || 'Failed to upload logo');
     } finally {
       setIsUploadingLogo(false);
     }
@@ -633,10 +650,9 @@ export default function AdminPanel() {
       if (error) throw error;
 
       await refreshAppSettings();
-      alert('App settings updated successfully!');
     } catch (err: any) {
       console.error('Error updating settings:', err);
-      alert(err.message || 'Failed to update settings');
+      setError(err.message || 'Failed to update settings');
     } finally {
       setIsSubmitting(false);
     }
@@ -650,24 +666,28 @@ export default function AdminPanel() {
 
   // Group users by hierarchy
   const getHierarchy = () => {
-    const buildTree = (parentId: string | null): any[] => {
+    const buildTree = (parentId: string | null, visited = new Set()): any[] => {
       return users
-        .filter(u => u.created_by === parentId)
-        .map(u => ({
-          ...u,
-          children: buildTree(u.id)
-        }));
+        .filter(u => u.created_by === parentId && u.id !== parentId && !visited.has(u.id))
+        .map(u => {
+          const newVisited = new Set(visited);
+          newVisited.add(u.id);
+          return {
+            ...u,
+            children: buildTree(u.id, newVisited)
+          };
+        });
     };
 
     // Roots are users whose creator is not in our current list of fetched users
     const roots = users.filter(u => {
-      if (!u.created_by) return true;
+      if (!u.created_by || u.created_by === u.id) return true;
       return !users.some(creator => creator.id === u.created_by);
     });
 
     return roots.map(u => ({
       ...u,
-      children: buildTree(u.id)
+      children: buildTree(u.id, new Set([u.id]))
     }));
   };
 
@@ -892,12 +912,6 @@ export default function AdminPanel() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900">Sent Notifications</h3>
-            <button 
-              onClick={() => setShowAddNotification(true)}
-              className="btn-primary px-4 py-2 text-xs"
-            >
-              Send New Notification
-            </button>
           </div>
           {loading ? (
             <div className="glass-card p-8 text-center">
@@ -960,7 +974,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => handleDeleteNotification(notif.id)}
+                    onClick={() => confirmDeleteNotification(notif.id)}
                     className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                   >
                     <Trash2 size={14} />
@@ -1306,6 +1320,7 @@ export default function AdminPanel() {
         title="Delete User"
         message="Are you sure you want to delete this user? This action will permanently remove them from the system."
         onConfirm={handleDeleteUser}
+        isLoading={isSubmitting}
         onCancel={() => {
           setDeleteModalOpen(false);
           setUserToDelete(null);
@@ -1323,6 +1338,19 @@ export default function AdminPanel() {
         onCancel={() => {
           setImpersonateModalOpen(false);
           setUserToImpersonate(null);
+        }}
+      />
+
+      {/* Delete Notification Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteNotifModalOpen}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification? This action cannot be undone."
+        onConfirm={handleDeleteNotification}
+        isLoading={isSubmitting}
+        onCancel={() => {
+          setDeleteNotifModalOpen(false);
+          setNotifToDelete(null);
         }}
       />
     </div>

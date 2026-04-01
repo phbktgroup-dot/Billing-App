@@ -881,7 +881,7 @@ export default function Settings() {
                     <div key={series.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div>
                         <p className="text-xs font-bold text-slate-900">{series.name}</p>
-                        <p className="text-[10px] text-slate-500">Prefix: {series.prefix} | Next: {formatSeriesNumber(series)}</p>
+                        <p className="text-[10px] text-slate-500">Prefix: {series.prefix} | Next: {formatSeriesNumber(series.current_number, series.prefix, series.name)}</p>
                       </div>
                       <button 
                         onClick={async () => {
@@ -930,7 +930,7 @@ export default function Settings() {
                         
                         if (data) {
                           // Check if default series exists and remove it
-                          const defaultSeries = invoiceSeries.find(s => s.name === 'INV-0000000001' && s.current_number === 1);
+                          const defaultSeries = invoiceSeries.find(s => (s.name === 'INV-0000000001' || s.name === 'Default Series') && s.current_number === 1);
                           if (defaultSeries) {
                             await supabase.from('invoice_series').delete().eq('id', defaultSeries.id);
                             setInvoiceSeries([...invoiceSeries.filter(s => s.id !== defaultSeries.id), data[0]]);

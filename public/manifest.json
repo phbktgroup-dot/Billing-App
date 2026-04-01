@@ -2,7 +2,7 @@
   "name": "Billing Pro+",
   "short_name": "Billing Pro+",
   "description": "Professional Billing and Management Suite",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#1e3a8a",

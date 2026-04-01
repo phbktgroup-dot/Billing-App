@@ -20,10 +20,20 @@ import {
   CreditCard,
   AlertTriangle,
   Package,
-  ArrowUpRight
+  ArrowUpRight,
+  BarChart3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, formatCurrency, getDateRange, FilterType, downloadFile } from '../lib/utils';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+import { cn, formatCurrency, getDateRange, FilterType, downloadFile, formatCurrencyNoDecimals } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
@@ -440,6 +450,18 @@ export default function Invoices() {
     return { paid, unpaid, overdue, total: paid + unpaid + overdue };
   }, [invoices]);
 
+  const chartData = useMemo(() => {
+    const data: Record<string, number> = {};
+    invoices.forEach(inv => {
+      const date = new Date(inv.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      data[date] = (data[date] || 0) + Number(inv.total);
+    });
+    return Object.entries(data)
+      .map(([name, total]) => ({ name, total }))
+      .reverse()
+      .slice(-15); // Show last 15 days
+  }, [invoices]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-emerald-100 text-emerald-700';
@@ -496,30 +518,94 @@ export default function Invoices() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             className={cn(
-              "glass-card p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden",
+              "glass-card p-3 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden",
               stat.border,
               "border-l-[4px]",
               stat.accent
             )}
           >
-            <div className="flex items-start justify-between mb-4 relative z-10">
-              <div className={cn("p-2.5 rounded-xl bg-white shadow-sm border border-slate-100", stat.color)}>
-                <stat.icon size={18} />
+            <div className="flex items-start justify-between mb-2 relative z-10">
+              <div className={cn("p-2 rounded-xl bg-white shadow-sm border border-slate-100", stat.color)}>
+                <stat.icon size={16} />
               </div>
             </div>
 
-            <div className="space-y-1.5 mt-auto relative z-10">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight font-serif">
+            <div className="space-y-1 mt-auto relative z-10">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">
                 {stat.value}
               </h3>
-              <div className={cn("flex items-center text-[10px] font-bold mt-2", stat.trendColor)}>
-                <stat.trendIcon size={12} className="mr-1" />
+              <div className={cn("flex items-center text-[9px] font-bold mt-1", stat.trendColor)}>
+                <stat.trendIcon size={10} className="mr-1" />
                 <span>{stat.trend}</span>
               </div>
             </div>
           </motion.div>
         ))}
+      </div>
+
+      {/* Sales Trend Chart */}
+      <div className="glass-card p-4 border border-black/10 border-l-[6px] border-black shadow-sm relative overflow-hidden group">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-slate-100 rounded-lg border border-slate-200">
+              <BarChart3 size={16} className="text-slate-700" />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold text-slate-900">Sales Trend</h2>
+              <p className="text-[9px] text-slate-500">Daily Revenue Performance</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Revenue</p>
+            <p className="text-sm font-bold text-slate-900">{formatCurrency(totals.total)}</p>
+          </div>
+        </div>
+
+        <div className="h-40 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 9, fill: '#64748b' }}
+                dy={10}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 9, fill: '#64748b' }}
+                tickFormatter={(value) => `₹${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '12px', 
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  fontSize: '10px'
+                }}
+                formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="total" 
+                stroke="#3b82f6" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorTotal)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Filters & Search */}

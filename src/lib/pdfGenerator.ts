@@ -210,14 +210,20 @@ export const generateInvoicePDF = async (invoice: InvoiceData, business: Busines
   invoice.items.forEach((item, index) => {
     if (currentY > 190) return; // Prevent items from overflowing table
     doc.text((index + 1).toString(), 15, currentY, { align: 'center' });
-    doc.text(item.name, 22, currentY);
+    
+    // Split item name to fit in column (width is approx 65 units, from x=20 to x=85)
+    const splitName = doc.splitTextToSize(item.name, 60);
+    doc.text(splitName, 22, currentY);
+    
     doc.text(item.hsnCode || "-", 95, currentY, { align: 'center' });
     doc.text(`${item.gstRate || 0}%`, 115, currentY, { align: 'center' });
     doc.text(item.quantity.toString(), 135, currentY, { align: 'center' });
     doc.text(item.rate.toFixed(2), 168, currentY, { align: 'right' });
     doc.text((item.quantity * item.rate).toFixed(2), 198, currentY, { align: 'right' });
     
-    currentY += 6;
+    // Adjust currentY based on number of lines in description
+    const lines = splitName.length;
+    currentY += Math.max(6, (lines * 5) + 1);
   });
 
   // Discount Row (Single row style)

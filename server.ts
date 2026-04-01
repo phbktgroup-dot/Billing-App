@@ -248,8 +248,19 @@ app.post("/api/admin/delete-user", async (req, res) => {
       }
     }
 
-    if (targetUser.role === 'Admin') {
-      await supabaseAdmin.from('users').update({ created_by: adminUser.id }).eq('created_by', userId);
+    if (targetUser.role === 'Admin' || targetUser.role === 'Super Admin') {
+      // Reassign users created by the deleted user to the current admin
+      // But avoid self-reference (don't set a user's creator to themselves)
+      await supabaseAdmin.from('users')
+        .update({ created_by: adminUser.id })
+        .eq('created_by', userId)
+        .neq('id', adminUser.id);
+      
+      // If the current admin was created by the deleted user, set their creator to null (they are now a root)
+      await supabaseAdmin.from('users')
+        .update({ created_by: null })
+        .eq('id', adminUser.id)
+        .eq('created_by', userId);
     }
     
     // Storage cleanup
@@ -338,9 +349,21 @@ app.post("/api/admin/send-user-notification", async (req, res) => {
 
 app.post("/api/admin/delete-notification", async (req, res) => {
   try {
-    const { isSuperAdmin } = await verifyAdmin(req);
-    if (!isSuperAdmin) throw new Error("Forbidden");
+    const { isSuperAdmin, user } = await verifyAdmin(req);
     const { id } = req.body;
+    
+    const { data: notification, error: fetchError } = await supabaseAdmin
+      .from('notifications')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (fetchError || !notification) throw new Error("Notification not found");
+    
+    if (!isSuperAdmin && notification.created_by !== user.id) {
+      throw new Error("Forbidden: You can only delete notifications you created");
+    }
+    
     const { error } = await supabaseAdmin.from('notifications').delete().eq('id', id);
     if (error) throw error;
     res.json({ success: true });
@@ -438,7 +461,7 @@ app.post("/api/scan", async (req, res) => {
         }
       ],
       config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
         ...config
       }
     });

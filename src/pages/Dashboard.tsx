@@ -647,6 +647,13 @@ export default function Dashboard() {
         <div className="flex flex-row items-center gap-3 justify-end relative z-20 w-full sm:w-auto md:mt-0">
           {loading && <Loader2 className="w-4 h-4 animate-spin text-primary hidden sm:block" />}
           <button 
+            onClick={() => navigate('/invoices/new')}
+            className="bg-primary text-white hover:bg-primary/90 flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-md"
+          >
+            <Plus size={16} className="mr-1.5" />
+            <span>Create Invoice</span>
+          </button>
+          <button 
             onClick={() => setShowScanOptions(true)}
             className="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 flex-1 sm:flex-none sm:min-w-[160px] h-10 sm:h-9 flex items-center justify-center px-4 rounded-xl text-xs font-bold transition-all duration-300 active:scale-95 shadow-sm"
           >
@@ -702,7 +709,7 @@ export default function Dashboard() {
           <h2 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</h2>
           <div className="flex flex-row sm:grid sm:grid-cols-4 md:grid-cols-8 gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {[
-              { icon: Plus, label: 'Sale', color: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200', path: '/invoices/new' },
+              { icon: Plus, label: 'Create Invoice', color: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200', path: '/invoices/new' },
               { icon: ShoppingCart, label: 'Purchase', color: 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-purple-200', path: '/purchases' },
               { icon: Users, label: 'Add Party', color: 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-200', path: '/customers' },
               { icon: Package, label: 'Add Item', color: 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-orange-200', path: '/inventory' },

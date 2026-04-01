@@ -947,50 +947,6 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             </div>
           )}
 
-          {/* External Links / Quick Actions */}
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4">Government Portal & Compliance</h4>
-            <div className="space-y-2">
-              <button 
-                onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
-                className="w-full text-left px-4 h-10 sm:h-9 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
-              >
-                <div className="flex items-center">
-                  <ExternalLink size={18} className="mr-3 text-emerald-500" />
-                  ITR Government Portal
-                </div>
-                <ArrowRight size={16} className="text-emerald-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-              </button>
-              <button 
-                onClick={() => window.open('https://www.gst.gov.in/', '_blank')}
-                className="w-full text-left px-4 h-10 sm:h-9 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
-              >
-                <div className="flex items-center">
-                  <ExternalLink size={18} className="mr-3 text-emerald-500" />
-                  GST Government Portal
-                </div>
-                <ArrowRight size={16} className="text-emerald-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-              </button>
-              <button 
-                onClick={() => {
-                  const urls = {
-                    gst: 'https://services.gst.gov.in/services/searchtp',
-                    eway: 'https://ewaybillgst.gov.in/Search/SearchGSTIN.aspx',
-                    itr: 'https://www.incometax.gov.in/iec/foportal/help/all-about-compliance'
-                  };
-                  window.open(urls[type], '_blank');
-                }}
-                className="w-full text-left px-4 h-10 sm:h-9 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 text-sm font-bold text-emerald-700 flex items-center justify-between group transition-all border border-emerald-100"
-              >
-                <div className="flex items-center">
-                  <FileCheck size={18} className="mr-3 text-emerald-500" />
-                  Compliance Check
-                </div>
-                <ArrowRight size={16} className="text-emerald-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-              </button>
-            </div>
-          </div>
-
           {type === 'itr' && (
             <>
               <div className="glass-card p-6 bg-slate-900 text-white">

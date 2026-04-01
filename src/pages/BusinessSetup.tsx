@@ -183,7 +183,7 @@ export default function BusinessSetup() {
           .from('invoice_series')
           .insert([{
             business_id: business.id,
-            name: 'INV-0000000001',
+            name: 'Default Series',
             prefix: 'INV-',
             current_number: 1
           }]);

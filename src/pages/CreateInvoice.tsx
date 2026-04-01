@@ -22,6 +22,7 @@ import {
   CreditCard,
   Percent,
   ChevronRight,
+  ChevronDown,
   Eye,
   Edit3,
   X,
@@ -156,7 +157,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       // Prefer INV- series as default
       const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
       const series = invSeries || invoiceSeries[0];
-      setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix));
+      setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix, series.name));
       setSelectedSeriesId(series.id);
     }
   }, [invoiceSeries, invoiceNumber, isScannedInvoiceNumberFound]);
@@ -170,7 +171,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     if (!currentInvoiceNumber) {
       const selectedSeries = invoiceSeries.find(s => s.id === selectedSeriesId);
       if (selectedSeries) {
-        currentInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix);
+        currentInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix, selectedSeries.name);
       } else {
         const prefix = businessProfile?.invoice_prefix || 'INV';
         const number = Date.now().toString().slice(-6);
@@ -298,6 +299,11 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             transporterId: parsed.ewayDefaultTransporterId || '',
             transporterName: parsed.ewayDefaultTransporterName || ''
           }));
+          
+          // Auto-enable E-way bill if threshold is met
+          if (total > (isInterState ? parsed.ewayThreshold : parsed.intraStateThreshold)) {
+            setIncludeEwayBill(true);
+          }
         }
       }
 
@@ -325,34 +331,33 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       if (seriesError) throw seriesError;
       
       let finalSeries = series || [];
-      if (finalSeries.length === 0) {
-        // Create default INV- series
-        const { data: newSeries, error: createError } = await supabase
-          .from('invoice_series')
-          .insert([{
-            business_id: businessId,
-            name: 'INV-0000000001',
-            prefix: 'INV-',
-            current_number: 1
-          }])
-          .select()
-          .single();
+        if (finalSeries.length === 0) {
+          // Create default INV- series
+          const { data: newSeries, error: createError } = await supabase
+            .from('invoice_series')
+            .insert([{
+              business_id: businessId,
+              name: 'Default Series',
+              prefix: 'INV-',
+              current_number: 1
+            }])
+            .select()
+            .single();
+          
+          if (!createError && newSeries) {
+            finalSeries = [newSeries];
+          }
+        }
         
-        if (!createError && newSeries) {
-          finalSeries = [newSeries];
+        setInvoiceSeries(finalSeries);
+        if (finalSeries.length > 0) {
+          // Prefer INV- series or Default Series as default
+          const defaultSeries = finalSeries.find(s => s.prefix === 'INV-' || s.name === 'Default Series' || s.name === 'INV-0000000001') || finalSeries[0];
+          if (defaultSeries) {
+            setSelectedSeriesId(defaultSeries.id);
+            setInvoiceNumber(formatSeriesNumber(defaultSeries.current_number, defaultSeries.prefix, defaultSeries.name));
+          }
         }
-      }
-      
-      setInvoiceSeries(finalSeries);
-      if (finalSeries.length > 0) {
-        // Prefer INV- series as default
-        const invSeries = finalSeries.find(s => s.prefix === 'INV-');
-        if (invSeries) {
-          setSelectedSeriesId(invSeries.id);
-        } else {
-          setSelectedSeriesId(finalSeries[0].id);
-        }
-      }
 
       const { data: trans, error: transError } = await supabase
         .from('transporters')
@@ -391,23 +396,28 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       // Resize image for faster processing, skip for PDF
       let optimizedBase64 = base64Data;
       if (mimeType.startsWith('image/')) {
-        optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+        optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`, 600, 600).then(res => res.split(',')[1]);
       }
       
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');
       
-      const prompt = "Extract invoice details: invoice number, customer name, customer phone, customer email, customer gst, customer address line 1, customer address line 2, customer city, customer pincode, items (name, quantity, price, gst, hsn code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress1: string, customerAddress2: string, customerCity: string, customerPincode: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, hsnCode: string }] }";
+      const prompt = "Extract invoice details: invoice number, customer name, customer phone, customer email, customer gst, customer address line 1, customer address line 2, customer city, customer pincode, supplier name, supplier gst, items (name, quantity, price, gst, hsn code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress1: string, customerAddress2: string, customerCity: string, customerPincode: string, supplierName: string, supplierGst: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, hsnCode: string }] }";
 
       let extractedText = '';
 
       try {
         // Try backend scanning first (more robust for Electron/CORS)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout for backend
+
         const response = await fetch(getApiUrl('/api/scan'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64Data: optimizedBase64, mimeType, prompt, apiKey })
+          body: JSON.stringify({ base64Data: optimizedBase64, mimeType, prompt, apiKey }),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const result = await response.json();
@@ -430,7 +440,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           throw new Error("The Gemini API key is invalid or missing. Please update it in Settings.");
         }
 
-        console.warn("Backend scan failed, falling back to client-side scan:", backendError);
+        console.warn("Backend scan failed or timed out, falling back to client-side scan:", backendError);
         
         // Fallback to client-side scanning
         if (!apiKey) {
@@ -438,7 +448,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         }
         const ai = new GoogleGenAI({ apiKey });
 
-        const retry = async (fn: () => Promise<any>, retries = 2, delay = 2000): Promise<any> => {
+        const retry = async (fn: () => Promise<any>, retries = 1, delay = 1000): Promise<any> => {
           try {
             return await fn();
           } catch (error: any) {
@@ -462,7 +472,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             }
           ],
           config: {
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }
           }
         }));
         extractedText = response.text || '';
@@ -482,12 +492,22 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           
           if (data.invoiceNumber) {
             const currentSeries = invoiceSeries.find(s => s.id === selectedSeriesId);
-            let finalScannedInvoiceNumber = data.invoiceNumber;
-            if (currentSeries && !data.invoiceNumber.startsWith(currentSeries.prefix)) {
-              finalScannedInvoiceNumber = `${currentSeries.prefix}${data.invoiceNumber}`;
+            
+            // 1. Extract the numeric part from the scanned number
+            const numericMatch = data.invoiceNumber.match(/\d+/);
+            const scannedNumericPart = numericMatch ? numericMatch[0] : '';
+            
+            // 2. Ensure it starts with "INV-" (take number and starting INV- only)
+            let finalScannedInvoiceNumber = '';
+            if (scannedNumericPart) {
+              finalScannedInvoiceNumber = `INV-${scannedNumericPart}`;
+            } else {
+              finalScannedInvoiceNumber = data.invoiceNumber.startsWith('INV-') 
+                ? data.invoiceNumber 
+                : `INV-${data.invoiceNumber}`;
             }
 
-            // Check if invoice number already exists
+            // 3. Check if invoice number already exists
             const { data: existingInvoice } = await supabase
               .from('invoices')
               .select('id')
@@ -496,10 +516,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               .maybeSingle();
 
             if (existingInvoice) {
-              // If it exists, use the next number from current series
-              const series = currentSeries || invoiceSeries.find(s => s.prefix === 'INV-') || invoiceSeries[0];
+              // 4. If it exists, use the next number from current series
+              // User said "INV- only not any other", so let's prefer INV- series
+              const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
+              const series = invSeries || currentSeries || invoiceSeries[0];
               if (series) {
-                finalScannedInvoiceNumber = formatSeriesNumber(series.current_number, series.prefix);
+                finalScannedInvoiceNumber = formatSeriesNumber(series.current_number, series.prefix, series.name);
                 setSelectedSeriesId(series.id);
               }
             }
@@ -507,7 +529,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             setInvoiceNumber(finalScannedInvoiceNumber);
             setIsScannedInvoiceNumberFound(true);
             
-            // Extract prefix and number more intelligently (e.g., SN-001 -> SN-, 001; INV/100 -> INV/, 100)
+            // Extract prefix and number for series management
             const numberMatch = finalScannedInvoiceNumber.match(/^(.*?)([0-9]+)$/);
             let scannedPrefix = '';
             let scannedNumber = 1;
@@ -526,63 +548,26 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
             let matchingSeries = invoiceSeries.find(s => s.prefix === scannedPrefix);
             
-            if (!matchingSeries) {
-              // Add new series
-              const currentBusinessId = profile?.business_id;
-              if (currentBusinessId) {
-                const { data: newSeries, error: seriesError } = await supabase
-                  .from('invoice_series')
-                  .insert([{
-                    business_id: currentBusinessId,
-                    name: data.invoiceNumber, // Store original to preserve padding
-                    prefix: scannedPrefix,
-                    current_number: scannedNumber + 1
-                  }])
-                  .select()
-                  .single();
-                
-                if (seriesError) {
-                  console.error("Failed to add invoice series", seriesError);
-                  setModal({ isOpen: true, title: 'Series Error', message: `Failed to save new invoice series: ${seriesError.message}`, type: 'error' });
-                } else if (newSeries) {
-                  matchingSeries = newSeries;
-                  // Check if default series exists and remove it
-                  const defaultSeries = invoiceSeries.find(s => s.name === 'INV-0000000001' && s.current_number === 1);
-                  if (defaultSeries) {
-                    await supabase.from('invoice_series').delete().eq('id', defaultSeries.id);
-                    setInvoiceSeries(prev => [...prev.filter(s => s.id !== defaultSeries.id), newSeries]);
-                  } else {
-                    setInvoiceSeries(prev => [...prev, newSeries]);
-                  }
-                }
-              }
-            } else {
-              // If series exists, update its current number if the scanned one is higher
-              if (scannedNumber >= (matchingSeries.current_number || 0)) {
-                await supabase
-                  .from('invoice_series')
-                  .update({ 
-                    current_number: scannedNumber + 1
-                  })
-                  .eq('id', matchingSeries.id);
-                
-                // Update local state
-                setInvoiceSeries(prev => prev.map(s => 
-                  s.id === matchingSeries?.id 
-                    ? { ...s, current_number: scannedNumber + 1 } 
-                    : s
-                ));
-              }
-            }
-            
             if (matchingSeries) {
+              // We link to the matching series but DO NOT update its current number
+              // because scanned invoices are usually external and shouldn't jump the user's own series
               setSelectedSeriesId(matchingSeries.id);
+            } else {
+              // If no matching series found, fallback to INV- or first available
+              // but DO NOT add to database as per user request
+              const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
+              const fallbackSeries = invSeries || invoiceSeries[0];
+              if (fallbackSeries) {
+                setSelectedSeriesId(fallbackSeries.id);
+                // If we forced INV- prefix earlier, we should ensure the number is consistent with the fallback series
+                // if the number was already used. This is handled by the existingInvoice check above.
+              }
             }
           } else {
             setIsScannedInvoiceNumberFound(false);
             const series = invoiceSeries.find(s => s.id === selectedSeriesId) || invoiceSeries[0];
             if (series) {
-              setInvoiceNumber(formatSeriesNumber(series));
+              setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix, series.name));
             } else {
               setInvoiceNumber(`${businessProfile?.invoice_prefix || 'INV'}-${Date.now().toString().slice(-6)}`);
             }
@@ -599,6 +584,29 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             city: data.customerCity || '',
             pincode: data.customerPincode || ''
           };
+
+          // Check if scanned customer is the same as current business
+          const isScannedCustomerMe = (
+            (data.customerGst && businessProfile?.gst_number && data.customerGst.trim().toUpperCase() === businessProfile.gst_number.trim().toUpperCase()) ||
+            (data.customerName && businessProfile?.name && data.customerName.trim().toLowerCase() === businessProfile.name.trim().toLowerCase())
+          );
+
+          const isScannedSupplierMe = (
+            (data.supplierGst && businessProfile?.gst_number && data.supplierGst.trim().toUpperCase() === businessProfile.gst_number.trim().toUpperCase()) ||
+            (data.supplierName && businessProfile?.name && data.supplierName.trim().toLowerCase() === businessProfile.name.trim().toLowerCase())
+          );
+
+          // If the scanned CUSTOMER is me, it's a purchase bill.
+          // If the scanned SUPPLIER is NOT me, it's also likely a purchase bill.
+          if (isScannedCustomerMe || (!isScannedSupplierMe && data.supplierName)) {
+            setModal({
+              isOpen: true,
+              title: 'Wrong Document Type',
+              message: 'This appears to be a Purchase Bill (you are the customer). Scanning a purchase bill in the Sales Invoice section is wrong. Please use the Purchases page for this document.',
+              type: 'error'
+            });
+            return;
+          }
           
           const scannedItems = (data.items || []).map((item: any) => {
             const itemName = item.name || 'Custom Item';
@@ -844,6 +852,16 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     customerState
   } = calculateTotals();
 
+  // Auto-enable E-way bill if threshold is met
+  useEffect(() => {
+    if (ewaySettings?.ewayBillEnabled && !includeEwayBill) {
+      const threshold = isInterState ? ewaySettings.ewayThreshold : ewaySettings.intraStateThreshold;
+      if (total > threshold) {
+        setIncludeEwayBill(true);
+      }
+    }
+  }, [total, isInterState, ewaySettings, includeEwayBill]);
+
   // Auto-populate E-way bill data
   useEffect(() => {
     if (includeEwayBill) {
@@ -962,7 +980,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       let finalInvoiceNumber = invoiceNumber;
       if (!finalInvoiceNumber) {
         if (selectedSeries) {
-          finalInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix);
+          finalInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix, selectedSeries.name);
         } else {
           const prefix = businessProfile?.invoice_prefix || 'INV';
           finalInvoiceNumber = `${prefix}-${Date.now().toString().slice(-6)}`;
@@ -1025,17 +1043,16 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       if (invError) throw invError;
 
       // Update current_number in invoice_series
-      if (selectedSeries) {
-        // Extract number from finalInvoiceNumber to ensure series is updated correctly
-        const numberMatch = finalInvoiceNumber.match(/([0-9]+)$/);
-        const currentNum = numberMatch ? parseInt(numberMatch[1]) : (selectedSeries.current_number || 1);
-        const nextNum = currentNum + 1;
+      if (selectedSeries && !isScannedInvoiceNumberFound) {
+        const expectedNext = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix, selectedSeries.name);
         
-        if (nextNum > (selectedSeries.current_number || 0)) {
+        // Only update the series if the invoice number matches the expected next number
+        // This prevents "jumping" the series when scanning or manually entering external numbers
+        if (finalInvoiceNumber === expectedNext) {
           await supabase
             .from('invoice_series')
             .update({ 
-              current_number: nextNum
+              current_number: selectedSeries.current_number + 1
             })
             .eq('id', selectedSeries.id);
         }
@@ -1359,60 +1376,43 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-20">
-                  <div className="md:col-span-3 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Series</label>
+                  <div className="md:col-span-6 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
                     <div className="relative z-[100]">
-                      <input 
-                        type="text"
-                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px]"
-                        value={invoiceNumber}
-                        onFocus={() => setShowSeriesList(true)}
-                        onBlur={() => {
-                          // Delay closing to allow clicking on dropdown items
-                          setTimeout(() => setShowSeriesList(false), 200);
-                        }}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setInvoiceNumber(val);
-                          setIsScannedInvoiceNumberFound(false);
-                          
-                          if (!val) {
-                            setSelectedSeriesId('');
-                            return;
-                          }
-                          
-                          const matchingSeries = [...invoiceSeries]
-                            .sort((a, b) => (b.prefix?.length || 0) - (a.prefix?.length || 0))
-                            .find(s => s.prefix && val.startsWith(s.prefix));
-                            
-                          if (matchingSeries) {
-                            setSelectedSeriesId(matchingSeries.id);
-                          } else {
-                            setSelectedSeriesId('');
-                          }
-                        }}
-                        placeholder="Invoice series or number"
-                      />
-                      {invoiceSeries.length > 0 && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1 pointer-events-none">
-                          <ChevronRight size={12} className={cn("text-slate-400 transition-transform", showSeriesList ? "rotate-90" : "rotate-0")} />
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px] pr-8"
+                          value={invoiceNumber}
+                          onChange={e => {
+                            setInvoiceNumber(e.target.value);
+                            setIsScannedInvoiceNumberFound(false);
+                          }}
+                          placeholder="Invoice number"
+                        />
+                        <div 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer p-1 hover:bg-slate-100 rounded-md transition-colors"
+                          onClick={() => setShowSeriesList(!showSeriesList)}
+                        >
+                          <ChevronDown size={12} className={cn("text-slate-400 transition-transform", showSeriesList ? "rotate-180" : "rotate-0")} />
                         </div>
-                      )}
+                      </div>
                       
                       {/* Custom Dropdown List */}
                       {showSeriesList && invoiceSeries.length > 0 && (
                         <div className="absolute z-[9999] left-0 right-0 mt-1 !bg-white border border-slate-300 rounded-lg shadow-2xl transition-all max-h-40 overflow-y-auto opacity-100">
                           <div className="p-1 !bg-white">
                             <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 !bg-white sticky top-0">
-                              Series List
+                              Select Series
                             </div>
                             {invoiceSeries.map(series => (
                               <button
                                 key={series.id}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between !bg-white"
-                                onClick={() => {
-                                  setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix));
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix, series.name));
                                   setSelectedSeriesId(series.id);
                                   setIsScannedInvoiceNumberFound(false);
                                   setShowSeriesList(false);
@@ -1420,11 +1420,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                               >
                                 <div className="flex flex-col">
                                   <span className="text-[11px] font-bold text-slate-900">{series.name}</span>
-                                  <span className="text-[8px] text-slate-500 font-medium">Prefix: {series.prefix}</span>
+                                  <span className="text-[8px] text-slate-500 font-medium">Next: {formatSeriesNumber(series.current_number, series.prefix, series.name)}</span>
                                 </div>
-                                <span className="text-[8px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
-                                  {formatSeriesNumber(series.current_number, series.prefix)}
-                                </span>
                               </button>
                             ))}
                           </div>
@@ -1444,6 +1441,26 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       />
                     </div>
                   </div>
+                  <div className="md:col-span-3 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                    <div className="relative">
+                      <Phone size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Contact"
+                        maxLength={10}
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                        value={customer.phone || ''}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          handleCustomerChange('phone', val);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3 relative z-10">
                   <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
                     <div className="relative z-[100]">
@@ -1527,23 +1544,6 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           </div>
                         </div>
                       )}
-                    </div>
-                  </div>
-                  <div className="md:col-span-6 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
-                    <div className="relative">
-                      <Phone size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Contact"
-                        maxLength={10}
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
-                        value={customer.phone || ''}
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          handleCustomerChange('phone', val);
-                        }}
-                      />
                     </div>
                   </div>
                   <div className="md:col-span-6 space-y-0.5">
@@ -2292,13 +2292,18 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           setItems(finalData.items);
           if (finalData.invoiceNumber) {
             const scannedInvoiceNumber = finalData.invoiceNumber;
-            const matchingSeries = invoiceSeries.find(s => s.prefix && scannedInvoiceNumber.startsWith(s.prefix));
             
-            if (matchingSeries) {
+            // Logic: if scanned number already has a prefix, use it. 
+            // Otherwise, prepend "INV-" as requested.
+            if (scannedInvoiceNumber.includes('-')) {
               setInvoiceNumber(scannedInvoiceNumber);
-              setSelectedSeriesId(matchingSeries.id);
+              const matchingSeries = invoiceSeries.find(s => s.prefix && scannedInvoiceNumber.startsWith(s.prefix));
+              if (matchingSeries) {
+                setSelectedSeriesId(matchingSeries.id);
+              }
             } else {
               setInvoiceNumber(`INV-${scannedInvoiceNumber}`);
+              // Try to find the INV- series to link it
               const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
               if (invSeries) {
                 setSelectedSeriesId(invSeries.id);

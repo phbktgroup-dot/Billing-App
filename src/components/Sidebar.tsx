@@ -42,7 +42,6 @@ const menuItems = [
   { icon: ShoppingCart, label: 'Purchases', path: '/purchases' },
   { icon: Receipt, label: 'Expenses', path: '/expenses' },
   { icon: CreditCard, label: 'Payments & Receipts', path: '/payments' },
-  { icon: FileUp, label: 'Data Import', path: '/data-import' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: BookOpen, label: 'Ledger', path: '/ledger' },
   { icon: FileSpreadsheet, label: 'GST Reports', path: '/gst-reports' },

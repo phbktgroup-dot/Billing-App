@@ -14,9 +14,20 @@ import {
   X,
   Loader2,
   Save,
-  History
+  History,
+  BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell
+} from 'recharts';
 import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -269,6 +280,18 @@ export default function Inventory() {
   const lowStockCount = products.filter(p => p.stock <= p.min_stock && p.stock > 0).length;
   const outOfStockCount = products.filter(p => p.stock === 0).length;
 
+  const chartData = React.useMemo(() => {
+    const categories: Record<string, number> = {};
+    products.forEach(p => {
+      const cat = p.category || 'Uncategorized';
+      categories[cat] = (categories[cat] || 0) + p.stock;
+    });
+    return Object.entries(categories)
+      .map(([name, stock]) => ({ name, stock }))
+      .sort((a, b) => b.stock - a.stock)
+      .slice(0, 8); // Top 8 categories
+  }, [products]);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -311,29 +334,88 @@ export default function Inventory() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-[32px] shadow-sm">
+        <div className="bg-slate-50/30 p-2.5 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-[32px] shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Items</p>
-          <h3 className="text-2xl font-black text-slate-900 mt-0.5">{products.length}</h3>
-          <div className="flex items-center text-[10px] text-emerald-600 font-bold mt-1">
+          <h3 className="text-lg font-bold text-slate-900 mt-0.5">{products.length}</h3>
+          <div className="flex items-center text-[9px] text-emerald-600 font-bold mt-1">
             <ArrowUpRight size={10} className="mr-1" />
             Active products
           </div>
         </div>
-        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-orange-600 rounded-[32px] shadow-sm">
+        <div className="bg-slate-50/30 p-2.5 border border-blue-200 border-l-[6px] border-l-orange-600 rounded-[32px] shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Low Stock Alerts</p>
-          <h3 className="text-2xl font-black text-slate-900 mt-0.5">{lowStockCount}</h3>
-          <div className="flex items-center text-[10px] text-orange-600 font-bold mt-1">
+          <h3 className="text-lg font-bold text-slate-900 mt-0.5">{lowStockCount}</h3>
+          <div className="flex items-center text-[9px] text-orange-600 font-bold mt-1">
             <AlertTriangle size={10} className="mr-1" />
             Action required
           </div>
         </div>
-        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-red-600 rounded-[32px] shadow-sm">
+        <div className="bg-slate-50/30 p-2.5 border border-blue-200 border-l-[6px] border-l-red-600 rounded-[32px] shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Out of Stock</p>
-          <h3 className="text-2xl font-black text-slate-900 mt-0.5">{outOfStockCount}</h3>
-          <div className="flex items-center text-[10px] text-red-600 font-bold mt-1">
+          <h3 className="text-lg font-bold text-slate-900 mt-0.5">{outOfStockCount}</h3>
+          <div className="flex items-center text-[9px] text-red-600 font-bold mt-1">
             <ArrowDownRight size={10} className="mr-1" />
             Loss of revenue
           </div>
+        </div>
+      </div>
+
+      {/* Stock Status Chart */}
+      <div className="glass-card p-4 border border-black/10 border-l-[6px] border-black shadow-sm relative overflow-hidden group">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-slate-100 rounded-lg border border-slate-200">
+              <BarChart3 size={16} className="text-slate-700" />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold text-slate-900">Stock Status</h2>
+              <p className="text-[9px] text-slate-500">Inventory Levels by Category</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Items</p>
+            <p className="text-sm font-bold text-slate-900">{products.length}</p>
+          </div>
+        </div>
+
+        <div className="h-40 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 9, fill: '#64748b' }}
+                dy={10}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 9, fill: '#64748b' }}
+              />
+              <Tooltip 
+                cursor={{ fill: '#f8fafc' }}
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '12px', 
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  fontSize: '10px'
+                }}
+              />
+              <Bar 
+                dataKey="stock" 
+                fill="#3b82f6" 
+                radius={[4, 4, 0, 0]}
+                barSize={30}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3b82f6' : '#60a5fa'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

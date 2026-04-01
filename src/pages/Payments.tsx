@@ -27,9 +27,9 @@ import {
   ExternalLink,
   Maximize2,
   Minimize2,
-  Share2
+  Share2,
+  FileSpreadsheet
 } from 'lucide-react';
-import * as pdfjs from 'pdfjs-dist';
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -42,11 +42,6 @@ import Drawer from '../components/Drawer';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { getApiUrl } from '../lib/api';
-
-// Set PDF.js worker
-const pdfjsVersion = pdfjs.version || '5.5.207';
-// Use unpkg for more reliable worker fetching
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 
 interface Payment {
   id: string;
@@ -101,7 +96,6 @@ export default function Payments() {
   // Reconciliation States
   const [isReconcileMode, setIsReconcileMode] = useState(false);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [systemEntries, setSystemEntries] = useState<SystemEntry[]>([]);
   const [selectedSystemEntryIds, setSelectedSystemEntryIds] = useState<string[]>([]);
   const [selectedBankTxId, setSelectedBankTxId] = useState<string | null>(null);
@@ -113,8 +107,6 @@ export default function Payments() {
   const [reconcileSearch, setReconcileSearch] = useState('');
   const [bankColumns, setBankColumns] = useState<string[]>([]);
   const [isTableView, setIsTableView] = useState(false);
-  const [isPdfView, setIsPdfView] = useState(false);
-  const [isFullWidthPdf, setIsFullWidthPdf] = useState(false);
   const [reconcileTypeFilter, setReconcileTypeFilter] = useState<'all' | 'invoice' | 'purchase'>('all');
   const [bankSearch, setBankSearch] = useState('');
 
@@ -214,8 +206,87 @@ export default function Payments() {
     }
   };
 
+  const downloadSampleExcel = () => {
+    const data = [
+      ['Date', 'PARTICULARS', 'Debit', 'Credit'],
+      ['01-01-2026', 'Sample Debit Transaction (Purchase Payment)', '1000.00', ''],
+      ['02-01-2026', 'Sample Credit Transaction (Sales Receipt)', '', '500.00']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sample");
+    XLSX.writeFile(wb, "bank_statement_sample.xlsx");
+    toast.success('Sample Excel downloaded');
+  };
+
   const parseTextToTransactions = (text: string, source: string) => {
     const rows = text.trim().split('\n');
+    
+    if (source === 'paste') {
+      return rows.map((row, idx) => {
+        let parts = row.split('\t');
+        if (parts.length < 2) parts = row.split(',');
+        if (parts.length < 2) parts = row.split(/\s{2,}/); 
+        if (parts.length < 2) parts = row.split('|');
+
+        const firstPart = parts[0]?.trim().toUpperCase();
+        if (firstPart === 'DATE' || firstPart === 'TRAN DATE' || firstPart === 'PARTICULARS') return null;
+
+        if (parts.length < 3) return null;
+
+        let dateStr = parts[0]?.trim();
+        let description = parts[1]?.trim() || 'Pasted Transaction';
+        let debit = parts[2]?.trim();
+        let credit = parts[3]?.trim();
+
+        let amount = 0;
+        let type: 'debit' | 'credit' = 'debit';
+
+        if (debit && !isNaN(parseFloat(debit.replace(/[^\d.-]/g, '')))) {
+          amount = Math.abs(parseFloat(debit.replace(/[^\d.-]/g, '')));
+          type = 'debit';
+        } else if (credit && !isNaN(parseFloat(credit.replace(/[^\d.-]/g, '')))) {
+          amount = Math.abs(parseFloat(credit.replace(/[^\d.-]/g, '')));
+          type = 'credit';
+        }
+
+        if (amount === 0) return null;
+
+        // Simple date parsing
+        let date = new Date().toISOString().split('T')[0];
+        if (dateStr) {
+          try {
+            let d: Date;
+            if (dateStr.match(/^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/)) {
+              const [day, month, year] = dateStr.split(/[-/.]/);
+              d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            } else {
+              d = new Date(dateStr);
+            }
+            if (!isNaN(d.getTime())) {
+              date = d.toISOString().split('T')[0];
+            }
+          } catch (e) {}
+        }
+
+        return {
+          id: `paste-${idx}-${Date.now()}`,
+          date,
+          description,
+          amount,
+          type,
+          status: 'unmatched' as const,
+          matchedIds: [],
+          metadata: {
+            'Date': dateStr,
+            'PARTICULARS': description,
+            'Debit': debit,
+            'Credit': credit
+          }
+        };
+      }).filter(Boolean) as BankTransaction[];
+    }
+
     return rows.map((row, idx) => {
       // Try tab-separated first (Excel/Sheets default), then comma, then multiple spaces, then pipes
       let parts = row.split('\t');
@@ -430,6 +501,10 @@ export default function Payments() {
     try {
       const txs = parseTextToTransactions(pasteText, 'paste');
 
+      if (txs.length === 0) {
+        throw new Error('Invalid format. Please use: Date, PARTICULARS, Debit, Credit');
+      }
+
       setTimeout(() => {
         setBankTransactions(prev => [...prev, ...txs]);
         setProcessingProgress(100);
@@ -451,600 +526,138 @@ export default function Payments() {
     }
   };
 
-  const processPdfFile = async (file: File) => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-    const allRows: string[][] = [];
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      
-      // Group items by their vertical position (transform[5]) with a small threshold
-      const items = textContent.items as any[];
-      const rows: { y: number; items: any[] }[] = [];
-      
-      items.forEach(item => {
-        if (!item.str && item.str !== '') return; // Skip non-text items
-        const y = item.transform[5];
-        // Find an existing row within 5 pixels
-        let row = rows.find(r => Math.abs(r.y - y) < 5);
-        if (!row) {
-          row = { y, items: [] };
-          rows.push(row);
-        }
-        row.items.push(item);
-      });
-      
-      // Sort rows by y descending (top to bottom)
-      rows.sort((a, b) => b.y - a.y);
-      
-      rows.forEach(row => {
-        // Sort items in each row by x ascending (left to right)
-        const rowItems = row.items.sort((a, b) => a.transform[4] - b.transform[4]);
-        const rowData = rowItems.map(item => item.str);
-        allRows.push(rowData);
-      });
-    }
-    return allRows;
-  };
-
-  const processBankFileWithAI = async (file: File) => {
-    const reader = new FileReader();
-    const base64Promise = new Promise<string>((resolve) => {
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        resolve(base64);
-      };
-      reader.readAsDataURL(file);
-    });
-    const base64Data = await base64Promise;
-    const mimeType = file.type;
-
-    // Use business-specific API key if available, otherwise fallback to environment variable
-    const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
-    
-    const prompt = `Analyze this bank statement and extract EVERY SINGLE row from the tables on EVERY page into a structured JSON format.
-    Identify all columns present in the statement (e.g., Date, Description, Reference, Debit, Credit, Balance, etc.).
-    
-    Return a JSON object with:
-    - columns: string[] (The original column names found in the statement)
-    - transactions: Array of objects, where each object has:
-      - is_transaction: boolean (True if this row is a financial transaction, false if it's a header, subtotal, balance row, or summary)
-      - date: string (YYYY-MM-DD format, or null if not applicable)
-      - description: string (The text from the description or main column)
-      - amount: number (The transaction amount if applicable, always positive, or 0)
-      - type: 'debit' | 'credit' (Identify if it's a withdrawal or deposit, or null)
-      - page_number: number (The page number where this row was found)
-      - [original_column_name]: value (Include the exact text from all other columns found)
-    
-    Important: 
-    - Capture EVERY row from the table structure. Do not skip rows that look like subtotals or balance updates.
-    - Ensure EVERY page is processed.
-    - If the date is in a different format, convert it to YYYY-MM-DD.
-    - For amount, use the absolute value.
-    - For type, use 'debit' for money out and 'credit' for money in.`;
-
-    try {
-      // Try backend scanning first
-      const response = await fetch(getApiUrl('/api/scan'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          base64Data, 
-          mimeType, 
-          prompt, 
-          apiKey,
-          config: {
-            responseMimeType: "application/json"
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('AI analysis failed');
-      }
-
-      const result = await response.json();
-      const parsed = typeof result.text === 'string' ? JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim()) : result.text;
-
-      if (parsed.columns && parsed.transactions) {
-        setBankColumns(parsed.columns);
-        const txs = parsed.transactions.map((tx: any, idx: number) => ({
-          id: `ai-bank-${idx}-${Date.now()}`,
-          date: tx.date || (tx.is_transaction ? new Date().toISOString().split('T')[0] : ''),
-          description: tx.description || '',
-          amount: tx.amount || 0,
-          type: tx.type || 'debit',
-          page_number: tx.page_number,
-          is_transaction: tx.is_transaction !== false, // Default to true if not specified
-          matchedIds: [],
-          status: 'unmatched',
-          metadata: tx
-        }));
-        setBankTransactions(txs);
-      } else {
-        throw new Error('Invalid AI response format');
-      }
-    } catch (error: any) {
-      console.error('AI Bank Analysis Error:', error);
-      toast.error('AI analysis failed. Falling back to manual mapping.');
-      // Fallback to manual mapping if AI fails
-      const rows = await processPdfFile(file);
-      setRawFileData(rows);
-      const firstRow = rows.find(r => r.length > 2) || [];
-      setMappingHeaders(firstRow.map((_, i) => `Column ${i + 1}`));
-      setIsMappingMode(true);
-      
-      setIsProcessingFile(false);
-      setProcessingProgress(0);
-    }
-  };
-
   const processBankFile = async (file: File) => {
     setIsProcessingFile(true);
     setProcessingProgress(0);
     
-    // Fast progress
     const interval = setInterval(() => {
       setProcessingProgress(prev => {
         if (prev >= 98) {
           clearInterval(interval);
           return 98;
         }
-        return prev + 35;
+        return prev + 15;
       });
-    }, 10);
+    }, 100);
 
     try {
-      if (file.type === 'application/pdf' || file.type === 'application/x-pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        const url = URL.createObjectURL(file);
-        setPdfUrl(url);
-        setIsPdfView(true);
-        const rows = await processPdfFile(file);
-        const filteredRows = rows.filter(r => r.length > 1 && r.some(cell => cell.trim().length > 0));
-        
-        // Try to find headers
-        const dateKeywords = ['date', 'txn date', 'transaction date', 'val dt', 'value date', 'dt', 'posted date', 'tran date'];
-        const descKeywords = ['desc', 'particular', 'narration', 'remarks', 'details', 'transaction details', 'payee', 'memo', 'description'];
-        const amountKeywords = ['amount', 'value', 'txn amount', 'amt', 'total', 'transaction amount'];
-        const debitKeywords = ['debit', 'withdrawal', 'dr', 'out', 'payment', 'money out'];
-        const creditKeywords = ['credit', 'deposit', 'cr', 'in', 'receipt', 'money in'];
-        const typeKeywords = ['type', 'dr/cr', 'transaction type', 'cr/dr'];
-
-        let foundHeaderIdx = -1;
-        let dateIdx = -1;
-        let descIdx = -1;
-        let amountIdx = -1;
-        let debitIdx = -1;
-        let creditIdx = -1;
-        let typeIdx = -1;
-
-        for (let i = 0; i < Math.min(filteredRows.length, 20); i++) {
-          const row = filteredRows[i];
-          const headers = row.map(h => String(h || '').toLowerCase().trim());
-          const dIdx = headers.findIndex(h => dateKeywords.some(k => h.includes(k)));
-          if (dIdx !== -1) {
-            foundHeaderIdx = i;
-            dateIdx = dIdx;
-            descIdx = headers.findIndex(h => descKeywords.some(k => h.includes(k)));
-            amountIdx = headers.findIndex(h => amountKeywords.some(k => h.includes(k)));
-            debitIdx = headers.findIndex(h => debitKeywords.some(k => h.includes(k)));
-            creditIdx = headers.findIndex(h => creditKeywords.some(k => h.includes(k)));
-            typeIdx = headers.findIndex(h => typeKeywords.some(k => h.includes(k)));
-            break;
-          }
-        }
-
-        // If no header found, use defaults
-        if (foundHeaderIdx === -1) {
-          foundHeaderIdx = 0;
-          dateIdx = 0;
-          descIdx = 1;
-          amountIdx = 2;
-        }
-
-        const headers = filteredRows[foundHeaderIdx].map((h, i) => String(h || '').trim() || `Column ${i + 1}`);
-        setBankColumns(headers);
-        setIsTableView(true);
-
-        const txs: BankTransaction[] = filteredRows.map((row, idx): BankTransaction => {
-          const isHeaderOrBefore = idx <= foundHeaderIdx;
-          
-          let dateStr = '';
-          let desc = '';
-          let amount = 0;
-          let type: 'debit' | 'credit' = 'debit';
-
-          if (!isHeaderOrBefore) {
-            dateStr = String(row[dateIdx] || '').trim();
-            desc = descIdx !== -1 ? String(row[descIdx] || '') : '';
-            
-            if (amountIdx !== -1) {
-              amount = parseFloat(String(row[amountIdx] || '0').replace(/[^\d.-]/g, ''));
-              if (typeIdx !== -1) {
-                const typeVal = String(row[typeIdx] || '').toLowerCase();
-                type = typeVal.includes('cr') || typeVal.includes('dep') || typeVal.includes('in') ? 'credit' : 'debit';
-              } else {
-                type = amount < 0 ? 'debit' : 'credit';
-                amount = Math.abs(amount);
-              }
-            } else if (debitIdx !== -1 || creditIdx !== -1) {
-              const debitVal = debitIdx !== -1 ? parseFloat(String(row[debitIdx] || '0').replace(/[^\d.-]/g, '')) : 0;
-              const creditVal = creditIdx !== -1 ? parseFloat(String(row[creditIdx] || '0').replace(/[^\d.-]/g, '')) : 0;
-              
-              if (!isNaN(creditVal) && creditVal > 0) {
-                amount = creditVal;
-                type = 'credit';
-              } else if (!isNaN(debitVal) && debitVal > 0) {
-                amount = debitVal;
-                type = 'debit';
-              }
-            }
-          }
-
-          const metadata: Record<string, any> = {};
-          headers.forEach((h, hIdx) => {
-            metadata[h] = row[hIdx];
-          });
-
-          return {
-            id: `pdf-bank-${idx}-${Date.now()}`,
-            date: dateStr || 'N/A',
-            description: desc || row.join(' '),
-            amount: Math.abs(amount) || 0,
-            type,
-            matchedIds: [],
-            status: 'unmatched',
-            metadata,
-            is_transaction: !isHeaderOrBefore && !!dateStr && !isNaN(amount) && amount !== 0
-          };
-        });
-
-        setBankTransactions(txs);
-        setProcessingProgress(100);
-        setTimeout(() => {
-          setIsProcessingFile(false);
-          setProcessingProgress(0);
-        }, 200);
-        return;
-      } 
+      const reader = new FileReader();
+      const dataPromise = new Promise<ArrayBuffer>((resolve) => {
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.readAsArrayBuffer(file);
+      });
+      const buffer = await dataPromise;
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
-      if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        const reader = new FileReader();
-        const dataPromise = new Promise<ArrayBuffer>((resolve) => {
-          reader.onload = () => resolve(reader.result as ArrayBuffer);
-          reader.readAsArrayBuffer(file);
-        });
-        const buffer = await dataPromise;
-        const workbook = XLSX.read(buffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      if (jsonData.length < 1) throw new Error('Excel file is empty');
+
+      // Find the header row (scan first 20 rows)
+      let headerRowIdx = -1;
+      let dateIdx = -1;
+      let descIdx = -1;
+      let debitIdx = -1;
+      let creditIdx = -1;
+
+      const dateKeywords = ['date', 'txn date', 'transaction date', 'val dt', 'value date', 'dt', 'posted date', 'tran date'];
+      const descKeywords = ['desc', 'particular', 'narration', 'remarks', 'details', 'transaction details', 'payee', 'memo', 'description'];
+      const debitKeywords = ['debit', 'withdrawal', 'dr', 'out', 'payment', 'money out'];
+      const creditKeywords = ['credit', 'deposit', 'cr', 'in', 'receipt', 'money in'];
+
+      for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
+        const row = jsonData[i];
+        if (!row || !Array.isArray(row)) continue;
         
-        if (jsonData.length < 1) throw new Error('File is empty');
-
-        // Find the header row (scan first 20 rows)
-        let headerRowIdx = -1;
-        let dateIdx = -1;
-        let descIdx = -1;
-        let amountIdx = -1;
-        let debitIdx = -1;
-        let creditIdx = -1;
-        let typeIdx = -1;
-
-        const dateKeywords = ['date', 'txn date', 'transaction date', 'val dt', 'value date', 'dt', 'posted date', 'tran date'];
-        const descKeywords = ['desc', 'particular', 'narration', 'remarks', 'details', 'transaction details', 'payee', 'memo', 'description'];
-        const amountKeywords = ['amount', 'value', 'txn amount', 'amt', 'total', 'transaction amount'];
-        const debitKeywords = ['debit', 'withdrawal', 'dr', 'out', 'payment', 'money out'];
-        const creditKeywords = ['credit', 'deposit', 'cr', 'in', 'receipt', 'money in'];
-        const typeKeywords = ['type', 'dr/cr', 'transaction type', 'cr/dr'];
-
-        for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
-          const row = jsonData[i];
-          if (!row || !Array.isArray(row)) continue;
-          
-          const headers = row.map(h => String(h || '').toLowerCase().trim());
-          
-          const dIdx = headers.findIndex(h => dateKeywords.some(k => h.includes(k)));
-          const dsIdx = headers.findIndex(h => descKeywords.some(k => h.includes(k)));
-          const aIdx = headers.findIndex(h => amountKeywords.some(k => h.includes(k)));
-          const dbIdx = headers.findIndex(h => debitKeywords.some(k => h.includes(k)));
-          const crIdx = headers.findIndex(h => creditKeywords.some(k => h.includes(k)));
-          
-          // A row is likely a header if it has at least a date and either an amount or debit/credit
-          if (dIdx !== -1 && (aIdx !== -1 || (dbIdx !== -1 && crIdx !== -1))) {
-            headerRowIdx = i;
-            dateIdx = dIdx;
-            descIdx = dsIdx;
-            amountIdx = aIdx;
-            debitIdx = dbIdx;
-            creditIdx = crIdx;
-            typeIdx = headers.findIndex(h => typeKeywords.some(k => h.includes(k)));
-            break;
-          }
+        const headers = row.map(h => String(h || '').toLowerCase().trim());
+        
+        const dIdx = headers.findIndex(h => dateKeywords.some(k => h.includes(k)));
+        const dsIdx = headers.findIndex(h => descKeywords.some(k => h.includes(k)));
+        const dbIdx = headers.findIndex(h => debitKeywords.some(k => h.includes(k)));
+        const crIdx = headers.findIndex(h => creditKeywords.some(k => h.includes(k)));
+        
+        if (dIdx !== -1 && (dbIdx !== -1 || crIdx !== -1)) {
+          headerRowIdx = i;
+          dateIdx = dIdx;
+          descIdx = dsIdx;
+          debitIdx = dbIdx;
+          creditIdx = crIdx;
+          break;
         }
-
-        // Fallback: if no headers found, try to guess from first row of data
-        if (headerRowIdx === -1) {
-          // If we can't find headers, we might be looking at a file that starts directly with data
-          // or we just missed the headers. Let's try to find a row that looks like data.
-          for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
-            const row = jsonData[i];
-            if (!row) continue;
-            
-            // Look for a date-like string and a number-like string
-            const dIdx = row.findIndex(cell => String(cell).match(/^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}$/));
-            const nIdx = row.findIndex(cell => !isNaN(parseFloat(String(cell).replace(/[^0-9.-]/g, ''))));
-            
-            if (dIdx !== -1 && nIdx !== -1) {
-              headerRowIdx = i - 1; // Assume headers were one row above, or none
-              dateIdx = dIdx;
-              amountIdx = nIdx;
-              // Try to find description (usually a long string)
-              descIdx = row.findIndex((cell, idx) => idx !== dIdx && idx !== nIdx && String(cell).length > 5);
-              if (descIdx === -1) descIdx = row.findIndex((cell, idx) => idx !== dIdx && idx !== nIdx);
-              break;
-            }
-          }
-        }
-
-        if (dateIdx === -1 || (amountIdx === -1 && debitIdx === -1)) {
-          // Fallback to manual mapping for Excel
-          const filteredRows = jsonData.filter(r => r && r.length > 1 && r.some(cell => String(cell || '').trim().length > 0));
-          
-          // Capture first few rows as account details
-          const details = jsonData.slice(0, 15).filter(r => r && r.length < 4).map(r => r.join(' ')).filter(s => s.trim().length > 5);
-          setAccountDetails(details);
-          setRawFileData(filteredRows);
-          
-          const firstRow = filteredRows.find(r => r.length > 2) || [];
-          setMappingHeaders(firstRow.map((_, i) => `Column ${i + 1}`));
-          setIsMappingMode(true);
-          
-          setIsProcessingFile(false);
-          setProcessingProgress(0);
-          return;
-        }
-
-        const headers = (jsonData[headerRowIdx] || []).map(h => String(h || ''));
-        setBankColumns(headers);
-
-        const txs: BankTransaction[] = jsonData.slice(headerRowIdx + 1).map((row: any, idx): BankTransaction | null => {
-          if (!row || !Array.isArray(row)) return null;
-          
-          let amount = 0;
-          let type: 'debit' | 'credit' = 'debit';
-
-          if (debitIdx !== -1 && row[debitIdx] !== undefined && row[debitIdx] !== null && row[debitIdx] !== '') {
-            const val = parseFloat(String(row[debitIdx]).replace(/[^0-9.-]/g, ''));
-            if (!isNaN(val) && val !== 0) {
-              amount = Math.abs(val);
-              type = 'debit';
-            }
-          }
-          
-          if (amount === 0 && creditIdx !== -1 && row[creditIdx] !== undefined && row[creditIdx] !== null && row[creditIdx] !== '') {
-            const val = parseFloat(String(row[creditIdx]).replace(/[^0-9.-]/g, ''));
-            if (!isNaN(val) && val !== 0) {
-              amount = Math.abs(val);
-              type = 'credit';
-            }
-          }
-
-          if (amount === 0 && amountIdx !== -1 && row[amountIdx] !== undefined && row[amountIdx] !== null) {
-            const val = parseFloat(String(row[amountIdx]).replace(/[^0-9.-]/g, ''));
-            if (!isNaN(val)) {
-              amount = Math.abs(val);
-              type = val < 0 ? 'debit' : 'credit';
-              
-              if (typeIdx !== -1) {
-                const typeStr = String(row[typeIdx]).toLowerCase();
-                if (typeStr.includes('cr') || typeStr.includes('credit') || typeStr.includes('dep')) type = 'credit';
-                if (typeStr.includes('dr') || typeStr.includes('debit') || typeStr.includes('with')) type = 'debit';
-              }
-            }
-          }
-
-          let dateStr = new Date().toISOString().split('T')[0];
-          if (row[dateIdx]) {
-            try {
-              const d = new Date(row[dateIdx]);
-              if (!isNaN(d.getTime())) {
-                dateStr = d.toISOString().split('T')[0];
-              }
-            } catch (e) {}
-          }
-
-          const metadata: Record<string, any> = {};
-          headers.forEach((h, hIdx) => {
-            metadata[h || `Col ${hIdx}`] = row[hIdx];
-          });
-
-          return {
-            id: `bank-excel-${idx}-${Date.now()}`,
-            date: dateStr,
-            description: descIdx !== -1 ? String(row[descIdx] || 'No description') : 'No description',
-            amount: Math.abs(amount),
-            type,
-            matchedIds: [] as string[],
-            status: 'unmatched',
-            metadata
-          };
-        }).filter((tx): tx is BankTransaction => tx !== null && tx.amount > 0);
-
-        setBankTransactions(txs);
-        setProcessingProgress(100);
-        setTimeout(() => {
-          setIsProcessingFile(false);
-          setProcessingProgress(0);
-        }, 300);
-      } else {
-        // CSV processing
-        Papa.parse(file, {
-          header: false, // Don't assume first row is header
-          skipEmptyLines: true,
-          complete: (results) => {
-            const jsonData = results.data as any[][];
-            if (jsonData.length < 1) {
-              toast.error('File is empty');
-              setIsProcessingFile(false);
-              setProcessingProgress(0);
-              return;
-            }
-
-            // Find the header row (scan first 20 rows)
-            let headerRowIdx = -1;
-            let dateIdx = -1;
-            let descIdx = -1;
-            let amountIdx = -1;
-            let debitIdx = -1;
-            let creditIdx = -1;
-            let typeIdx = -1;
-
-            const dateKeywords = ['date', 'txn date', 'transaction date', 'val dt', 'value date', 'dt', 'posted date', 'tran date'];
-            const descKeywords = ['desc', 'particular', 'narration', 'remarks', 'details', 'transaction details', 'payee', 'memo', 'description'];
-            const amountKeywords = ['amount', 'value', 'txn amount', 'amt', 'total', 'transaction amount'];
-            const debitKeywords = ['debit', 'withdrawal', 'dr', 'out', 'payment', 'money out'];
-            const creditKeywords = ['credit', 'deposit', 'cr', 'in', 'receipt', 'money in'];
-            const typeKeywords = ['type', 'dr/cr', 'transaction type', 'cr/dr'];
-
-            for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
-              const row = jsonData[i];
-              const headers = row.map(h => String(h || '').toLowerCase().trim());
-              
-              const dIdx = headers.findIndex(h => dateKeywords.some(k => h.includes(k)));
-              const dsIdx = headers.findIndex(h => descKeywords.some(k => h.includes(k)));
-              const aIdx = headers.findIndex(h => amountKeywords.some(k => h.includes(k)));
-              const dbIdx = headers.findIndex(h => debitKeywords.some(k => h.includes(k)));
-              const crIdx = headers.findIndex(h => creditKeywords.some(k => h.includes(k)));
-              
-              if (dIdx !== -1 && (aIdx !== -1 || (dbIdx !== -1 && crIdx !== -1))) {
-                headerRowIdx = i;
-                dateIdx = dIdx;
-                descIdx = dsIdx;
-                amountIdx = aIdx;
-                debitIdx = dbIdx;
-                creditIdx = crIdx;
-                typeIdx = headers.findIndex(h => typeKeywords.some(k => h.includes(k)));
-                break;
-              }
-            }
-
-            // Fallback: guess from data
-            if (headerRowIdx === -1) {
-              for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
-                const row = jsonData[i];
-                const dIdx = row.findIndex(cell => String(cell).match(/^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}$/));
-                const nIdx = row.findIndex(cell => !isNaN(parseFloat(String(cell).replace(/[^0-9.-]/g, ''))));
-                
-                if (dIdx !== -1 && nIdx !== -1) {
-                  headerRowIdx = i - 1;
-                  dateIdx = dIdx;
-                  amountIdx = nIdx;
-                  descIdx = row.findIndex((cell, idx) => idx !== dIdx && idx !== nIdx && String(cell).length > 5);
-                  if (descIdx === -1) descIdx = row.findIndex((cell, idx) => idx !== dIdx && idx !== nIdx);
-                  break;
-                }
-              }
-            }
-
-            if (dateIdx === -1 || (amountIdx === -1 && debitIdx === -1)) {
-              // Fallback to manual mapping for CSV
-              const filteredRows = jsonData.filter(r => r && r.length > 1 && r.some(cell => String(cell || '').trim().length > 0));
-              
-              // Capture first few rows as account details
-              const details = jsonData.slice(0, 15).filter(r => r && r.length < 4).map(r => r.join(' ')).filter(s => s.trim().length > 5);
-              setAccountDetails(details);
-              setRawFileData(filteredRows);
-              
-              const firstRow = filteredRows.find(r => r.length > 2) || [];
-              setMappingHeaders(firstRow.map((_, i) => `Column ${i + 1}`));
-              setIsMappingMode(true);
-              
-              setIsProcessingFile(false);
-              setProcessingProgress(0);
-              return;
-            }
-
-            const headers = (jsonData[headerRowIdx] || []).map(h => String(h || ''));
-            setBankColumns(headers);
-
-            const txs: BankTransaction[] = jsonData.slice(headerRowIdx + 1).map((row: any, idx): BankTransaction | null => {
-              let amount = 0;
-              let type: 'debit' | 'credit' = 'debit';
-
-              if (debitIdx !== -1 && row[debitIdx] !== undefined && row[debitIdx] !== null && row[debitIdx] !== '') {
-                const val = parseFloat(String(row[debitIdx]).replace(/[^0-9.-]/g, ''));
-                if (!isNaN(val) && val !== 0) {
-                  amount = Math.abs(val);
-                  type = 'debit';
-                }
-              }
-              
-              if (amount === 0 && creditIdx !== -1 && row[creditIdx] !== undefined && row[creditIdx] !== null && row[creditIdx] !== '') {
-                const val = parseFloat(String(row[creditIdx]).replace(/[^0-9.-]/g, ''));
-                if (!isNaN(val) && val !== 0) {
-                  amount = Math.abs(val);
-                  type = 'credit';
-                }
-              }
-
-              if (amount === 0 && amountIdx !== -1 && row[amountIdx] !== undefined && row[amountIdx] !== null) {
-                const val = parseFloat(String(row[amountIdx]).replace(/[^0-9.-]/g, ''));
-                if (!isNaN(val)) {
-                  amount = Math.abs(val);
-                  type = val < 0 ? 'debit' : 'credit';
-                  
-                  if (typeIdx !== -1) {
-                    const typeStr = String(row[typeIdx]).toLowerCase();
-                    if (typeStr.includes('cr') || typeStr.includes('credit')) type = 'credit';
-                    if (typeStr.includes('dr') || typeStr.includes('debit')) type = 'debit';
-                  }
-                }
-              }
-
-              let dateStr = new Date().toISOString().split('T')[0];
-              if (row[dateIdx]) {
-                try {
-                  const d = new Date(row[dateIdx]);
-                  if (!isNaN(d.getTime())) {
-                    dateStr = d.toISOString().split('T')[0];
-                  }
-                } catch (e) {}
-              }
-
-              const metadata: Record<string, any> = {};
-              headers.forEach((h, hIdx) => {
-                metadata[h || `Col ${hIdx}`] = row[hIdx];
-              });
-
-              return {
-                id: `bank-csv-${idx}-${Date.now()}`,
-                date: dateStr,
-                description: descIdx !== -1 ? String(row[descIdx] || 'No description') : 'No description',
-                amount: Math.abs(amount),
-                type,
-                matchedIds: [] as string[],
-                status: 'unmatched',
-                metadata
-              };
-            }).filter((tx): tx is BankTransaction => tx !== null && tx.amount > 0);
-            setBankTransactions(txs);
-            setProcessingProgress(100);
-            setTimeout(() => {
-              setIsProcessingFile(false);
-              setProcessingProgress(0);
-            }, 300);
-          },
-          error: (err) => {
-            console.error('CSV Parse Error:', err);
-            toast.error('Error parsing CSV file.');
-            setIsProcessingFile(false);
-            setProcessingProgress(0);
-          }
-        });
       }
+
+      if (headerRowIdx === -1 || dateIdx === -1 || (debitIdx === -1 && creditIdx === -1)) {
+        // Fallback to manual mapping for Excel
+        const filteredRows = jsonData.filter(r => r && r.length > 1 && r.some(cell => String(cell || '').trim().length > 0));
+        setRawFileData(filteredRows);
+        const firstRow = filteredRows.find(r => r.length > 2) || [];
+        setMappingHeaders(firstRow.map((_, i) => `Column ${i + 1}`));
+        setIsMappingMode(true);
+        setIsProcessingFile(false);
+        setProcessingProgress(0);
+        return;
+      }
+
+      const headers = (jsonData[headerRowIdx] || []).map(h => String(h || ''));
+      setBankColumns(headers);
+
+      const txs: BankTransaction[] = jsonData.slice(headerRowIdx + 1).map((row: any, idx): BankTransaction | null => {
+        if (!row || !Array.isArray(row)) return null;
+        
+        let amount = 0;
+        let type: 'debit' | 'credit' = 'debit';
+
+        if (debitIdx !== -1 && row[debitIdx] !== undefined && row[debitIdx] !== null && row[debitIdx] !== '') {
+          const val = parseFloat(String(row[debitIdx]).replace(/[^0-9.-]/g, ''));
+          if (!isNaN(val) && val !== 0) {
+            amount = Math.abs(val);
+            type = 'debit';
+          }
+        }
+        
+        if (amount === 0 && creditIdx !== -1 && row[creditIdx] !== undefined && row[creditIdx] !== null && row[creditIdx] !== '') {
+          const val = parseFloat(String(row[creditIdx]).replace(/[^0-9.-]/g, ''));
+          if (!isNaN(val) && val !== 0) {
+            amount = Math.abs(val);
+            type = 'credit';
+          }
+        }
+
+        let dateStr = new Date().toISOString().split('T')[0];
+        if (row[dateIdx]) {
+          try {
+            const d = new Date(row[dateIdx]);
+            if (!isNaN(d.getTime())) {
+              dateStr = d.toISOString().split('T')[0];
+            }
+          } catch (e) {}
+        }
+
+        const metadata: Record<string, any> = {};
+        headers.forEach((h, hIdx) => {
+          metadata[h || `Col ${hIdx}`] = row[hIdx];
+        });
+
+        return {
+          id: `bank-excel-${idx}-${Date.now()}`,
+          date: dateStr,
+          description: descIdx !== -1 ? String(row[descIdx] || 'No description') : 'No description',
+          amount: Math.abs(amount),
+          type,
+          matchedIds: [] as string[],
+          status: 'unmatched',
+          metadata
+        };
+      }).filter((tx): tx is BankTransaction => tx !== null && tx.amount > 0);
+
+      setBankTransactions(txs);
+      setIsTableView(true);
+      setProcessingProgress(100);
+      setTimeout(() => {
+        setIsProcessingFile(false);
+        setProcessingProgress(0);
+      }, 300);
     } catch (error: any) {
       console.error('File Process Error:', error);
       toast.error(error.message || 'Error processing file.');
@@ -1057,24 +670,21 @@ export default function Payments() {
 
   const onDrop = (acceptedFiles: File[], rejectedFiles: any[]) => {
     if (rejectedFiles.length > 0) {
-      toast.error('Invalid file type. Please upload CSV, Excel (.xlsx, .xls) or PDF files.');
+      toast.error('Invalid file type. Please upload Excel (.xlsx, .xls) files.');
       return;
     }
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       const validTypes = [
-        'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel',
-        'application/pdf',
-        'application/x-pdf',
-        'application/octet-stream' // Some systems use this for CSV/Excel
+        'application/octet-stream' // Some systems use this for Excel
       ];
-      const validExtensions = ['.csv', '.xlsx', '.xls', '.pdf'];
+      const validExtensions = ['.xlsx', '.xls'];
       const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
       
       if (!validTypes.includes(file.type) && !hasValidExtension) {
-        toast.error('Invalid file type. Please upload CSV, Excel (.xlsx, .xls) or PDF files.');
+        toast.error('Invalid file type. Please upload Excel (.xlsx, .xls) files.');
         return;
       }
       processBankFile(file);
@@ -1084,10 +694,8 @@ export default function Payments() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
     accept: {
-      'text/csv': ['.csv'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/pdf': ['.pdf']
+      'application/vnd.ms-excel': ['.xls']
     },
     multiple: false
   });
@@ -1439,26 +1047,33 @@ export default function Payments() {
                 </h2>
                 <p className="text-[10px] text-slate-500 font-medium">Match bank transactions with system entries.</p>
                 
-                <div className="flex items-center space-x-2 mt-4">
-                  <button 
-                    onClick={() => setIsPasteMode(false)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
-                      !isPasteMode ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    )}
-                  >
-                    Upload File
-                  </button>
-                  <button 
-                    onClick={() => setIsPasteMode(true)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
-                      isPasteMode ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    )}
-                  >
-                    Paste Data
-                  </button>
-                </div>
+                  <div className="flex items-center space-x-2 mt-4">
+                    <button 
+                      onClick={() => setIsPasteMode(false)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
+                        !isPasteMode ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      )}
+                    >
+                      Upload File
+                    </button>
+                    <button 
+                      onClick={() => setIsPasteMode(true)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
+                        isPasteMode ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      )}
+                    >
+                      Paste Data
+                    </button>
+                    <button 
+                      onClick={downloadSampleExcel}
+                      className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all flex items-center"
+                    >
+                      <Download size={12} className="mr-1.5" />
+                      Sample Excel
+                    </button>
+                  </div>
               </div>
               
               <div className="flex-1 w-full">
@@ -1689,8 +1304,6 @@ export default function Payments() {
                             setBankTransactions([]);
                             setSelectedBankTxId(null);
                             setSelectedSystemEntryIds([]);
-                            setPdfUrl(null);
-                            setIsPdfView(false);
                           }}
                           className="text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors mt-2"
                         >
@@ -1700,10 +1313,11 @@ export default function Payments() {
                     ) : (
                       <>
                         <div className="p-3 bg-slate-50 rounded-full mb-3 group-hover:bg-primary/10 transition-colors">
-                          <Upload className="text-slate-400 group-hover:text-primary transition-colors" size={24} />
+                          <FileSpreadsheet className="text-slate-400 group-hover:text-primary transition-colors" size={24} />
                         </div>
                         <p className="text-xs font-bold text-slate-700">Drop your bank statement here</p>
-                        <p className="text-[10px] text-slate-400 font-medium mt-1">Supports CSV, Excel (.xlsx, .xls) and PDF</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-1">Supports Excel (.xlsx, .xls) only</p>
+                        <p className="text-[9px] text-slate-400 mt-1 italic">Required columns: Date, Description, Debit, Credit</p>
                       </>
                     )}
                   </div>
@@ -1713,15 +1327,9 @@ export default function Payments() {
           </div>
 
           {bankTransactions.length > 0 && (
-            <div className={cn(
-              "grid gap-6 h-[calc(100vh-350px)] min-h-[500px]",
-              isFullWidthPdf && isPdfView ? "grid-cols-1" : "grid-cols-1 xl:grid-cols-2"
-            )}>
+            <div className="grid gap-6 xl:h-[calc(100vh-180px)] grid-cols-1 xl:grid-cols-2">
               {/* Left Side: Bank Transactions */}
-              <div className={cn(
-                "glass-card flex flex-col overflow-hidden transition-all duration-500",
-                isFullWidthPdf && isPdfView ? "w-full" : ""
-              )}>
+              <div className="glass-card flex flex-col overflow-hidden transition-all duration-500 h-[600px] xl:h-full">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                   <div className="flex flex-col">
                     <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Bank Transactions</h3>
@@ -1730,19 +1338,7 @@ export default function Payments() {
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
-                    {pdfUrl && (
-                      <button 
-                        onClick={() => setIsPdfView(!isPdfView)}
-                        className={cn(
-                          "p-1.5 border rounded-lg transition-all shadow-sm",
-                          isPdfView ? "bg-primary/10 border-primary text-primary" : "bg-white border-slate-200 text-slate-600 hover:text-primary"
-                        )}
-                        title={isPdfView ? "Switch to Data View" : "View Original PDF"}
-                      >
-                        <FileText size={14} />
-                      </button>
-                    )}
-                    {bankColumns.length > 0 && !isPdfView && (
+                    {bankColumns.length > 0 && (
                       <button 
                         onClick={() => setIsTableView(!isTableView)}
                         className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-primary transition-all shadow-sm"
@@ -1769,46 +1365,11 @@ export default function Payments() {
                   </div>
                 </div>
                 <div className="flex-1 overflow-auto p-2">
-                  {isPdfView && pdfUrl ? (
-                    <div className="w-full h-full rounded-xl overflow-hidden border border-slate-100 bg-slate-50 relative group">
-                      <iframe 
-                        src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
-                        className="w-full h-full border-none"
-                        title="PDF Viewer"
-                      />
-                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col space-y-2">
-                        <button 
-                          onClick={() => setIsFullWidthPdf(!isFullWidthPdf)}
-                          className="bg-white/90 backdrop-blur-sm border border-slate-200 p-2 rounded-lg shadow-lg text-slate-600 hover:text-primary transition-all flex items-center space-x-2"
-                        >
-                          {isFullWidthPdf ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                          <span className="text-[10px] font-bold">{isFullWidthPdf ? "Exit Full Width" : "Full Width View"}</span>
-                        </button>
-                        <a 
-                          href={pdfUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="bg-white/90 backdrop-blur-sm border border-slate-200 p-2 rounded-lg shadow-lg text-slate-600 hover:text-primary transition-all flex items-center space-x-2"
-                        >
-                          <ExternalLink size={14} />
-                          <span className="text-[10px] font-bold">Open Full PDF</span>
-                        </a>
-                        <a 
-                          href={pdfUrl} 
-                          download="bank-statement.pdf"
-                          className="bg-white/90 backdrop-blur-sm border border-slate-200 p-2 rounded-lg shadow-lg text-slate-600 hover:text-primary transition-all flex items-center space-x-2"
-                        >
-                          <Download size={14} />
-                          <span className="text-[10px] font-bold">Download PDF</span>
-                        </a>
-                      </div>
-                    </div>
-                  ) : isTableView && bankColumns.length > 0 ? (
+                  {isTableView && bankColumns.length > 0 ? (
                     <div className="border border-slate-100 rounded-xl overflow-hidden">
                       <table className="w-full text-left border-collapse text-[10px]">
                         <thead>
                           <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
-                            <th className="px-3 py-2 whitespace-nowrap">Status</th>
                             {bankTransactions.some(t => t.page_number) && (
                               <th className="px-3 py-2 whitespace-nowrap">Page</th>
                             )}
@@ -1854,18 +1415,6 @@ export default function Payments() {
                                       : tx.is_transaction !== false && "hover:bg-slate-50"
                                 )}
                               >
-                                <td className="px-3 py-2">
-                                  {tx.is_transaction === false ? (
-                                    <div className="w-2 h-2 rounded-full bg-slate-100" />
-                                  ) : tx.status === 'matched' ? (
-                                    <CheckCircle2 size={12} className="text-emerald-500" />
-                                  ) : (
-                                    <div className={cn(
-                                      "w-2 h-2 rounded-full",
-                                      selectedBankTxId === tx.id ? "bg-primary" : "bg-slate-200"
-                                    )} />
-                                  )}
-                                </td>
                                 {bankTransactions.some(t => t.page_number) && (
                                   <td className="px-3 py-2 font-bold text-slate-400">
                                     {tx.page_number || '-'}
@@ -1986,8 +1535,7 @@ export default function Payments() {
               </div>
 
               {/* Right Side: System Entries */}
-              {!isFullWidthPdf && (
-                <div className="glass-card flex flex-col overflow-hidden relative">
+              <div className="glass-card flex flex-col overflow-hidden relative h-[600px] xl:h-full">
                   <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">System Entries</h3>
@@ -2052,9 +1600,13 @@ export default function Payments() {
                                                    e.number.toLowerCase().includes(reconcileSearch.toLowerCase());
                               const matchesType = reconcileTypeFilter === 'all' || e.type === reconcileTypeFilter;
                               
-                              // If a bank transaction is selected, filter system entries by amount
-                              const matchesBankTx = selectedBankTxId ? (
-                                Math.abs(e.amount - (bankTransactions.find(t => t.id === selectedBankTxId)?.amount || 0)) < 0.01
+                              // If a bank transaction is selected, filter system entries by amount and type
+                              const selectedBankTx = bankTransactions.find(t => t.id === selectedBankTxId);
+                              const matchesBankTx = selectedBankTx ? (
+                                Math.abs(e.amount - selectedBankTx.amount) < 0.01 && (
+                                  (selectedBankTx.type === 'credit' && e.type === 'invoice') ||
+                                  (selectedBankTx.type === 'debit' && e.type === 'purchase')
+                                )
                               ) : true;
 
                               return matchesSearch && matchesType && matchesBankTx;
@@ -2137,11 +1689,10 @@ export default function Payments() {
                   </motion.div>
                 )}
               </div>
-            )}
-          </div>
-        )}
-      </div>
-    ) : (
+            </div>
+          )}
+        </div>
+      ) : (
         <>
           {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

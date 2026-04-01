@@ -116,7 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setUser(null);
           userIdRef.current = null;
-          alert('Your account has been disabled. Please contact your administrator.');
           return null;
         }
         setProfile(finalProfile);

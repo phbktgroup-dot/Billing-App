@@ -142,7 +142,16 @@ export function downloadFile(data: string | Blob, filename: string) {
   }
 }
 
-export function formatSeriesNumber(num: number, prefix: string = '', length: number = 4): string {
+export function formatSeriesNumber(num: number, prefix: string = '', lengthOrName: number | string = 4): string {
+  let length = 4;
+  if (typeof lengthOrName === 'number') {
+    length = lengthOrName;
+  } else if (typeof lengthOrName === 'string') {
+    const match = lengthOrName.match(/([0-9]+)$/);
+    if (match) {
+      length = match[0].length;
+    }
+  }
   return `${prefix}${String(num).padStart(length, '0')}`;
 }
 

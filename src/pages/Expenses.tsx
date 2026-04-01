@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Download, Trash2, Edit2, Loader2, AlertCircle, Receipt, Calendar, Tag, DollarSign, MoreVertical } from 'lucide-react';
+import { Plus, Search, Filter, Download, Trash2, Edit2, Loader2, AlertCircle, Receipt, Calendar, Tag, DollarSign, MoreVertical, BarChart3, ArrowUpRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 import { formatCurrency, getDateRange, FilterType, cn } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
@@ -180,6 +189,18 @@ export default function Expenses() {
 
   const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
+  const chartData = React.useMemo(() => {
+    const data: Record<string, number> = {};
+    expenses.forEach(exp => {
+      const date = new Date(exp.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      data[date] = (data[date] || 0) + Number(exp.amount);
+    });
+    return Object.entries(data)
+      .map(([name, total]) => ({ name, total }))
+      .reverse()
+      .slice(-15); // Show last 15 days
+  }, [expenses]);
+
   const toggleSelectAll = () => {
     if (selectedExpenses.length === filteredExpenses.length) {
       setSelectedExpenses([]);
@@ -227,34 +248,98 @@ export default function Expenses() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-red-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
+        <div className="bg-slate-50/30 p-2.5 border border-blue-200 border-l-[6px] border-l-red-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-blue-100 flex items-center justify-center text-red-600">
-              <DollarSign size={16} />
+              <DollarSign size={14} />
             </div>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Expenses</p>
-          <h3 className="text-xl font-black text-slate-900 tracking-tight">{formatCurrency(totalExpenses)}</h3>
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">{formatCurrency(totalExpenses)}</h3>
         </div>
-        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
+        <div className="bg-slate-50/30 p-2.5 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-blue-100 flex items-center justify-center text-blue-600">
-              <Receipt size={16} />
+              <Receipt size={14} />
             </div>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Expense Count</p>
-          <h3 className="text-xl font-black text-slate-900 tracking-tight">{filteredExpenses.length}</h3>
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">{filteredExpenses.length}</h3>
         </div>
-        <div className="bg-slate-50/30 p-4 border border-blue-200 border-l-[6px] border-l-emerald-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
+        <div className="bg-slate-50/30 p-2.5 border border-blue-200 border-l-[6px] border-l-emerald-600 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-blue-100 flex items-center justify-center text-emerald-600">
-              <Calendar size={16} />
+              <Calendar size={14} />
             </div>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">This Month</p>
-          <h3 className="text-xl font-black text-slate-900 tracking-tight">
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">
             {formatCurrency(expenses.filter(e => e.date.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, e) => s + e.amount, 0))}
           </h3>
+        </div>
+      </div>
+
+      {/* Expense Trend Chart */}
+      <div className="glass-card p-4 border border-black/10 border-l-[6px] border-black shadow-sm relative overflow-hidden group">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-slate-100 rounded-lg border border-slate-200">
+              <BarChart3 size={16} className="text-slate-700" />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold text-slate-900">Expense Trend</h2>
+              <p className="text-[9px] text-slate-500">Daily Spending Performance</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Expenses</p>
+            <p className="text-sm font-bold text-slate-900">{formatCurrency(totalExpenses)}</p>
+          </div>
+        </div>
+
+        <div className="h-40 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 9, fill: '#64748b' }}
+                dy={10}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 9, fill: '#64748b' }}
+                tickFormatter={(value) => `₹${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  borderRadius: '12px', 
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  fontSize: '10px'
+                }}
+                formatter={(value: number) => [formatCurrency(value), 'Expenses']}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="total" 
+                stroke="#ef4444" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorTotal)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

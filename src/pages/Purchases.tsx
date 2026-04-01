@@ -723,7 +723,7 @@ export default function Purchases() {
       // Resize image for faster processing, skip for PDF
       let optimizedBase64 = base64Data;
       if (mimeType.startsWith('image/')) {
-        optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+        optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`, 600, 600).then(res => res.split(',')[1]);
       }
       
       // Use business-specific API key if available, otherwise fallback to environment variable
@@ -743,6 +743,8 @@ export default function Purchases() {
 - total SGST
 - total IGST
 - total amount (including all taxes)
+- customer name
+- customer GST number
 
 Return as JSON format: { 
   supplierName: string, 
@@ -756,18 +758,25 @@ Return as JSON format: {
   cgstTotal: number,
   sgstTotal: number,
   igstTotal: number,
-  totalAmount: number 
+  totalAmount: number,
+  customerName: string,
+  customerGstin: string
 }`;
 
       let extractedText = '';
 
       try {
         // Try backend scanning first (more robust for Electron/CORS)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout for backend
+
         const response = await fetch(getApiUrl('/api/scan'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64Data: optimizedBase64, mimeType, prompt, apiKey })
+          body: JSON.stringify({ base64Data: optimizedBase64, mimeType, prompt, apiKey }),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const result = await response.json();
@@ -790,7 +799,7 @@ Return as JSON format: {
           throw backendError;
         }
 
-        console.warn("Backend scan failed, falling back to client-side scan:", backendError);
+        console.warn("Backend scan failed or timed out, falling back to client-side scan:", backendError);
         
         // Fallback to client-side scanning
         if (!apiKey) {
@@ -798,7 +807,7 @@ Return as JSON format: {
         }
         const ai = new GoogleGenAI({ apiKey });
 
-        const retry = async (fn: () => Promise<any>, retries = 2, delay = 2000): Promise<any> => {
+        const retry = async (fn: () => Promise<any>, retries = 1, delay = 1000): Promise<any> => {
           try {
             return await fn();
           } catch (error: any) {
@@ -822,7 +831,7 @@ Return as JSON format: {
             }
           ],
           config: {
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }
           }
         }));
         extractedText = response.text || '';
@@ -858,6 +867,35 @@ Return as JSON format: {
               amount: (qty * rate) + cgst + sgst + igst,
             };
           });
+
+          // Check if scanned supplier is the same as current business
+          const scannedSupplierName = data.supplierName || data.supplier_name || '';
+          const scannedSupplierGstin = data.supplierGstin || data.supplier_gstin || data.supplierGst || '';
+          const scannedCustomerName = data.customerName || data.customer_name || '';
+          const scannedCustomerGstin = data.customerGstin || data.customer_gstin || data.customerGst || '';
+          const businessProfile = profile?.business_profiles;
+
+          const isScannedSupplierMe = (
+            (scannedSupplierGstin && businessProfile?.gst_number && scannedSupplierGstin.trim().toUpperCase() === businessProfile.gst_number.trim().toUpperCase()) ||
+            (scannedSupplierName && businessProfile?.name && scannedSupplierName.trim().toLowerCase() === businessProfile.name.trim().toLowerCase())
+          );
+
+          const isScannedCustomerMe = (
+            (scannedCustomerGstin && businessProfile?.gst_number && scannedCustomerGstin.trim().toUpperCase() === businessProfile.gst_number.trim().toUpperCase()) ||
+            (scannedCustomerName && businessProfile?.name && scannedCustomerName.trim().toLowerCase() === businessProfile.name.trim().toLowerCase())
+          );
+
+          // If the scanned SUPPLIER is me, it's a sales invoice.
+          // If the scanned CUSTOMER is NOT me, it's also likely a sales invoice.
+          if (isScannedSupplierMe || (!isScannedCustomerMe && scannedCustomerName)) {
+            setModal({
+              isOpen: true,
+              title: 'Wrong Document Type',
+              message: 'This appears to be a Sales Invoice (you are the supplier). Scanning a sales invoice in the Purchases section is wrong. Please use the Create Invoice page for this document.',
+              type: 'error'
+            });
+            return;
+          }
 
           setScannedData({
             supplier: {

@@ -1070,57 +1070,6 @@ export default function GSTReports() {
               </p>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-blue-500">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center uppercase tracking-wider">
-              <Clock size={18} className="mr-2 text-primary" />
-              GST Calendar
-            </h4>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 flex-shrink-0 text-xs font-bold">
-                  11
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">GSTR-1</p>
-                  <p className="text-[10px] text-slate-500">Monthly sales return</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 flex-shrink-0 text-xs font-bold">
-                  20
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">GSTR-3B</p>
-                  <p className="text-[10px] text-slate-500">Monthly payment return</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-primary/10 to-transparent rounded-2xl p-6 border border-primary/20 shadow-sm border-l-4 border-primary">
-            <h4 className="font-bold text-slate-900 mb-3 flex items-center uppercase tracking-wider">
-              <FileCheck size={18} className="mr-2 text-primary" />
-              Pro Tip
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed italic">
-              "Download the GSTR-2A report and compare it with your purchase invoices to ensure you are claiming the correct ITC."
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm border-l-4 border-slate-400">
-            <h4 className="font-bold text-slate-900 mb-4 uppercase tracking-wider">Quick Actions</h4>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                Reconcile ITC
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
-              <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                View HSN Summary
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
