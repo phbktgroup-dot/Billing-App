@@ -13,6 +13,7 @@ import {
   FileCheck,
   Info
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import PageHeader from '../components/PageHeader';
@@ -29,6 +30,10 @@ export default function GSTReports() {
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const businessId = profile?.business_id;
 

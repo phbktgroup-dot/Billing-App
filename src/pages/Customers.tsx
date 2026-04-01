@@ -13,8 +13,12 @@ import {
   Phone,
   Mail,
   MapPin,
-  FileText
+  FileText,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,6 +54,10 @@ export default function Customers() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const businessId = profile?.business_id;
 

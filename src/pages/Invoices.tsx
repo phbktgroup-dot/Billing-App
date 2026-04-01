@@ -72,6 +72,10 @@ export default function Invoices() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [ewaySettings, setEwaySettings] = useState<any>(null);

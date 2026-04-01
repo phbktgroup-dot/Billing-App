@@ -234,12 +234,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   };
 
   const handleScanClick = () => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      cameraInputRef.current?.click();
-    } else {
-      setShowScanOptions(true);
-    }
+    setShowScanOptions(true);
   };
 
   const businessId = profile?.business_id;
@@ -393,8 +388,11 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     }, 500);
 
     try {
-      // Resize image for faster processing
-      const optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+      // Resize image for faster processing, skip for PDF
+      let optimizedBase64 = base64Data;
+      if (mimeType.startsWith('image/')) {
+        optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+      }
       
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');

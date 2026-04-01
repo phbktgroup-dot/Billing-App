@@ -47,6 +47,10 @@ export default function Ledger() {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const businessId = profile?.business_id;
 

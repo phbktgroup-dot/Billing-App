@@ -60,8 +60,8 @@ export default function ScanOptionsModal({ onClose, onFileSelect }: ScanOptionsM
               <ImageIcon size={32} />
             </div>
             <div>
-              <span className="text-base font-bold text-slate-900 block">Upload Image</span>
-              <span className="text-xs text-slate-500">Select an existing image from your device</span>
+              <span className="text-base font-bold text-slate-900 block">Upload Image or PDF</span>
+              <span className="text-xs text-slate-500">Select an existing image or PDF from your device</span>
             </div>
           </button>
         </div>

@@ -16,6 +16,7 @@ import {
   Save,
   History
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn, formatCurrency, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,6 +54,10 @@ export default function Inventory() {
   const [isBulkDelete, setIsBulkDelete] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
   const [bulkFormData, setBulkFormData] = useState({
     stock: 0,
     price: 0,

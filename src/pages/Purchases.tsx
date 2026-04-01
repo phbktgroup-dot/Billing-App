@@ -10,6 +10,7 @@ import { DateFilter } from '../components/DateFilter';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import MessageModal from '../components/MessageModal';
 import { getApiUrl } from '../lib/api';
+import ScanOptionsModal from '../components/ScanOptionsModal';
 
 export default function Purchases() {
   const { profile } = useAuth();
@@ -25,6 +26,7 @@ export default function Purchases() {
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [showScanOptions, setShowScanOptions] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
     isOpen: false,
@@ -693,6 +695,23 @@ export default function Purchases() {
     setEditingPurchase(null);
   };
 
+  const handleScanClick = () => {
+    setShowScanOptions(true);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64Data = (reader.result as string).split(',')[1];
+        await processScannedFile(base64Data, file.type);
+      };
+    }
+    setShowScanOptions(false);
+  };
+
   const processScannedFile = async (base64Data: string, mimeType: string) => {
     setIsScanning(true);
     setProcessingProgress(0);
@@ -701,8 +720,11 @@ export default function Purchases() {
     }, 500);
 
     try {
-      // Resize image for faster processing
-      const optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+      // Resize image for faster processing, skip for PDF
+      let optimizedBase64 = base64Data;
+      if (mimeType.startsWith('image/')) {
+        optimizedBase64 = await resizeImage(`data:${mimeType};base64,${base64Data}`).then(res => res.split(',')[1]);
+      }
       
       // Use business-specific API key if available, otherwise fallback to environment variable
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
@@ -922,23 +944,12 @@ Return as JSON format: {
         <div className="flex items-center space-x-2">
           
           <button 
-            onClick={() => document.getElementById('purchase-file-input')?.click()}
+            onClick={handleScanClick}
             className="btn-secondary h-10 sm:h-9"
           >
             <Scan size={14} className="mr-1.5 text-primary" />
             Scan Bill
           </button>
-          <input id="purchase-file-input" type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => {
-            if (e.target.files?.[0]) {
-              const file = e.target.files[0];
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onload = async () => {
-                const base64Data = (reader.result as string).split(',')[1];
-                await processScannedFile(base64Data, file.type);
-              };
-            }
-          }} />
           <button className="btn-primary h-10 sm:h-9" onClick={() => openModal()}>
             <Plus size={14} className="mr-1.5" />
             Record Purchase
@@ -1602,6 +1613,13 @@ Return as JSON format: {
           />
         )}
       </AnimatePresence>
+
+      {showScanOptions && (
+        <ScanOptionsModal 
+          onClose={() => setShowScanOptions(false)}
+          onFileSelect={handleFileSelect}
+        />
+      )}
 
       {isScanning && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">

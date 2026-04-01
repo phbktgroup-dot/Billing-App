@@ -34,6 +34,10 @@ export default function Expenses() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const [formData, setFormData] = useState({
     category: 'Other',
