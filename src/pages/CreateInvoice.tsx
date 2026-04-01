@@ -952,7 +952,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               city: customer.city,
               pincode: customer.pincode,
               state: customer.stateCode ? STATE_CODES[customer.stateCode] : '',
-              created_by: user?.id
+              created_by: profile?.id || user?.id
             }])
             .select()
             .single();
@@ -1033,7 +1033,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           payment_mode: finalPaymentMode,
           notes,
           terms,
-          created_by: user?.id,
+          created_by: profile?.id || user?.id,
           supply_type: ewayData.supplyType,
           sub_supply_type: ewayData.subSupplyType
         }])
@@ -1078,7 +1078,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               .from('products')
               .insert([{
                 business_id: businessId,
-                created_by: user?.id,
+                created_by: profile?.id || user?.id,
                 name: itemName,
                 hsn_code: item.hsnCode || '',
                 price: Number(item.rate) || 0,
@@ -1286,7 +1286,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 .from('customers')
                 .insert([{
                   business_id: businessId,
-                  created_by: user?.id,
+                  created_by: profile?.id || user?.id,
                   name: data.name,
                   phone: data.phone,
                   address1: data.address1,
@@ -1320,7 +1320,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 .from('products')
                 .insert([{
                   business_id: businessId,
-                  created_by: user?.id,
+                  created_by: profile?.id || user?.id,
                   name: data.name,
                   sku: data.sku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
                   hsn_code: data.hsn_code || data.sku,

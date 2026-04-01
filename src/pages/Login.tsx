@@ -20,7 +20,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const { user, loading, appSettings, settingsLoading } = useAuth();
+  const { user, profile, loading, signOut, appSettings, settingsLoading } = useAuth();
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(true);
 
@@ -36,6 +36,18 @@ export default function Login() {
     }
   }, [user, loading, navigate]);
 
+  const handleSignOut = async () => {
+    setIsLoading(true);
+    try {
+      await signOut();
+      setSuccessMsg('Signed out successfully. You can now login with a new account.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign out.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -47,11 +59,11 @@ export default function Login() {
       
       if (isSignUp) {
         result = await supabase.auth.signUp({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           options: {
             data: {
-              name: email.split('@')[0]
+              name: email.trim().toLowerCase().split('@')[0]
             }
           }
         });
@@ -62,7 +74,7 @@ export default function Login() {
       }
 
       const loginPromise = supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
       const timeoutPromise = new Promise((_, reject) => 
@@ -203,6 +215,21 @@ export default function Login() {
               {isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Secure Login'}
             </h2>
           </div>
+
+          {user && !isForgotPassword && !isSignUp && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-xl flex flex-col space-y-2 text-amber-700 text-xs">
+              <div className="flex items-start space-x-3">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <p>You are currently signed in as <strong>{user.email}</strong>. If you are having trouble, you can force a sign out.</p>
+              </div>
+              <button 
+                onClick={handleSignOut}
+                className="text-amber-800 font-bold hover:underline text-left ml-7"
+              >
+                Force Sign Out & Clear Session
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3 text-red-600 text-xs animate-shake">

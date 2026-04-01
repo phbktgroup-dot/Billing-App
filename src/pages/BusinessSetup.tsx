@@ -9,6 +9,11 @@ import PageHeader from '../components/PageHeader';
 export default function BusinessSetup() {
   const navigate = useNavigate();
   const { user, refreshProfile, signOut } = useAuth();
+  
+  React.useEffect(() => {
+    console.log('[BusinessSetup] Component mounted', { userId: user?.id });
+  }, [user]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -84,6 +89,8 @@ export default function BusinessSetup() {
     e.preventDefault();
     if (!user) return;
     
+    const targetUserId = profile?.id || user.id;
+    
     setIsLoading(true);
     setError(null);
     
@@ -93,7 +100,7 @@ export default function BusinessSetup() {
       const { data: existingUser, error: userCheckError } = await supabase
         .from('users')
         .select('id')
-        .eq('id', user.id)
+        .eq('id', targetUserId)
         .maybeSingle();
 
       if (userCheckError) throw userCheckError;
@@ -111,10 +118,10 @@ export default function BusinessSetup() {
           const { error: userCreateError } = await supabase
             .from('users')
             .upsert([{
-              id: user.id,
-              email: user.email!,
-              name: user.user_metadata?.name || user.email?.split('@')[0],
-              role: user.email === 'phbktgroup@gmail.com' ? 'Super Admin' : 'Admin'
+              id: targetUserId,
+              email: profile?.email || user.email!,
+              name: profile?.name || user.user_metadata?.name || user.email?.split('@')[0],
+              role: (profile?.email || user.email) === 'phbktgroup@gmail.com' ? 'Super Admin' : 'Admin'
             }], { onConflict: 'id' });
 
           if (!userCreateError) {
@@ -146,7 +153,7 @@ export default function BusinessSetup() {
       const { data: business, error: saveError } = await supabase
         .from('business_profiles')
         .insert([{
-          user_id: user.id,
+          user_id: targetUserId,
           name: formData.businessName,
           owner_name: formData.ownerName,
           address: fullAddress,
@@ -176,7 +183,7 @@ export default function BusinessSetup() {
         await supabase
           .from('users')
           .update({ business_id: business.id })
-          .eq('id', user.id);
+          .eq('id', targetUserId);
           
         // Create default invoice series
         await supabase

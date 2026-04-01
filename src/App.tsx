@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 
@@ -28,12 +28,22 @@ import Login from './pages/Login';
 import BusinessSetup from './pages/BusinessSetup';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile } = useAuth();
+  const { user, loading, profile, signOut } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-6"></div>
+        <p className="text-slate-500 text-sm mb-4">Loading your profile...</p>
+        {user && (
+          <button 
+            onClick={() => signOut()}
+            className="text-xs text-slate-400 hover:text-primary underline"
+          >
+            Stuck? Sign Out
+          </button>
+        )}
       </div>
     );
   }
@@ -42,8 +52,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" />;
   }
 
-  if (user && !profile?.business_id && window.location.pathname !== '/business-setup') {
-    return <Navigate to="/business-setup" />;
+  // Check if user has a business linked
+  // This handles manually created users in Supabase Auth/Public tables
+  const hasBusiness = !!profile?.business_id;
+  const isSetupPage = location.pathname.replace(/\/$/, '') === '/business-setup';
+
+  console.log('[ProtectedRoute] State:', {
+    pathname: location.pathname,
+    hasBusiness,
+    isSetupPage,
+    hasProfile: !!profile,
+    userId: user.id
+  });
+
+  if (!hasBusiness && !isSetupPage) {
+    console.log('[ProtectedRoute] No business profile found, redirecting to setup...');
+    return <Navigate to="/business-setup" replace />;
   }
 
   return <>{children}</>;
@@ -53,10 +77,10 @@ function App() {
   return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/business-setup" element={<ProtectedRoute><BusinessSetup /></ProtectedRoute>} />
         
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/business-setup" element={<BusinessSetup />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/new" element={<CreateInvoice />} />
           <Route path="/invoices/edit/:id" element={<CreateInvoice />} />

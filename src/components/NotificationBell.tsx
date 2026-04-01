@@ -5,19 +5,20 @@ import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function NotificationBell() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const targetUserId = profile?.id || user?.id;
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    if (!targetUserId) return;
 
     fetchNotifications();
 
     const channel = supabase
       .channel('notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${targetUserId}` }, () => {
         fetchNotifications();
       })
       .subscribe();
@@ -25,14 +26,14 @@ export default function NotificationBell() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [targetUserId]);
 
   const fetchNotifications = async () => {
-    if (!user) return;
+    if (!targetUserId) return;
     const { data, error } = await supabase
       .from('user_notifications')
       .select('*, notifications(*)')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .eq('is_read', false)
       .order('created_at', { ascending: false });
 
@@ -56,7 +57,7 @@ export default function NotificationBell() {
     const { error } = await supabase
       .from('user_notifications')
       .update({ is_read: true })
-      .eq('user_id', user?.id)
+      .eq('user_id', targetUserId)
       .eq('is_read', false);
     if (!error) fetchNotifications();
   };

@@ -137,7 +137,7 @@ export default function Inventory() {
       stock: Number(formData.stock) || 0,
       sku: formData.sku?.trim() || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       business_id: businessId,
-      created_by: user?.id
+      created_by: profile?.id || user?.id
     };
 
     try {

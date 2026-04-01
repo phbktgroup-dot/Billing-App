@@ -127,7 +127,7 @@ export default function Customers() {
       city,
       pincode,
       business_id: businessId,
-      created_by: user?.id
+      created_by: profile?.id || user?.id
     };
 
     try {

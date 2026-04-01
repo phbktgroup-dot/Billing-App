@@ -33,29 +33,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function getProfile(userId: string, isImpersonation = false) {
     try {
-      console.log(`Fetching profile for ${isImpersonation ? 'impersonated ' : ''}user:`, userId);
+      console.log(`[AuthContext] Fetching profile for ${isImpersonation ? 'impersonated ' : ''}user:`, userId);
       
-      // 1. Fetch the user record first
+      // 1. Fetch the user record from public.users
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-
+ 
       if (userError) {
-        console.error('Error fetching user:', userError);
+        console.error('[AuthContext] Error fetching user from public.users:', userError);
         return null;
       }
-
+ 
       let finalProfile = userData;
-
+ 
       if (!userData && !isImpersonation) {
+        console.log('[AuthContext] User record missing in public.users, attempting creation...');
         // If user record doesn't exist, try to create it (only for the logged-in user)
         const { data: { session } } = await supabase.auth.getSession();
         const authUser = session?.user;
         
         if (authUser && authUser.id === userId) {
-          console.log('Creating missing user record for:', authUser.email);
+          console.log('[AuthContext] Creating missing user record for:', authUser.email);
           const { data: newUser, error: insertError } = await supabase
             .from('users')
             .upsert([{
@@ -68,21 +69,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .maybeSingle();
           
           if (insertError) {
-            console.error('Error creating/upserting user record:', insertError);
+            console.error('[AuthContext] Error creating/upserting user record:', insertError);
+            // Try one more fetch in case it was a race condition with a trigger
             const { data: retryData } = await supabase
               .from('users')
               .select('*')
               .eq('id', userId)
               .maybeSingle();
-            if (retryData) finalProfile = retryData;
+            if (retryData) {
+              console.log('[AuthContext] Retry fetch successful after upsert error');
+              finalProfile = retryData;
+            }
           } else if (newUser) {
+            console.log('[AuthContext] User record created successfully');
             finalProfile = newUser;
           }
         }
       }
 
+      if (!finalProfile) {
+        console.warn('[AuthContext] No profile found or created for user:', userId);
+      }
+
       // 2. Fetch the business profile separately
       if (finalProfile) {
+        console.log('[AuthContext] Fetching business profile for user:', userId);
         const { data: businessData, error: businessError } = await supabase
           .from('business_profiles')
           .select('*')
@@ -90,13 +101,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (businessError) {
-          console.error('Error fetching business profile:', businessError);
+          console.error('[AuthContext] Error fetching business profile:', businessError);
         } else if (businessData) {
+          console.log('[AuthContext] Business profile found:', businessData.id);
           finalProfile = {
             ...finalProfile,
             business_profiles: businessData,
             business_id: businessData.id
           };
+        } else {
+          console.log('[AuthContext] No business profile found for user');
         }
       }
 
@@ -158,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setImpersonatedUser(targetUser);
         setImpersonatedProfile(targetProfile);
         setProfile(targetProfile);
-        sessionStorage.setItem('impersonatedUserId', targetUser.id);
+        localStorage.setItem('impersonatedUserId', targetUser.id);
       }
     } finally {
       setLoading(false);
@@ -169,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setImpersonatedUser(null);
     setImpersonatedProfile(null);
     setProfile(originalProfile);
-    sessionStorage.removeItem('impersonatedUserId');
+    localStorage.removeItem('impersonatedUserId');
   };
 
   const refreshProfile = async () => {
@@ -196,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userProfile = await getProfile(currentUser.id);
         
         // Check for persisted impersonation
-        const impersonatedId = sessionStorage.getItem('impersonatedUserId');
+        const impersonatedId = localStorage.getItem('impersonatedUserId');
         if (impersonatedId && userProfile && (userProfile.role === 'Admin' || userProfile.role === 'Super Admin')) {
           const targetProfile = await getProfile(impersonatedId, true);
           if (targetProfile) {
@@ -253,13 +267,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setImpersonatedUser(null);
-    setImpersonatedProfile(null);
-    setOriginalProfile(null);
-    userIdRef.current = null;
-    sessionStorage.removeItem('impersonatedUserId');
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error signing out:', err);
+    } finally {
+      setUser(null);
+      setProfile(null);
+      setImpersonatedUser(null);
+      setImpersonatedProfile(null);
+      setOriginalProfile(null);
+      userIdRef.current = null;
+      localStorage.removeItem('impersonatedUserId');
+      // Clear any potential stale auth data from localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
+          localStorage.removeItem(key);
+        }
+      }
+    }
   };
 
   return (

@@ -165,7 +165,13 @@ app.get("/api/admin/users", async (req, res) => {
 app.post("/api/admin/create-user", async (req, res) => {
   try {
     const { user: adminUser, profile: adminProfile, isSuperAdmin } = await verifyAdmin(req);
-    const { email, password, name, role, created_by } = req.body;
+    const { email: rawEmail, password, name, role, created_by } = req.body;
+    const email = rawEmail?.trim()?.toLowerCase();
+    
+    if (!email || !email.includes('@')) {
+      throw new Error("Unable to validate email address: invalid format");
+    }
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -248,19 +254,8 @@ app.post("/api/admin/delete-user", async (req, res) => {
       }
     }
 
-    if (targetUser.role === 'Admin' || targetUser.role === 'Super Admin') {
-      // Reassign users created by the deleted user to the current admin
-      // But avoid self-reference (don't set a user's creator to themselves)
-      await supabaseAdmin.from('users')
-        .update({ created_by: adminUser.id })
-        .eq('created_by', userId)
-        .neq('id', adminUser.id);
-      
-      // If the current admin was created by the deleted user, set their creator to null (they are now a root)
-      await supabaseAdmin.from('users')
-        .update({ created_by: null })
-        .eq('id', adminUser.id)
-        .eq('created_by', userId);
+    if (targetUser.role === 'Admin') {
+      await supabaseAdmin.from('users').update({ created_by: adminUser.id }).eq('created_by', userId);
     }
     
     // Storage cleanup
@@ -349,21 +344,17 @@ app.post("/api/admin/send-user-notification", async (req, res) => {
 
 app.post("/api/admin/delete-notification", async (req, res) => {
   try {
-    const { isSuperAdmin, user } = await verifyAdmin(req);
+    const { isSuperAdmin, isAdmin, user } = await verifyAdmin(req);
     const { id } = req.body;
     
-    const { data: notification, error: fetchError } = await supabaseAdmin
-      .from('notifications')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (fetchError || !notification) throw new Error("Notification not found");
-    
-    if (!isSuperAdmin && notification.created_by !== user.id) {
-      throw new Error("Forbidden: You can only delete notifications you created");
+    if (!isSuperAdmin) {
+      // If not super admin, check if they are the creator
+      const { data: notif } = await supabaseAdmin.from('notifications').select('created_by').eq('id', id).single();
+      if (!notif || notif.created_by !== user.id) {
+        throw new Error("Forbidden: You can only delete notifications you created");
+      }
     }
-    
+
     const { error } = await supabaseAdmin.from('notifications').delete().eq('id', id);
     if (error) throw error;
     res.json({ success: true });
@@ -374,7 +365,8 @@ app.post("/api/admin/delete-notification", async (req, res) => {
 
 app.post("/api/auth/request-otp", async (req, res) => {
   try {
-    const email = req.body.email.toLowerCase();
+    const email = req.body.email?.trim()?.toLowerCase();
+    if (!email) throw new Error("Email is required");
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60000);
     await supabaseAdmin.from('otps').insert({ email, otp, expires_at: expiresAt.toISOString() });
@@ -394,8 +386,9 @@ app.post("/api/auth/request-otp", async (req, res) => {
 
 app.post("/api/auth/verify-otp", async (req, res) => {
   try {
-    const email = req.body.email.toLowerCase();
-    const otp = req.body.otp.trim();
+    const email = req.body.email?.trim()?.toLowerCase();
+    const otp = req.body.otp?.trim();
+    if (!email || !otp) throw new Error("Email and OTP are required");
     const { data, error } = await supabaseAdmin.from('otps').select('*').eq('email', email).eq('otp', otp).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
     if (!data) throw new Error("Invalid OTP.");
@@ -408,9 +401,10 @@ app.post("/api/auth/verify-otp", async (req, res) => {
 
 app.post("/api/auth/reset-password-otp", async (req, res) => {
   try {
-    const email = req.body.email.toLowerCase();
-    const otp = req.body.otp.trim();
+    const email = req.body.email?.trim()?.toLowerCase();
+    const otp = req.body.otp?.trim();
     const { password } = req.body;
+    if (!email || !otp || !password) throw new Error("Email, OTP and password are required");
     const { data, error } = await supabaseAdmin.from('otps').select('*').eq('email', email).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
     if (!data || data.otp !== otp) throw new Error("Invalid OTP.");
@@ -428,7 +422,8 @@ app.post("/api/auth/reset-password-otp", async (req, res) => {
 
 app.post("/api/auth/check-email", async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email?.trim()?.toLowerCase();
+    if (!email) throw new Error("Email is required");
     const { data, error } = await supabaseAdmin.from('users').select('id').ilike('email', email).maybeSingle();
     if (error) throw error;
     res.json({ exists: !!data });

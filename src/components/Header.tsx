@@ -20,6 +20,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, profile, signOut, isImpersonating, stopImpersonating, originalProfile } = useAuth();
+  const targetUserId = profile?.id || user?.id;
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -50,17 +51,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
   };
 
   useEffect(() => {
-    if (user) {
+    if (targetUserId) {
       fetchNotifications();
       
       // Subscribe to new user-specific notifications
       const channel = supabase
-        .channel(`user-notifications:${user.id}`)
+        .channel(`user-notifications:${targetUserId}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
           table: 'user_notifications',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${targetUserId}`
         }, () => {
           fetchNotifications();
         })
@@ -70,16 +71,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
         supabase.removeChannel(channel);
       };
     }
-  }, [user?.id]);
+  }, [targetUserId]);
 
   const fetchNotifications = async () => {
-    if (!user) return;
+    if (!targetUserId) return;
     try {
       // Fetch from unread user_notifications joined with notifications
       const { data, error } = await supabase
         .from('user_notifications')
         .select('*, notifications(*)')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('is_read', false)
         .order('created_at', { ascending: false });
 
@@ -110,11 +111,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
   };
 
   const markAllAsRead = async () => {
-    if (!user) return;
+    if (!targetUserId) return;
     const { error } = await supabase
       .from('user_notifications')
       .update({ is_read: true })
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .eq('is_read', false);
     if (!error) fetchNotifications();
   };
@@ -239,7 +240,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-16 md:h-12 bg-white/80 backdrop-blur-xl sticky z-[60] px-4 md:px-8 flex items-center justify-between border-b border-slate-100 pt-safe md:pt-0",
+        "h-12 md:h-12 bg-white/80 backdrop-blur-xl sticky z-[60] px-4 md:px-8 flex items-center justify-between border-b border-slate-100",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
         <div className="absolute inset-0 -z-10 pointer-events-none" />
