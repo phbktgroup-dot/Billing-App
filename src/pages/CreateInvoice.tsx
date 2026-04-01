@@ -156,7 +156,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       // Prefer INV- series as default
       const invSeries = invoiceSeries.find(s => s.prefix === 'INV-');
       const series = invSeries || invoiceSeries[0];
-      setInvoiceNumber(formatSeriesNumber(series));
+      setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix));
       setSelectedSeriesId(series.id);
     }
   }, [invoiceSeries, invoiceNumber, isScannedInvoiceNumberFound]);
@@ -170,7 +170,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     if (!currentInvoiceNumber) {
       const selectedSeries = invoiceSeries.find(s => s.id === selectedSeriesId);
       if (selectedSeries) {
-        currentInvoiceNumber = formatSeriesNumber(selectedSeries);
+        currentInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix);
       } else {
         const prefix = businessProfile?.invoice_prefix || 'INV';
         const number = Date.now().toString().slice(-6);
@@ -501,7 +501,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               // If it exists, use the next number from current series
               const series = currentSeries || invoiceSeries.find(s => s.prefix === 'INV-') || invoiceSeries[0];
               if (series) {
-                finalScannedInvoiceNumber = formatSeriesNumber(series);
+                finalScannedInvoiceNumber = formatSeriesNumber(series.current_number, series.prefix);
                 setSelectedSeriesId(series.id);
               }
             }
@@ -964,7 +964,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       let finalInvoiceNumber = invoiceNumber;
       if (!finalInvoiceNumber) {
         if (selectedSeries) {
-          finalInvoiceNumber = formatSeriesNumber(selectedSeries);
+          finalInvoiceNumber = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix);
         } else {
           const prefix = businessProfile?.invoice_prefix || 'INV';
           finalInvoiceNumber = `${prefix}-${Date.now().toString().slice(-6)}`;
@@ -1223,6 +1223,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       {/* Header */}
       <PageHeader 
         title="Create New Invoice" 
+        description="Fill in the details below to generate a new invoice."
       >
         <div className="flex items-center space-x-4">
           
@@ -1230,10 +1231,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           
           <button 
             onClick={handleScanClick}
-            className="px-5 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-sm font-bold flex items-center hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
+            className="px-5 py-2 w-48 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl text-sm font-bold flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
           >
             <Scan size={18} className="mr-2" strokeWidth={2.5} />
-            AI Scan
+            AI Scan Invoice
           </button>
         </div>
       </PageHeader>
@@ -1337,7 +1338,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             exit={{ opacity: 0, x: 20 }}
             className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start"
           >
-            <div className="xl:col-span-2 space-y-6 pr-2">
+            <div className="xl:col-span-2 space-y-6 pr-2 xl:h-[calc(100vh-150px)] xl:overflow-y-auto">
               {/* Customer & Details Section */}
               <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
@@ -1413,7 +1414,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between !bg-white"
                                 onClick={() => {
-                                  setInvoiceNumber(formatSeriesNumber(series));
+                                  setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix));
                                   setSelectedSeriesId(series.id);
                                   setIsScannedInvoiceNumberFound(false);
                                   setShowSeriesList(false);
@@ -1424,7 +1425,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                   <span className="text-[8px] text-slate-500 font-medium">Prefix: {series.prefix}</span>
                                 </div>
                                 <span className="text-[8px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
-                                  {formatSeriesNumber(series)}
+                                  {formatSeriesNumber(series.current_number, series.prefix)}
                                 </span>
                               </button>
                             ))}
