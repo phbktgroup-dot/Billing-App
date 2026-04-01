@@ -1155,6 +1155,6 @@ export default function GSTReports() {
           </div>
         </div>
       </div>
-    </div>
+      </motion.div>
   );
 }

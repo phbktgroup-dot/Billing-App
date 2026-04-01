@@ -787,6 +787,6 @@ export default function Inventory() {
           setIsBulkDelete(false);
         }}
       />
-    </div>
+      </motion.div>
   );
 }

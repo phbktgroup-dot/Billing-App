@@ -473,6 +473,6 @@ export default function Ledger() {
         <p>* This is a computer generated statement and does not require a signature.</p>
         <p>Generated on: {new Date().toLocaleString()}</p>
       </div>
-    </div>
+      </motion.div>
   );
 }

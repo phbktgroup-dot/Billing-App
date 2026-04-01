@@ -491,6 +491,6 @@ export default function Expenses() {
           setIsBulkDelete(false);
         }}
       />
-    </div>
+      </motion.div>
   );
 }

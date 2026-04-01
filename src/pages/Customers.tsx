@@ -559,6 +559,6 @@ export default function Customers() {
           setIsBulkDelete(false);
         }}
       />
-    </div>
+      </motion.div>
   );
 }
