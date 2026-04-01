@@ -354,7 +354,11 @@
 
     DROP POLICY IF EXISTS "Users can create their business" ON business_profiles;
     CREATE POLICY "Users can create their business" ON business_profiles
-        FOR INSERT WITH CHECK (auth.uid() = user_id);
+        FOR INSERT WITH CHECK (
+            auth.uid() = user_id 
+            OR public.is_super_admin() 
+            OR public.is_auth_admin()
+        );
 
     DROP POLICY IF EXISTS "Users can update their business" ON business_profiles;
     CREATE POLICY "Users can update their business" ON business_profiles

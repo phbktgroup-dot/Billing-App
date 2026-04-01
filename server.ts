@@ -236,6 +236,39 @@ app.post("/api/admin/toggle-status", async (req, res) => {
   }
 });
 
+app.post("/api/admin/create-business", async (req, res) => {
+  try {
+    const { user: adminUser, profile: adminProfile, isSuperAdmin, isAdmin } = await verifyAdmin(req);
+    const { targetUserId, businessData } = req.body;
+
+    if (!targetUserId || !businessData) {
+      throw new Error("Missing required fields");
+    }
+
+    // Only Admins or Super Admins can create businesses for other users
+    // Or users can create for themselves
+    if (adminUser.id !== targetUserId && !isSuperAdmin && !isAdmin) {
+      throw new Error("Forbidden: Cannot create business for this user");
+    }
+
+    // Insert the business profile
+    const { data: business, error: saveError } = await supabaseAdmin
+      .from('business_profiles')
+      .insert([{
+        user_id: targetUserId,
+        ...businessData
+      }])
+      .select()
+      .single();
+
+    if (saveError) throw saveError;
+
+    res.json({ success: true, business });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 app.post("/api/admin/delete-user", async (req, res) => {
   try {
     const { isSuperAdmin, isAdmin, user: adminUser, profile: adminProfile } = await verifyAdmin(req);

@@ -8,7 +8,7 @@ import PageHeader from '../components/PageHeader';
 
 export default function BusinessSetup() {
   const navigate = useNavigate();
-  const { user, refreshProfile, signOut } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
   
   React.useEffect(() => {
     console.log('[BusinessSetup] Component mounted', { userId: user?.id });
@@ -150,6 +150,7 @@ export default function BusinessSetup() {
 
       // 1. Create business profile
       const fullAddress = `${formData.address1}${formData.address2 ? ', ' + formData.address2 : ''}`;
+      
       const { data: business, error: saveError } = await supabase
         .from('business_profiles')
         .insert([{
