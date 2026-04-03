@@ -51,6 +51,7 @@ export default function Ledger() {
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
   const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
 
   const businessId = profile?.business_id;
 
@@ -306,6 +307,23 @@ export default function Ledger() {
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
         description="View detailed transaction history, track outstanding balances, and reconcile accounts for your business partners."
+        isDateFilterOpen={isDateFilterOpen}
+        dateFilter={
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            iconOnly={true}
+            isOpen={isDateFilterOpen}
+            setIsOpen={setIsDateFilterOpen}
+            allowedTabs={['date', 'range']}
+          />
+        }
       >
         <div className="flex items-center space-x-4">
           <div className="flex bg-slate-100 p-1 rounded-xl">

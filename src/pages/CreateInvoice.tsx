@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import ScanOptionsModal from '../components/ScanOptionsModal';
 import Drawer from '../components/Drawer';
@@ -77,7 +77,10 @@ interface CreateInvoiceProps {
 export default function CreateInvoice({ isModal = false, onClose }: CreateInvoiceProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id } = useParams();
   const { user, profile, refreshProfile } = useAuth();
+  const businessId = profile?.business_id;
+  const businessProfile = profile?.business_profiles;
   const [items, setItems] = useState<LineItem[]>([]);
   const [customer, setCustomer] = useState({ id: '', name: '', phone: '', gst: '', address1: '', address2: '', city: '', pincode: '', stateCode: '' });
   const [newItem, setNewItem] = useState<LineItem>({ id: '', productId: '', name: '', hsnCode: '', unitType: 'NUMBERS', quantity: '', rate: '', gstRate: '', discount: '', amount: '' });
@@ -156,10 +159,97 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   });
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [originalInvoiceItems, setOriginalInvoiceItems] = useState<any[]>([]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const seriesListRef = useRef<HTMLDivElement>(null);
   const customerListRef = useRef<HTMLDivElement>(null);
+
+  // Fetch invoice data for editing
+  useEffect(() => {
+    const fetchInvoiceData = async () => {
+      if (!id || !businessId) return;
+
+      try {
+        const { data: invoice, error: invError } = await supabase
+          .from('invoices')
+          .select(`
+            *,
+            customers (*),
+            invoice_items (*, products (*)),
+            eway_bills (*)
+          `)
+          .eq('id', id)
+          .single();
+
+        if (invError) throw invError;
+
+        if (invoice) {
+          setCustomer({
+            id: invoice.customer_id,
+            name: invoice.customers?.name || '',
+            phone: invoice.customers?.phone || '',
+            gst: invoice.customers?.gstin || '',
+            address1: invoice.customers?.address1 || '',
+            address2: invoice.customers?.address2 || '',
+            city: invoice.customers?.city || '',
+            pincode: invoice.customers?.pincode || '',
+            stateCode: invoice.customer_state || ''
+          });
+
+          setInvoiceNumber(invoice.invoice_number);
+          setDate(invoice.date);
+          setPaymentStatus(invoice.status);
+          setPaymentMode(invoice.payment_mode || 'Cash');
+          setNotes(invoice.notes || '');
+          setTerms(invoice.terms || '');
+          setDiscount(invoice.discount_percentage || invoice.discount || 0);
+          setDiscountType(invoice.discount_percentage > 0 ? 'percentage' : 'fixed');
+          setSelectedSeriesId(invoice.invoice_series_id || '');
+
+          const mappedItems = invoice.invoice_items.map((item: any) => ({
+            id: item.id,
+            productId: item.product_id,
+            name: item.products?.name || 'Custom Item',
+            hsnCode: item.hsn_code || '',
+            unitType: item.unit_type || 'NOS',
+            quantity: item.quantity,
+            rate: item.unit_price,
+            gstRate: item.gst_rate,
+            discount: item.discount,
+            amount: item.amount
+          }));
+          setItems(mappedItems);
+          setOriginalInvoiceItems(invoice.invoice_items);
+
+          if (invoice.eway_bills && invoice.eway_bills.length > 0) {
+            const eway = invoice.eway_bills[0];
+            setIncludeEwayBill(true);
+            setEwayData({
+              ...ewayData,
+              ewayBillNo: eway.eway_bill_no || '',
+              transporterId: eway.transporter_id || '',
+              transporterName: eway.transporter_name || '',
+              transDocNo: eway.trans_doc_no || '',
+              transMode: eway.trans_mode || '1',
+              transDistance: eway.trans_distance || 100,
+              transDocDate: eway.trans_doc_date || '',
+              vehicleNo: eway.vehicle_no || '',
+              vehicleType: eway.vehicle_type || 'R',
+              transactionType: eway.transaction_type || 1,
+              supplyType: eway.supply_type || 'O',
+              subSupplyType: eway.sub_supply_type || '1',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching invoice:', error);
+        setModal({ isOpen: true, title: 'Error', message: 'Failed to load invoice data.', type: 'error' });
+      }
+    };
+
+    fetchInvoiceData();
+  }, [id, businessId]);
 
   // Click outside handler for dropdowns
   useEffect(() => {
@@ -314,9 +404,6 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   const handleScanClick = () => {
     setShowScanOptions(true);
   };
-
-  const businessId = profile?.business_id;
-  const businessProfile = profile?.business_profiles;
 
   // Autosave
   useEffect(() => {
@@ -1071,63 +1158,120 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         }
       }
 
-      // Check if invoice number already exists
-      const { data: existingInvoice, error: checkError } = await supabase
-        .from('invoices')
-        .select('id')
-        .eq('business_id', businessId)
-        .eq('invoice_number', finalInvoiceNumber)
-        .maybeSingle();
+      // Check if invoice number already exists (only for new invoices)
+      if (!id) {
+        const { data: existingInvoice, error: checkError } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('invoice_number', finalInvoiceNumber)
+          .maybeSingle();
 
-      if (checkError) throw checkError;
+        if (checkError) throw checkError;
 
-      if (existingInvoice) {
-        setModal({ 
-          isOpen: true, 
-          title: 'Duplicate Invoice Number', 
-          message: `Invoice number ${finalInvoiceNumber} is already in use. Please use a different number.`, 
-          type: 'error' 
-        });
-        setIsSaving(false);
-        return;
+        if (existingInvoice) {
+          setModal({ 
+            isOpen: true, 
+            title: 'Duplicate Invoice Number', 
+            message: `Invoice number ${finalInvoiceNumber} is already in use. Please use a different number.`, 
+            type: 'error' 
+          });
+          setIsSaving(false);
+          return;
+        }
       }
       
       const finalPaymentMode = paymentStatus === 'unpaid' ? 'Unpaid' : paymentMode;
       
-      const { data: invoice, error: invError } = await supabase
-        .from('invoices')
-        .insert([{
-          business_id: businessId,
-          customer_id: customerId,
-          invoice_series_id: selectedSeriesId || null,
-          invoice_number: finalInvoiceNumber,
-          date: date,
-          subtotal: taxableAmount,
-          discount: totalDiscount,
-          discount_percentage: discountType === 'percentage' ? discount : 0,
-          tax_amount: gstTotal,
-          cgst_amount: cgstAmount,
-          sgst_amount: sgstAmount,
-          igst_amount: igstAmount,
-          is_inter_state: isInterState,
-          billing_state: businessState,
-          customer_state: customerState,
-          total,
-          status: paymentStatus,
-          payment_mode: finalPaymentMode,
-          notes,
-          terms,
-          created_by: profile?.id || user?.id,
-          supply_type: ewayData.supplyType,
-          sub_supply_type: ewayData.subSupplyType
-        }])
-        .select()
-        .single();
-      
-      if (invError) throw invError;
+      let invoice;
+      if (id) {
+        // Update existing invoice
+        const { data: updatedInvoice, error: invError } = await supabase
+          .from('invoices')
+          .update({
+            customer_id: customerId,
+            invoice_number: finalInvoiceNumber,
+            date: date,
+            subtotal: taxableAmount,
+            discount: totalDiscount,
+            discount_percentage: discountType === 'percentage' ? discount : 0,
+            tax_amount: gstTotal,
+            cgst_amount: cgstAmount,
+            sgst_amount: sgstAmount,
+            igst_amount: igstAmount,
+            is_inter_state: isInterState,
+            billing_state: businessState,
+            customer_state: customerState,
+            total,
+            status: paymentStatus,
+            payment_mode: finalPaymentMode,
+            notes,
+            terms,
+            supply_type: ewayData.supplyType,
+            sub_supply_type: ewayData.subSupplyType
+          })
+          .eq('id', id)
+          .select()
+          .single();
+        
+        if (invError) throw invError;
+        invoice = updatedInvoice;
 
-      // Update current_number in invoice_series
-      if (selectedSeries && !isScannedInvoiceNumberFound) {
+        // Revert stock for original items
+        for (const item of originalInvoiceItems) {
+          if (item.product_id) {
+            const product = products.find(p => p.id === item.product_id);
+            if (product) {
+              await supabase
+                .from('products')
+                .update({ stock: product.stock + (Number(item.quantity) || 0) })
+                .eq('id', item.product_id);
+            }
+          }
+        }
+
+        // Delete old items
+        await supabase.from('invoice_items').delete().eq('invoice_id', id);
+        // Delete old e-way bills
+        await supabase.from('eway_bills').delete().eq('invoice_id', id);
+      } else {
+        // Create new invoice
+        const { data: newInvoice, error: invError } = await supabase
+          .from('invoices')
+          .insert([{
+            business_id: businessId,
+            customer_id: customerId,
+            invoice_series_id: selectedSeriesId || null,
+            invoice_number: finalInvoiceNumber,
+            date: date,
+            subtotal: taxableAmount,
+            discount: totalDiscount,
+            discount_percentage: discountType === 'percentage' ? discount : 0,
+            tax_amount: gstTotal,
+            cgst_amount: cgstAmount,
+            sgst_amount: sgstAmount,
+            igst_amount: igstAmount,
+            is_inter_state: isInterState,
+            billing_state: businessState,
+            customer_state: customerState,
+            total,
+            status: paymentStatus,
+            payment_mode: finalPaymentMode,
+            notes,
+            terms,
+            created_by: profile?.id || user?.id,
+            supply_type: ewayData.supplyType,
+            sub_supply_type: ewayData.subSupplyType
+          }])
+          .select()
+          .single();
+        
+        if (invError) throw invError;
+        invoice = newInvoice;
+      }
+      
+      // Update current_number in invoice_series (only for new invoices)
+      if (!id && selectedSeries && !isScannedInvoiceNumberFound) {
         const expectedNext = formatSeriesNumber(selectedSeries.current_number, selectedSeries.prefix, selectedSeries.name);
         
         // Only update the series if the invoice number matches the expected next number

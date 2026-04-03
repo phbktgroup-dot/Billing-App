@@ -1743,9 +1743,10 @@ export default function Payments() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table and Mobile List */}
       <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
@@ -1824,6 +1825,74 @@ export default function Payments() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="px-4 py-12 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading transactions...</p>
+            </div>
+          ) : filteredPayments.length === 0 ? (
+            <div className="px-4 py-12 text-center">
+              <CreditCard className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+              <p className="text-slate-500 font-medium text-xs">No transactions found</p>
+            </div>
+          ) : (
+            filteredPayments.map((payment) => (
+              <div key={payment.id} className="p-4 space-y-3">
+                {/* First Line: Date, Party Name, Type, Amount */}
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">
+                        {new Date(payment.date).toLocaleDateString()}
+                      </span>
+                      <span className={cn(
+                        "px-1 py-0.5 rounded text-[8px] font-bold uppercase",
+                        payment.type === 'receipt' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+                      )}>
+                        {payment.type === 'receipt' ? "Receipt" : "Payment"}
+                      </span>
+                    </div>
+                    <p className="text-[13px] font-bold text-slate-900">
+                      {payment.type === 'receipt' ? payment.customers?.name : payment.suppliers?.name}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {payment.payment_mode} {payment.reference_number ? `• ${payment.reference_number}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn(
+                      "text-[14px] font-bold",
+                      payment.type === 'receipt' ? "text-emerald-600" : "text-orange-600"
+                    )}>
+                      {payment.type === 'receipt' ? "+" : "-"}{formatCurrency(payment.amount)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Second Line: Action Icons */}
+                <div className="flex items-center justify-end space-x-4 pt-1">
+                  <button 
+                    onClick={() => {
+                      setPaymentToDelete(payment.id);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="flex items-center space-x-1.5 text-slate-500"
+                  >
+                    <Trash2 size={16} />
+                    <span className="text-[11px] font-medium">Delete</span>
+                  </button>
+                  <button className="flex items-center space-x-1.5 text-slate-500">
+                    <Share2 size={16} />
+                    <span className="text-[11px] font-medium">Share</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </>

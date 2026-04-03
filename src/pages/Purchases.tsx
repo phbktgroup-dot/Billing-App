@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical, User, FileText, Image as ImageIcon, Zap, UserPlus, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, Share2, User, FileText, Image as ImageIcon, Zap, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -1042,7 +1042,8 @@ Return as JSON format: {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-slate-900 text-white border-b border-slate-800">
@@ -1070,13 +1071,13 @@ Return as JSON format: {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center">
+                  <td colSpan={10} className="px-4 py-6 text-center">
                     <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
                   </td>
                 </tr>
               ) : filteredPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-xs text-slate-500">
+                  <td colSpan={10} className="px-4 py-6 text-center text-xs text-slate-500">
                     No purchases found.
                   </td>
                 </tr>
@@ -1089,44 +1090,39 @@ Return as JSON format: {
                       selectedPurchases.includes(purchase.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-2.5 py-1.5">
-                      <input 
-                        type="checkbox" 
-                        className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
-                        checked={selectedPurchases.includes(purchase.id)}
-                        onChange={() => toggleSelectPurchase(purchase.id)}
-                      />
+                    <td className="px-6 py-5">
+                      <div className="flex items-center justify-center">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded-md border-slate-300 text-primary focus:ring-primary cursor-pointer transition-all"
+                          checked={selectedPurchases.includes(purchase.id)}
+                          onChange={() => toggleSelectPurchase(purchase.id)}
+                        />
+                      </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
+                    <td className="px-4 py-5 text-[10px] text-slate-500">
                       {new Date(purchase.date).toLocaleDateString()}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[8px] text-slate-400">
+                    <td className="px-4 py-5 text-[8px] text-slate-400">
                       {new Date(purchase.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] font-medium text-slate-900">{purchase.invoice_number}</td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600">
+                    <td className="px-4 py-5 text-[10px] font-medium text-slate-900">{purchase.invoice_number}</td>
+                    <td className="px-4 py-5 text-[10px] text-slate-600">
                       {purchase.suppliers?.name || 'Unknown Supplier'}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
+                    <td className="px-4 py-5 text-[10px] text-slate-500 text-right">
                       {formatCurrency(purchase.cgst_amount || 0)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
+                    <td className="px-4 py-5 text-[10px] text-slate-500 text-right">
                       {formatCurrency(purchase.sgst_amount || 0)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-500">
+                    <td className="px-4 py-5 text-[10px] text-slate-500 text-right">
                       {formatCurrency(purchase.igst_amount || 0)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] font-bold text-slate-900">
+                    <td className="px-4 py-5 text-[10px] font-bold text-slate-900 text-right">
                       {formatCurrency(purchase.total_amount)}
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
-                        purchase.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {purchase.status}
-                      </span>
-                    </td>
-                    <td className="px-2.5 py-1.5 text-right">
+                    <td className="px-6 py-5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(purchase)}
@@ -1143,7 +1139,7 @@ Return as JSON format: {
                           <Trash2 size={12} />
                         </button>
                         <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-                          <MoreVertical size={12} />
+                          <Share2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -1152,6 +1148,71 @@ Return as JSON format: {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading purchases...</p>
+            </div>
+          ) : filteredPurchases.length === 0 ? (
+            <div className="p-8 text-center">
+              <ShoppingCart className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+              <p className="text-slate-500 font-medium text-xs">No purchases found</p>
+            </div>
+          ) : (
+            filteredPurchases.map((purchase) => (
+              <div key={purchase.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                      checked={selectedPurchases.includes(purchase.id)}
+                      onChange={() => toggleSelectPurchase(purchase.id)}
+                    />
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-xs font-bold text-slate-900">{purchase.invoice_number}</p>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
+                          purchase.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          {purchase.status}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {purchase.suppliers?.name || 'Unknown Supplier'} • {new Date(purchase.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-900">{formatCurrency(purchase.total_amount)}</p>
+                  </div>
+                </div>
+                
+                {/* Action Icons Row (Mobile Only) */}
+                <div className="flex items-center justify-end space-x-2 pt-1">
+                  <button 
+                    onClick={() => openModal(purchase)}
+                    className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => confirmDelete(purchase.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100">
+                    <Share2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

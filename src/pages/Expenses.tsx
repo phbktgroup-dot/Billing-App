@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Download, Trash2, Edit2, Loader2, AlertCircle, Receipt, Calendar, Tag, DollarSign, MoreVertical, BarChart3, ArrowUpRight } from 'lucide-react';
+import { Plus, Search, Filter, Download, Trash2, Edit2, Loader2, AlertCircle, Receipt, Calendar, Tag, DollarSign, Share2, BarChart3, ArrowUpRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -378,9 +378,10 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* Expenses Table */}
+      {/* Expenses List */}
       <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-bottom border-slate-100 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
@@ -469,7 +470,7 @@ export default function Expenses() {
                           <Trash2 size={12} />
                         </button>
                         <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-                          <MoreVertical size={12} />
+                          <Share2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -478,6 +479,67 @@ export default function Expenses() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading expenses...</p>
+            </div>
+          ) : filteredExpenses.length === 0 ? (
+            <div className="p-8 text-center">
+              <Receipt className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+              <p className="text-slate-500 font-medium text-xs">No expenses found</p>
+            </div>
+          ) : (
+            filteredExpenses.map((expense) => (
+              <div key={expense.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                      checked={selectedExpenses.includes(expense.id)}
+                      onChange={() => toggleSelectExpense(expense.id)}
+                    />
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-xs font-bold text-slate-900">{expense.category}</p>
+                        <span className="text-[10px] text-slate-500">• {new Date(expense.date).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
+                        {expense.description || 'No description'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-red-600">{formatCurrency(expense.amount)}</p>
+                  </div>
+                </div>
+                
+                {/* Action Icons Row (Mobile Only) */}
+                <div className="flex items-center justify-end space-x-2 pt-1">
+                  <button 
+                    onClick={() => handleEdit(expense)}
+                    className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button 
+                    onClick={() => confirmDelete(expense.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100">
+                    <Share2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

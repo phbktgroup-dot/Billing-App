@@ -20,18 +20,25 @@ interface DateFilterProps {
   iconOnly?: boolean;
   isOpen?: boolean;
   setIsOpen?: (isOpen: boolean) => void;
+  allowedTabs?: ('presets' | 'date' | 'range' | 'year')[];
+  onSelect?: () => void;
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({
-  filterType, setFilterType, day, setDay, year, setYear, customRange, setCustomRange, className, iconOnly, isOpen: externalIsOpen, setIsOpen: externalSetIsOpen
+  filterType, setFilterType, day, setDay, year, setYear, customRange, setCustomRange, className, iconOnly, isOpen: externalIsOpen, setIsOpen: externalSetIsOpen, allowedTabs, onSelect
 }) => {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalSetIsOpen || setInternalIsOpen;
   const dropdownRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<'presets' | 'date' | 'range' | 'year'>('presets');
+  const [activeTab, setActiveTab] = useState<'presets' | 'date' | 'range' | 'year'>(allowedTabs ? allowedTabs[0] : 'presets');
   
+  useEffect(() => {
+    if (allowedTabs && !allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs[0]);
+    }
+  }, [allowedTabs]);
   const parseDateString = (dateStr: string) => {
     if (!dateStr) return undefined;
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -60,6 +67,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   const handlePresetSelect = (type: FilterType) => {
     setFilterType(type);
     setIsOpen(false);
+    onSelect?.();
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -68,6 +76,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       setDay(format(date, 'yyyy-MM-dd'));
       setFilterType('day');
       setIsOpen(false);
+      onSelect?.();
     }
   };
 
@@ -91,6 +100,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       });
       setFilterType('custom');
       setIsOpen(false);
+      onSelect?.();
     }
   };
 
@@ -148,42 +158,50 @@ export const DateFilter: React.FC<DateFilterProps> = ({
 
         {/* Tabs */}
       <div className="flex border-b border-slate-100 p-1 bg-slate-50/50">
-        <button 
-          onClick={() => setActiveTab('presets')}
-          className={cn(
-            "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
-            activeTab === 'presets' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-          )}
-        >
-          Presets
-        </button>
-        <button 
-          onClick={() => setActiveTab('date')}
-          className={cn(
-            "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
-            activeTab === 'date' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-          )}
-        >
-          Date
-        </button>
-        <button 
-          onClick={() => setActiveTab('range')}
-          className={cn(
-            "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
-            activeTab === 'range' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-          )}
-        >
-          Range
-        </button>
-        <button 
-          onClick={() => setActiveTab('year')}
-          className={cn(
-            "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
-            activeTab === 'year' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-          )}
-        >
-          Year
-        </button>
+        {(!allowedTabs || allowedTabs.includes('presets')) && (
+          <button 
+            onClick={() => setActiveTab('presets')}
+            className={cn(
+              "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
+              activeTab === 'presets' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            Presets
+          </button>
+        )}
+        {(!allowedTabs || allowedTabs.includes('date')) && (
+          <button 
+            onClick={() => setActiveTab('date')}
+            className={cn(
+              "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
+              activeTab === 'date' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            Date
+          </button>
+        )}
+        {(!allowedTabs || allowedTabs.includes('range')) && (
+          <button 
+            onClick={() => setActiveTab('range')}
+            className={cn(
+              "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
+              activeTab === 'range' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            Range
+          </button>
+        )}
+        {(!allowedTabs || allowedTabs.includes('year')) && (
+          <button 
+            onClick={() => setActiveTab('year')}
+            className={cn(
+              "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
+              activeTab === 'year' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            Year
+          </button>
+        )}
       </div>
 
       <div className="p-4">
@@ -214,8 +232,9 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               selected={selectedDate}
               onSelect={handleDateSelect}
               className="border-0 p-3"
-              fromYear={1900}
-              toYear={2100}
+              startMonth={new Date(1900, 0)}
+              endMonth={new Date(2100, 11)}
+              captionLayout="dropdown"
             />
           </div>
         )}
@@ -227,8 +246,9 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               selected={selectedRange}
               onSelect={handleRangeSelect}
               className="border-0 p-3"
-              fromYear={1900}
-              toYear={2100}
+              startMonth={new Date(1900, 0)}
+              endMonth={new Date(2100, 11)}
+              captionLayout="dropdown"
             />
             <div className="w-full mt-4 pt-4 border-t border-slate-100 flex justify-end">
               <button 
@@ -252,6 +272,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                     setYear(y);
                     setFilterType('year');
                     setIsOpen(false);
+                    onSelect?.();
                   }}
                   className={cn(
                     "py-3 rounded-xl text-sm font-medium transition-colors",

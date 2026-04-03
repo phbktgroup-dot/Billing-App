@@ -119,6 +119,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   const [day, setDay] = useState<string>(getLocalToday());
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [financialYear, setFinancialYear] = useState<string>('2023-24');
+  const [shouldAutoDownload, setShouldAutoDownload] = useState(false);
 
   const businessId = profile?.business_id;
 
@@ -713,6 +714,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     }
   };
 
+  React.useEffect(() => {
+    if (shouldAutoDownload && type === 'eway') {
+      handleGenerateAll();
+      setShouldAutoDownload(false);
+    }
+  }, [filterType, day, customRange, year, shouldAutoDownload]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -758,6 +766,12 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             iconOnly={true}
             isOpen={isDateFilterOpen}
             setIsOpen={setIsDateFilterOpen}
+            allowedTabs={type === 'eway' ? ['date', 'range', 'year'] : undefined}
+            onSelect={() => {
+              if (type === 'eway') {
+                setShouldAutoDownload(true);
+              }
+            }}
           />
         }
       >

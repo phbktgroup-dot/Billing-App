@@ -4,7 +4,7 @@ import {
   Plus, 
   Search, 
   Filter, 
-  MoreVertical, 
+  Share2, 
   Edit, 
   Trash2, 
   X, 
@@ -335,7 +335,8 @@ export default function Customers() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
@@ -438,7 +439,7 @@ export default function Customers() {
                           <Trash2 size={12} />
                         </button>
                         <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-                          <MoreVertical size={12} />
+                          <Share2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -447,6 +448,62 @@ export default function Customers() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading customers...</p>
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="p-8 text-center">
+              <Users className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+              <p className="text-slate-500 font-medium text-xs">No customers found</p>
+            </div>
+          ) : (
+            filteredCustomers.map((customer) => (
+              <div key={customer.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                      checked={selectedCustomers.includes(customer.id)}
+                      onChange={() => toggleSelectCustomer(customer.id)}
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{customer.name}</p>
+                      <div className="flex items-center text-[10px] text-slate-500 mt-0.5 space-x-2">
+                        <span className="flex items-center"><Phone size={10} className="mr-1" /> {customer.phone || 'N/A'}</span>
+                        {customer.gstin && <span className="font-mono bg-slate-100 px-1 rounded">{customer.gstin}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action Icons Row (Mobile Only) */}
+                <div className="flex items-center justify-end space-x-2 pt-1">
+                  <button 
+                    onClick={() => openModal(customer)}
+                    className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => confirmDelete(customer.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100">
+                    <Share2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </motion.div>

@@ -5,7 +5,7 @@ import {
   Search, 
   Filter, 
   ArrowUpDown, 
-  MoreVertical, 
+  Share2, 
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
@@ -489,7 +489,8 @@ export default function Inventory() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
@@ -513,20 +514,20 @@ export default function Inventory() {
                 <th className="px-2.5 py-1.5">Stock Level</th>
                 <th className="px-2.5 py-1.5">Selling Price</th>
                 <th className="px-2.5 py-1.5">Status</th>
-                <th className="px-2.5 py-1.5">Actions</th>
+                <th className="px-2.5 py-1.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center">
+                  <td colSpan={9} className="px-3 py-6 text-center">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary mb-1.5" />
                     <p className="text-slate-500 text-[10px]">Loading products...</p>
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center">
+                  <td colSpan={9} className="px-3 py-6 text-center">
                     <Package className="w-8 h-8 mx-auto text-slate-200 mb-1.5" />
                     <p className="text-slate-500 font-medium text-[10px]">No products found</p>
                     <button onClick={() => openModal()} className="text-primary text-[10px] font-bold mt-0.5 hover:underline h-10 sm:h-9">Add your first product</button>
@@ -596,8 +597,8 @@ export default function Inventory() {
                          product.stock > 0 ? 'Low Stock' : 'Out of Stock'}
                       </span>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <div className="flex items-center space-x-1">
+                    <td className="px-2.5 py-1.5 text-right">
+                      <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(product)}
                           className="p-1 text-slate-400 hover:text-primary hover:bg-primary/5 rounded transition-all h-10 sm:h-9 w-10 flex items-center justify-center"
@@ -610,6 +611,9 @@ export default function Inventory() {
                         >
                           <Trash2 size={12} />
                         </button>
+                        <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
+                          <Share2 size={12} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -617,6 +621,75 @@ export default function Inventory() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-slate-500 text-xs">Loading products...</p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="p-8 text-center">
+              <Package className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+              <p className="text-slate-500 font-medium text-xs">No products found</p>
+            </div>
+          ) : (
+            filteredProducts.map((product) => (
+              <div key={product.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedProducts.includes(product.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProducts([...selectedProducts, product.id]);
+                        } else {
+                          setSelectedProducts(selectedProducts.filter(id => id !== product.id));
+                        }
+                      }}
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{product.name}</p>
+                      <div className="flex items-center text-[10px] text-slate-500 mt-0.5 space-x-2">
+                        <span>{product.sku}</span>
+                        <span className="text-slate-300">|</span>
+                        <span>{formatCurrency(product.price)}</span>
+                        <span className={cn(
+                          "px-1 rounded text-[8px] font-bold uppercase",
+                          product.stock > product.min_stock ? "bg-emerald-100 text-emerald-700" : 
+                          product.stock > 0 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"
+                        )}>
+                          {product.stock} units
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action Icons Row (Mobile Only) */}
+                <div className="flex items-center justify-end space-x-2 pt-1">
+                  <button 
+                    onClick={() => openModal(product)}
+                    className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => confirmDelete(product.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100">
+                    <Share2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </motion.div>
