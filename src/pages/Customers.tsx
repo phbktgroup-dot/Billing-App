@@ -262,6 +262,7 @@ export default function Customers() {
   );
 
   return (
+    <>
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -427,8 +428,9 @@ export default function Customers() {
           </table>
         </div>
       </div>
+    </motion.div>
 
-      {/* Add/Edit Modal */}
+    {/* Add/Edit Modal */}
       <Drawer
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -567,6 +569,6 @@ export default function Customers() {
           setIsBulkDelete(false);
         }}
       />
-      </motion.div>
+    </>
   );
 }

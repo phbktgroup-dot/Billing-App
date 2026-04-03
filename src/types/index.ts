@@ -33,6 +33,8 @@ export interface Product {
   stock_quantity: number;
   min_stock_level: number;
   business_id: string;
+  hsn_code?: string;
+  unit_type?: string;
 }
 
 export interface Customer {
@@ -78,4 +80,6 @@ export interface InvoiceItem {
   gst_rate: number;
   discount?: number;
   amount: number;
+  hsn_code?: string;
+  unit_type?: string;
 }

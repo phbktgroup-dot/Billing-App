@@ -141,6 +141,7 @@
     ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock INTEGER DEFAULT 5;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT 'pcs';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS hsn_code TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_type TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.users(id);
 
     -- 5. INVOICES
@@ -225,6 +226,7 @@
     ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS amount DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS total_price DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS hsn_code TEXT;
+    ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS unit_type TEXT;
 
     -- 7. OTP TABLE
     CREATE TABLE IF NOT EXISTS otps (
@@ -593,6 +595,7 @@
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS amount DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS total_price DECIMAL(12,2) DEFAULT 0;
     ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS hsn_code TEXT;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS unit_type TEXT;
 
     -- Enable RLS
     ALTER TABLE purchase_items ENABLE ROW LEVEL SECURITY;

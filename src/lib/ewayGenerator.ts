@@ -1,11 +1,12 @@
 import { STATE_CODES } from '../constants/stateCodes';
+import { getUqcCode } from '../constants/unitTypes';
 
 export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBills: any[] = [], skipExisting: boolean = true) => {
   const billLists = invoices.map(inv => {
     // Skip if already has an e-way bill number and we are skipping existing
     if (skipExisting && inv.eway_bill_no) return null;
 
-    const ewayData = ewayBills.find(eb => eb.invoice_id === inv.id) || {};
+    const ewayData = ewayBills.find(eb => eb.invoice_id === inv.id) || inv.eway_data || {};
     console.log('Eway data found for invoice:', inv.id, ewayData);
     
     try {
@@ -37,7 +38,7 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
           productDesc: item.products?.description || item.products?.name || item.name || 'Product',
           hsnCode: hsnCode,
           quantity: Number(item.quantity) || 0,
-          qtyUnit: item.products?.unit || "NOS",
+          qtyUnit: getUqcCode(item.products?.unit_type || item.unit_type || item.products?.unit || "NUMBERS"),
           taxableAmount: finalTaxableAmount,
           sgstRate: !isInterState ? Number(gstRate) / 2 : 0,
           cgstRate: !isInterState ? Number(gstRate) / 2 : 0,
@@ -74,13 +75,13 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
 
       return {
         userGstin: businessProfile?.gst_number || '',
-        supplyType: ewayData.supply_type || ewayData.supplyType || 'O',
-        subSupplyType: parseInt(ewayData.sub_supply_type || ewayData.subSupplyType) || 1,
-        subSupplyDesc: ewayData.sub_supply_desc || ewayData.subSupplyDesc || '',
+        supplyType: ewayData.supply_type || ewayData.supplyType || inv.eway_data?.supplyType || 'O',
+        subSupplyType: parseInt(ewayData.sub_supply_type || ewayData.subSupplyType || inv.eway_data?.subSupplyType) || 1,
+        subSupplyDesc: ewayData.sub_supply_desc || ewayData.subSupplyDesc || inv.eway_data?.subSupplyDesc || '',
         docType: "INV",
         docNo: inv.invoice_number ? inv.invoice_number.replace(/^[0/\-]+/, '') || inv.invoice_number : '',
         docDate: formattedDocDate,
-        transType: parseInt(ewayData.transaction_type || ewayData.transactionType) || 1,
+        transType: parseInt(ewayData.transaction_type || ewayData.transactionType || inv.eway_data?.transactionType) || 1,
         fromGstin: businessProfile?.gst_number || '',
         fromTrdName: businessProfile?.name || '',
         fromAddr1: businessProfile?.address1 || '',
@@ -91,8 +92,8 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
         actualFromStateCode: fromStateCode,
         toGstin: inv.customers?.gstin || 'URP',
         toTrdName: inv.customers?.name || '',
-        toAddr1: inv.customers?.address || '',
-        toAddr2: ewayData.to_addr2 || ewayData.toAddr2 || '',
+        toAddr1: inv.customers?.address1 || inv.customers?.address || ewayData.to_addr1 || ewayData.toAddr1 || '',
+        toAddr2: inv.customers?.address2 || ewayData.to_addr2 || ewayData.toAddr2 || '',
         toPlace: inv.customers?.city || '',
         toPincode: parseInt(inv.customers?.pincode) || 0,
         toStateCode: toStateCode,
@@ -101,21 +102,22 @@ export const generateEwayJSON = (invoices: any[], businessProfile: any, ewayBill
         cgstValue: !isInterState ? Number(inv.cgst_amount) || 0 : 0,
         sgstValue: !isInterState ? Number(inv.sgst_amount) || 0 : 0,
         igstValue: isInterState ? Number(inv.igst_amount) || 0 : 0,
-        cessValue: Number(ewayData.cess_value || ewayData.cessValue) || 0,
-        TotNonAdvolVal: Number(ewayData.tot_non_advol_val || ewayData.TotNonAdvolVal) || 0,
-        OthValue: Number(ewayData.oth_value || ewayData.OthValue) || 0,
+        cessValue: Number(ewayData.cess_value || ewayData.cessValue || inv.eway_data?.cessValue) || 0,
+        TotNonAdvolVal: Number(ewayData.tot_non_advol_val || ewayData.TotNonAdvolVal || inv.eway_data?.TotNonAdvolVal) || 0,
+        OthValue: Number(ewayData.oth_value || ewayData.OthValue || inv.eway_data?.OthValue) || 0,
         totInvValue: Number(inv.total) || 0,
-        transMode: parseInt(ewayData.trans_mode || ewayData.transMode) || 1,
-        transDistance: parseInt(ewayData.trans_distance || ewayData.transDistance) || 0,
-        transporterName: ewayData.transporter_name || ewayData.transporterName || '',
-        transporterId: ewayData.transporter_id || ewayData.transporterId || '',
-        transDocNo: ewayData.trans_doc_no || ewayData.transDocNo || '',
-        transDocDate: (ewayData.trans_doc_date || ewayData.transDocDate) ? (() => {
-          const d = new Date(ewayData.trans_doc_date || ewayData.transDocDate);
+        transMode: parseInt(ewayData.trans_mode || ewayData.transMode || inv.eway_data?.transMode) || 1,
+        transDistance: parseInt(ewayData.trans_distance || ewayData.transDistance || inv.eway_data?.transDistance) || 0,
+        transporterName: ewayData.transporter_name || ewayData.transporterName || inv.eway_data?.transporterName || '',
+        transporterId: ewayData.transporter_id || ewayData.transporterId || inv.eway_data?.transporterId || '',
+        transDocNo: ewayData.trans_doc_no || ewayData.transDocNo || inv.eway_data?.transDocNo || inv.invoice_number?.replace(/^[0/\-]+/, '') || inv.invoice_number || '',
+        transDocDate: (ewayData.trans_doc_date || ewayData.transDocDate || inv.eway_data?.transDocDate || inv.date) ? (() => {
+          const d = new Date(ewayData.trans_doc_date || ewayData.transDocDate || inv.eway_data?.transDocDate || inv.date);
+          if (isNaN(d.getTime())) return '';
           return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
         })() : '',
-        vehicleNo: ewayData.vehicle_no || ewayData.vehicleNo || '',
-        vehicleType: ewayData.vehicle_type || ewayData.vehicleType || 'R',
+        vehicleNo: ewayData.vehicle_no || ewayData.vehicleNo || inv.eway_data?.vehicleNo || '',
+        vehicleType: ewayData.vehicle_type || ewayData.vehicleType || inv.eway_data?.vehicleType || 'R',
         mainHsnCode: mainHsnCode,
         itemList
       };

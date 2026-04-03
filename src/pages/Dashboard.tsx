@@ -462,7 +462,7 @@ export default function Dashboard() {
       }
 
       const supplierTotals: Record<string, { name: string, total: number }> = {};
-      filteredPurchases.forEach(p => {
+      filteredPurchases.forEach((p: any) => {
         const sid = p.supplier_id;
         if (!sid) return;
         

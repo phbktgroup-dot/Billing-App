@@ -35,12 +35,14 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
 import Drawer from '../components/Drawer';
+import { UNIT_TYPES } from '../constants/unitTypes';
 
 interface Product {
   id: string;
   name: string;
   sku: string;
   hsn_code: string;
+  unit_type?: string;
   category: string;
   purchase_price: number;
   price: number;
@@ -82,6 +84,7 @@ export default function Inventory() {
     name: '',
     sku: '',
     hsn_code: '',
+    unit_type: 'NUMBERS',
     category: 'Electronics',
     purchase_price: '' as string | number,
     price: '' as string | number,
@@ -132,6 +135,7 @@ export default function Inventory() {
 
     const productData = {
       ...formData,
+      unit_type: formData.unit_type || 'NOS',
       purchase_price: Number(formData.purchase_price) || 0,
       price: Number(formData.price) || 0,
       stock: Number(formData.stock) || 0,
@@ -247,6 +251,7 @@ export default function Inventory() {
         name: product.name,
         sku: product.sku,
         hsn_code: product.hsn_code || '',
+        unit_type: product.unit_type || 'NUMBERS',
         category: product.category,
         purchase_price: product.purchase_price,
         price: product.price,
@@ -260,6 +265,7 @@ export default function Inventory() {
         name: '',
         sku: '',
         hsn_code: '',
+        unit_type: 'NUMBERS',
         category: 'Electronics',
         purchase_price: '',
         price: '',
@@ -293,6 +299,7 @@ export default function Inventory() {
   }, [products]);
 
   return (
+    <>
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -591,8 +598,9 @@ export default function Inventory() {
           </table>
         </div>
       </div>
+    </motion.div>
 
-      {/* Bulk Edit Modal */}
+    {/* Bulk Edit Modal */}
       <Drawer
         isOpen={isBulkEditModalOpen}
         onClose={() => setIsBulkEditModalOpen(false)}
@@ -739,6 +747,18 @@ export default function Inventory() {
               />
             </div>
             <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Unit Type</label>
+              <select 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.unit_type}
+                onChange={e => setFormData({...formData, unit_type: e.target.value})}
+              >
+                {UNIT_TYPES.map(unit => (
+                  <option key={unit} value={unit}>{unit}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Category</label>
               <input 
                 type="text" 
@@ -874,6 +894,6 @@ export default function Inventory() {
           setIsBulkDelete(false);
         }}
       />
-      </motion.div>
+    </>
   );
 }

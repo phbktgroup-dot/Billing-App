@@ -296,7 +296,9 @@ export default function Invoices() {
         : (invoiceData.customers?.gstin?.substring(0, 2) || ''),
       total: invoiceData.total,
       notes: invoiceData.notes,
-      terms: invoiceData.terms
+      terms: invoiceData.terms,
+      eway_bill_no: invoiceData.eway_bill_no,
+      eway_data: invoiceData.eway_data
     };
 
     return { pdfData, businessProfile, invoiceData };

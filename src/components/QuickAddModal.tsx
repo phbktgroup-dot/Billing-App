@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { UserPlus, Package, Save, Loader2 } from 'lucide-react';
 import Drawer from './Drawer';
+import { STATE_CODES } from '../constants/stateCodes';
+import { UNIT_TYPES } from '../constants/unitTypes';
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -12,7 +14,7 @@ interface QuickAddModalProps {
 export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAddModalProps) {
   const [formData, setFormData] = useState<any>(
     type === 'product' 
-      ? { gst_rate: 18, min_stock: 5, purchase_price: '', price: '', stock: '', category: '', name: '', sku: '' }
+      ? { gst_rate: 18, min_stock: 5, purchase_price: '', price: '', stock: '', category: '', name: '', sku: '', unit_type: 'NUMBERS' }
       : {}
   );
   const [isSaving, setIsSaving] = useState(false);
@@ -123,12 +125,16 @@ export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAdd
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">State</label>
-              <input 
-                type="text" 
+              <select 
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
-                onChange={e => setFormData({...formData, state: e.target.value})} 
-                placeholder="State"
-              />
+                value={formData.state || ''}
+                onChange={e => setFormData({...formData, state: e.target.value})}
+              >
+                <option value="">Select State</option>
+                {Object.entries(STATE_CODES).map(([code, name]) => (
+                  <option key={code} value={name}>{name}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Pin Code</label>
@@ -196,6 +202,18 @@ export default function QuickAddModal({ isOpen, onClose, type, onAdd }: QuickAdd
                 <option value={12}>12%</option>
                 <option value={18}>18%</option>
                 <option value={28}>28%</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Unit Type</label>
+              <select 
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all shadow-sm"
+                value={formData.unit_type || 'NUMBERS'}
+                onChange={e => setFormData({...formData, unit_type: e.target.value})}
+              >
+                {UNIT_TYPES.map(unit => (
+                  <option key={unit} value={unit}>{unit}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">

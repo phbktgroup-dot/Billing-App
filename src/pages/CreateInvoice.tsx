@@ -34,9 +34,10 @@ import { cn, formatCurrency, getDateRange, FilterType, formatSeriesNumber, resiz
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { generateInvoicePDF } from '../lib/pdfGenerator';
+import { generateInvoicePDF, generateEwayBillPDF } from '../lib/pdfGenerator';
 import MessageModal from '../components/MessageModal';
 import QuickAddModal from '../components/QuickAddModal';
+import { UNIT_TYPES } from '../constants/unitTypes';
 import { getApiUrl } from '../lib/api';
 import { DateFilter } from '../components/DateFilter';
 
@@ -49,6 +50,7 @@ interface LineItem {
   productId: string;
   name: string;
   hsnCode?: string;
+  unitType?: string;
   quantity: number | '';
   rate: number | '';
   gstRate: number | '';
@@ -61,6 +63,7 @@ interface Product {
   name: string;
   sku: string;
   hsn_code?: string;
+  unit_type?: string;
   price: number;
   gst_rate: number;
   stock: number;
@@ -77,7 +80,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   const { user, profile, refreshProfile } = useAuth();
   const [items, setItems] = useState<LineItem[]>([]);
   const [customer, setCustomer] = useState({ id: '', name: '', phone: '', gst: '', address1: '', address2: '', city: '', pincode: '', stateCode: '' });
-  const [newItem, setNewItem] = useState<LineItem>({ id: '', productId: '', name: '', hsnCode: '', quantity: '', rate: '', gstRate: '', discount: '', amount: '' });
+  const [newItem, setNewItem] = useState<LineItem>({ id: '', productId: '', name: '', hsnCode: '', unitType: 'NUMBERS', quantity: '', rate: '', gstRate: '', discount: '', amount: '' });
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
     isOpen: false,
     title: '',
@@ -116,6 +119,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   const [showCustomerList, setShowCustomerList] = useState(false);
   const [isScannedInvoiceNumberFound, setIsScannedInvoiceNumberFound] = useState(false);
   const [includeEwayBill, setIncludeEwayBill] = useState(false);
+  const [hasManuallyToggledEway, setHasManuallyToggledEway] = useState(false);
 
   // E-way bill state
   const [ewaySettings, setEwaySettings] = useState<any>(null);
@@ -133,6 +137,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     transactionType: 1,
     supplyType: 'O',
     subSupplyType: '1',
+    subSupplyDesc: '',
+    documentType: 'INV',
     fromPincode: '',
     toPincode: '',
     fromStateCode: '',
@@ -151,6 +157,24 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const seriesListRef = useRef<HTMLDivElement>(null);
+  const customerListRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handler for dropdowns
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (seriesListRef.current && !seriesListRef.current.contains(event.target as Node)) {
+        setShowSeriesList(false);
+      }
+      if (customerListRef.current && !customerListRef.current.contains(event.target as Node)) {
+        setShowCustomerList(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (invoiceSeries.length > 0 && !invoiceNumber && !isScannedInvoiceNumberFound) {
@@ -206,6 +230,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       igst_amount: igstAmount,
       is_inter_state: isInterState,
       eway_bill_no: ewayData.ewayBillNo,
+      eway_data: includeEwayBill ? {
+        ...ewayData,
+        generatedDate: new Date().toLocaleString('en-GB'),
+        generatedBy: businessProfile?.gst_number || '',
+        validUpto: new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')
+      } : undefined,
       total,
       notes,
       terms
@@ -232,6 +262,52 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     
     const blobUrl = URL.createObjectURL(blob);
     setPreviewPdfUrl(blobUrl);
+  };
+
+  const handleDownloadEway = async () => {
+    if (!savedInvoiceData && !includeEwayBill) return;
+    
+    const invoiceData = {
+      invoice_number: invoiceNumber,
+      date: date,
+      customer_name: customer.name,
+      customer_gstin: customer.gst,
+      customer_address: [customer.address1, customer.address2, [customer.city, customer.pincode].filter(Boolean).join(', ')].filter(Boolean).join('\n'),
+      customer_state: Object.entries(STATE_CODES).find(([code]) => code === customer.stateCode)?.[1] || '',
+      items: items.map(item => ({
+        name: item.name,
+        hsnCode: item.hsnCode,
+        quantity: Number(item.quantity) || 0,
+        rate: Number(item.rate) || 0,
+        gstRate: Number(item.gstRate) || 0,
+        amount: Number(item.amount) || 0
+      })),
+      subtotal: taxableAmount,
+      raw_subtotal: rawSubtotal,
+      tax_amount: gstTotal,
+      cgst_amount: cgstAmount,
+      sgst_amount: sgstAmount,
+      igst_amount: igstAmount,
+      is_inter_state: isInterState,
+      eway_bill_no: ewayData.ewayBillNo,
+      eway_data: {
+        ...ewayData,
+        generatedDate: new Date().toLocaleString('en-GB'),
+        generatedBy: businessProfile?.gst_number || '',
+        validUpto: new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')
+      },
+      total
+    };
+
+    await generateEwayBillPDF(invoiceData, {
+      name: businessProfile?.name || '',
+      address1: businessProfile?.address1,
+      address2: businessProfile?.address2,
+      city: businessProfile?.city,
+      state: businessProfile?.state,
+      pincode: businessProfile?.pincode,
+      gst_number: businessProfile?.gst_number
+    });
   };
 
   const handleScanClick = () => {
@@ -724,6 +800,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       if (product) {
         updated.name = product.name;
         updated.hsnCode = product.hsn_code;
+        updated.unitType = product.unit_type || 'NUMBERS';
         updated.rate = product.price;
         updated.gstRate = product.gst_rate;
         updated.quantity = 1; // Default quantity to 1
@@ -854,13 +931,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
   // Auto-enable E-way bill if threshold is met
   useEffect(() => {
-    if (ewaySettings?.ewayBillEnabled && !includeEwayBill) {
+    if (ewaySettings?.ewayBillEnabled && !includeEwayBill && !hasManuallyToggledEway) {
       const threshold = isInterState ? ewaySettings.ewayThreshold : ewaySettings.intraStateThreshold;
       if (total > threshold) {
         setIncludeEwayBill(true);
       }
     }
-  }, [total, isInterState, ewaySettings, includeEwayBill]);
+  }, [total, isInterState, ewaySettings, includeEwayBill, hasManuallyToggledEway]);
 
   // Auto-populate E-way bill data
   useEffect(() => {
@@ -877,10 +954,12 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         cgstValue: cgstAmount,
         sgstValue: sgstAmount,
         igstValue: igstAmount,
-        taxableValue: taxableAmount
+        taxableValue: taxableAmount,
+        transDocNo: prev.transDocNo || invoiceNumber,
+        transDocDate: prev.transDocDate || (date ? date.split('-').reverse().join('/') : '')
       }));
     }
-  }, [includeEwayBill, customer.pincode, customer.stateCode, total, taxableAmount, cgstAmount, sgstAmount, igstAmount, businessProfile]);
+  }, [includeEwayBill, customer.pincode, customer.stateCode, total, taxableAmount, cgstAmount, sgstAmount, igstAmount, businessProfile, invoiceNumber, date]);
 
   const handleSave = async () => {
     if (!businessId || !businessProfile) {
@@ -904,14 +983,30 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       return;
     }
 
-    if (isEwayEnabled && total > ewayThreshold && includeEwayBill) {
+    if (isEwayEnabled && includeEwayBill) {
       if (!customer.address1 || !customer.address2 || !customer.city || !customer.pincode || !customer.stateCode) {
         setModal({ isOpen: true, title: 'E-way Bill Error', message: 'Address Line 1, Address Line 2, City, Pincode, and State Code are mandatory for E-way bills.', type: 'error' });
         return;
       }
       
-      if (!ewayData.transporterId || !ewayData.transporterName || !ewayData.transDocNo || !ewayData.transDocDate || !ewayData.vehicleNo || !customer.stateCode || !ewayData.transDistance) {
-        setModal({ isOpen: true, title: 'E-way Bill Error', message: `All E-way Bill Details are mandatory for invoices exceeding ₹${ewayThreshold.toLocaleString()}.`, type: 'error' });
+      const isRoad = ewayData.transMode === '1';
+      const hasVehicle = !!ewayData.vehicleNo;
+      const hasTransDoc = !!ewayData.transDocNo && !!ewayData.transDocDate;
+
+      // Basic mandatory fields
+      if (!ewayData.documentType || !ewayData.transactionType || !ewayData.supplyType || !ewayData.subSupplyType || !ewayData.transMode || !ewayData.transDistance || !ewayData.vehicleType) {
+        setModal({ isOpen: true, title: 'E-way Bill Error', message: 'Basic Supply Information, Mode, Distance and Vehicle Type are mandatory.', type: 'error' });
+        return;
+      }
+
+      // Mode specific validation
+      if (isRoad && !hasVehicle) {
+        setModal({ isOpen: true, title: 'E-way Bill Error', message: 'Vehicle Number is mandatory for Road transport.', type: 'error' });
+        return;
+      }
+
+      if (!isRoad && !hasTransDoc) {
+        setModal({ isOpen: true, title: 'E-way Bill Error', message: 'Transport Document Number and Date are mandatory for Rail/Air/Ship transport.', type: 'error' });
         return;
       }
       
@@ -1081,6 +1176,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 created_by: profile?.id || user?.id,
                 name: itemName,
                 hsn_code: item.hsnCode || '',
+                unit_type: item.unitType || 'NOS',
                 price: Number(item.rate) || 0,
                 gst_rate: Number(item.gstRate) || 18,
                 stock: 0,
@@ -1103,6 +1199,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           invoice_id: invoice.id,
           product_id: productId,
           hsn_code: item.hsnCode || '',
+          unit_type: item.unitType || 'NOS',
           quantity: Number(item.quantity) || 0,
           unit_price: Number(item.rate) || 0,
           gst_rate: Number(item.gstRate) || 0,
@@ -1131,11 +1228,17 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       }
 
       // Save E-way bill data if enabled and applicable
-      if (isEwayEnabled && total > ewayThreshold && includeEwayBill) {
+      if (isEwayEnabled && includeEwayBill) {
         const fromState = parseInt(businessProfile?.gst_number?.substring(0, 2)) || 0;
         const toState = parseInt(customer.stateCode) || 0;
         
-        await supabase
+        const finalTransDocNo = ewayData.transDocNo || finalInvoiceNumber.replace(/^[0/\-]+/, '') || finalInvoiceNumber;
+        const finalTransDocDate = ewayData.transDocDate || (date ? date.split('-').reverse().join('/') : '');
+        const dbTransDocDate = finalTransDocDate.includes('/') 
+          ? finalTransDocDate.split('/').reverse().join('-') 
+          : finalTransDocDate;
+
+        const { error: ewayError } = await supabase
           .from('eway_bills')
           .insert([{
             business_id: businessId,
@@ -1147,8 +1250,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             trans_distance: ewayData.transDistance,
             transporter_name: ewayData.transporterName,
             transporter_id: ewayData.transporterId,
-            trans_doc_no: ewayData.transDocNo,
-            trans_doc_date: ewayData.transDocDate || null,
+            trans_doc_no: finalTransDocNo,
+            trans_doc_date: dbTransDocDate,
             vehicle_no: ewayData.vehicleNo,
             vehicle_type: ewayData.vehicleType,
             total_value: taxableAmount,
@@ -1156,22 +1259,21 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             sgst_value: sgstAmount,
             igst_amount: igstAmount,
             cess_value: 0,
-            tot_non_advol_val: ewayData.TotNonAdvolVal,
-            oth_value: ewayData.OthValue,
+            tot_non_advol_val: ewayData.TotNonAdvolVal || 0,
+            oth_value: ewayData.OthValue || 0,
             tot_inv_value: total,
             to_addr1: customer.address1 || '',
             to_addr2: customer.address2 || '',
             to_place: customer.city || '',
             to_pincode: parseInt(customer.pincode) || 0,
             to_state_code: toState,
-            from_state_code: fromState,
-            from_addr1: businessProfile?.address1 || '',
-            from_addr2: businessProfile?.address2 || '',
-            from_place: businessProfile?.city || '',
-            from_pincode: parseInt(businessProfile?.pincode) || 0,
-            actual_from_state_code: fromState,
-            actual_to_state_code: toState
+            from_state_code: fromState
           }]);
+
+        if (ewayError) {
+          console.error("Error inserting eway bill:", ewayError);
+          throw ewayError;
+        }
       }
 
       // Save data for download and generate PDF
@@ -1198,6 +1300,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         igst_amount: igstAmount,
         is_inter_state: isInterState,
         eway_bill_no: includeEwayBill ? ewayData.ewayBillNo : '',
+        eway_data: includeEwayBill ? {
+          ...ewayData,
+          transDocNo: ewayData.transDocNo || finalInvoiceNumber.replace(/^[0/\-]+/, '') || finalInvoiceNumber,
+          transDocDate: ewayData.transDocDate || (date ? date.split('-').reverse().join('/') : ''),
+          generatedDate: new Date().toLocaleString('en-GB'),
+          generatedBy: businessProfile?.gst_number || '',
+          validUpto: new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')
+        } : undefined,
         billing_state: businessState,
         customer_state: customerState,
         customer_state_code: customer.stateCode,
@@ -1230,6 +1340,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
   };
 
   return (
+    <>
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -1289,9 +1400,11 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   created_by: profile?.id || user?.id,
                   name: data.name,
                   phone: data.phone,
+                  gstin: data.gst_number,
                   address1: data.address1,
                   address2: data.address2,
                   city: data.city,
+                  state: data.state,
                   pincode: data.pincode
                 }])
                 .select()
@@ -1309,7 +1422,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 address2: newCustomer.address2 || '',
                 city: newCustomer.city || '',
                 pincode: newCustomer.pincode || '',
-                stateCode: '' // Will be updated if GSTIN is provided later
+                stateCode: newCustomer.state ? (Object.entries(STATE_CODES).find(([code, name]) => name.toLowerCase() === newCustomer.state.toLowerCase() || code === newCustomer.state)?.[0] || '') : ''
               });
             } catch (error: any) {
               setModal({ isOpen: true, title: 'Error', message: error.message || 'Failed to add customer', type: 'error' });
@@ -1355,9 +1468,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           >
             <div className="xl:col-span-2 space-y-6 pr-2 xl:h-[calc(100vh-150px)] xl:overflow-y-auto">
               {/* Customer & Details Section */}
-              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative">
+              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative z-[60]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-                <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center justify-between mb-5 relative z-[50]">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-600 rounded-xl shadow-sm border border-blue-100/50">
                       <UserPlus size={18} strokeWidth={2.5} />
@@ -1375,95 +1488,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-20">
-                  <div className="md:col-span-6 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
-                    <div className="relative z-[100]">
-                      <div className="relative">
-                        <input 
-                          type="text"
-                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px] pr-8"
-                          value={invoiceNumber}
-                          onChange={e => {
-                            setInvoiceNumber(e.target.value);
-                            setIsScannedInvoiceNumberFound(false);
-                          }}
-                          placeholder="Invoice number"
-                        />
-                        <div 
-                          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer p-1 hover:bg-slate-100 rounded-md transition-colors"
-                          onClick={() => setShowSeriesList(!showSeriesList)}
-                        >
-                          <ChevronDown size={12} className={cn("text-slate-400 transition-transform", showSeriesList ? "rotate-180" : "rotate-0")} />
-                        </div>
-                      </div>
-                      
-                      {/* Custom Dropdown List */}
-                      {showSeriesList && invoiceSeries.length > 0 && (
-                        <div className="absolute z-[9999] left-0 right-0 mt-1 !bg-white border border-slate-300 rounded-lg shadow-2xl transition-all max-h-40 overflow-y-auto opacity-100">
-                          <div className="p-1 !bg-white">
-                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 !bg-white sticky top-0">
-                              Select Series
-                            </div>
-                            {invoiceSeries.map(series => (
-                              <button
-                                key={series.id}
-                                type="button"
-                                className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between !bg-white"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix, series.name));
-                                  setSelectedSeriesId(series.id);
-                                  setIsScannedInvoiceNumberFound(false);
-                                  setShowSeriesList(false);
-                                }}
-                              >
-                                <div className="flex flex-col">
-                                  <span className="text-[11px] font-bold text-slate-900">{series.name}</span>
-                                  <span className="text-[8px] text-slate-500 font-medium">Next: {formatSeriesNumber(series.current_number, series.prefix, series.name)}</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="md:col-span-3 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Date</label>
-                    <div className="relative">
-                      <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input 
-                        type="date" 
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
-                        value={date}
-                        onChange={e => setDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="md:col-span-3 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
-                    <div className="relative">
-                      <Phone size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Contact"
-                        maxLength={10}
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
-                        value={customer.phone || ''}
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          handleCustomerChange('phone', val);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-[40]">
                   <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
-                    <div className="relative z-[100]">
+                    <div className="relative z-[100]" ref={customerListRef}>
                       <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input 
                         type="text" 
@@ -1471,9 +1499,6 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
                         value={customer.name || ''}
                         onFocus={() => setShowCustomerList(true)}
-                        onBlur={() => {
-                          setTimeout(() => setShowCustomerList(false), 200);
-                        }}
                         onChange={e => {
                           const val = e.target.value;
                           handleCustomerChange('name', val);
@@ -1546,6 +1571,108 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       )}
                     </div>
                   </div>
+                  <div className="md:col-span-3 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
+                    <div className="relative z-[100]" ref={seriesListRef}>
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium placeholder:text-[11px] pr-8"
+                          value={invoiceNumber}
+                          onChange={e => {
+                            setInvoiceNumber(e.target.value);
+                            setIsScannedInvoiceNumberFound(false);
+                          }}
+                          placeholder="Invoice number"
+                        />
+                        <div 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer p-1 hover:bg-slate-100 rounded-md transition-colors"
+                          onClick={() => setShowSeriesList(!showSeriesList)}
+                        >
+                          <ChevronDown size={12} className={cn("text-slate-400 transition-transform", showSeriesList ? "rotate-180" : "rotate-0")} />
+                        </div>
+                      </div>
+                      
+                      {/* Custom Dropdown List */}
+                      {showSeriesList && invoiceSeries.length > 0 && (
+                        <div className="absolute z-[9999] left-0 right-0 mt-1 !bg-white border border-slate-300 rounded-lg shadow-2xl transition-all max-h-40 overflow-y-auto opacity-100">
+                          <div className="p-1 !bg-white">
+                            <div className="px-2 py-1 text-[8px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 !bg-white sticky top-0">
+                              Select Series
+                            </div>
+                            {invoiceSeries.map(series => (
+                              <button
+                                key={series.id}
+                                type="button"
+                                className="w-full text-left px-2 py-1.5 hover:bg-slate-50 rounded-md transition-colors flex items-center justify-between !bg-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInvoiceNumber(formatSeriesNumber(series.current_number, series.prefix, series.name));
+                                  setSelectedSeriesId(series.id);
+                                  setIsScannedInvoiceNumberFound(false);
+                                  setShowSeriesList(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-[11px] font-bold text-slate-900">{series.name}</span>
+                                  <span className="text-[8px] text-slate-500 font-medium">Next: {formatSeriesNumber(series.current_number, series.prefix, series.name)}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:col-span-3 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Date</label>
+                    <div className="relative">
+                      <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input 
+                        type="text" 
+                        placeholder="DD/MM/YYYY"
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        value={date ? date.split('-').reverse().join('/') : ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          // Basic validation/parsing for DD/MM/YYYY
+                          if (val.length <= 10) {
+                            const parts = val.split('/');
+                            if (parts.length === 3 && parts[2].length === 4) {
+                              const yyyymmdd = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                              setDate(yyyymmdd);
+                            }
+                          }
+                        }}
+                      />
+                      <input 
+                        type="date"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        value={date}
+                        onChange={e => setDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3 relative z-[30]">
+                  <div className="md:col-span-6 space-y-0.5">
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                    <div className="relative">
+                      <Phone size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Contact"
+                        maxLength={10}
+                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 placeholder-slate-400 font-medium placeholder:text-[11px]"
+                        value={customer.phone || ''}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          handleCustomerChange('phone', val);
+                        }}
+                      />
+                    </div>
+                  </div>
                   <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">GSTIN</label>
                     <input 
@@ -1560,9 +1687,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 </div>
                 
                 {/* Customer Address Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-slate-100 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-slate-100 relative z-[20]">
                   <div className="md:col-span-8 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Building, Street, etc."
@@ -1572,7 +1699,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     />
                   </div>
                   <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Area, Locality, etc."
@@ -1582,7 +1709,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     />
                   </div>
                   <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">City {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">City {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="City"
@@ -1592,7 +1719,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     />
                   </div>
                   <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Pincode"
@@ -1606,7 +1733,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     />
                   </div>
                   <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && total > ewayThreshold && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <select
                       className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                       value={customer.stateCode || ''}
@@ -1624,7 +1751,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               {/* Items Section */}
               <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-                <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center justify-between mb-5 relative z-[50]">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100/50 text-emerald-600 rounded-xl shadow-sm border border-emerald-100/50">
                       <Package size={18} strokeWidth={2.5} />
@@ -1664,7 +1791,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         ))}
                       </select>
                     </div>
-                    <div className="md:col-span-4 space-y-0.5">
+                    <div className="md:col-span-2 space-y-0.5">
                       <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">HSN Code</label>
                       <input 
                         type="text" 
@@ -1673,6 +1800,18 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         className="w-full px-2 py-1.5 bg-slate-200/50 border border-slate-300 rounded-lg outline-none text-[11px] transition-all text-slate-600 font-bold placeholder:text-[11px]"
                         value={newItem.hsnCode || ''}
                       />
+                    </div>
+                    <div className="md:col-span-2 space-y-0.5">
+                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Unit Type</label>
+                      <select 
+                        className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
+                        value={newItem.unitType || 'NUMBERS'}
+                        onChange={e => updateNewItem('unitType', e.target.value)}
+                      >
+                        {UNIT_TYPES.map(unit => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Second Row */}
@@ -1737,6 +1876,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         <tr>
                           <th className="px-3 py-2.5 font-bold">Item Description</th>
                           <th className="px-3 py-2.5 font-bold">HSN Code</th>
+                          <th className="px-3 py-2.5 font-bold">Unit</th>
                           <th className="px-3 py-2.5 font-bold text-center">Qty</th>
                           <th className="px-3 py-2.5 font-bold text-right">Price</th>
                           <th className="px-3 py-2.5 font-bold text-center">Disc.</th>
@@ -1748,7 +1888,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <tbody className="divide-y divide-slate-100">
                         {items.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
+                            <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
                               <div className="flex flex-col items-center">
                                 <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-full mb-3 shadow-sm border border-slate-100">
                                   <Package size={24} className="text-slate-300" strokeWidth={1.5} />
@@ -1771,6 +1911,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                                 <div className="text-[10px] text-slate-400 font-medium mt-0.5">Item #{index + 1}</div>
                               </td>
                               <td className="px-3 py-2 text-slate-600 font-medium">{item.hsnCode || '-'}</td>
+                              <td className="px-3 py-2 text-slate-600 font-medium">{item.unitType || 'NUMBERS'}</td>
                               <td className="px-3 py-2 text-center font-bold text-slate-700 bg-slate-50/50">{item.quantity}</td>
                               <td className="px-3 py-2 text-right font-medium text-slate-700">{formatCurrency(Number(item.rate) || 0)}</td>
                               <td className="px-3 py-2 text-center">
@@ -1822,17 +1963,23 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           <h4 className="text-[13px] font-bold text-amber-900">Invoice value exceeds ₹{formatCurrency(ewayThreshold)}.</h4>
                           <p className="text-[11px] font-medium text-amber-700 mt-1">E-way bill is mandatory for movement of goods. Is this an over-the-counter sale or are goods being transported?</p>
                         </div>
-                        <div className="flex items-center bg-white/80 backdrop-blur-sm p-1.5 rounded-xl border border-amber-200/60 shadow-sm shrink-0">
+                          <div className="flex items-center bg-white/80 backdrop-blur-sm p-1.5 rounded-xl border border-amber-200/60 shadow-sm shrink-0">
                           <button
                             type="button"
-                            onClick={() => setIncludeEwayBill(false)}
+                            onClick={() => {
+                              setIncludeEwayBill(false);
+                              setHasManuallyToggledEway(true);
+                            }}
                             className={`px-4 py-2 text-[11px] font-bold rounded-lg transition-all ${!includeEwayBill ? 'bg-gradient-to-r from-amber-100 to-amber-200/50 text-amber-900 shadow-sm border border-amber-200/50' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
                           >
                             Over-the-counter / Services
                           </button>
                           <button
                             type="button"
-                            onClick={() => setIncludeEwayBill(true)}
+                            onClick={() => {
+                              setIncludeEwayBill(true);
+                              setHasManuallyToggledEway(true);
+                            }}
                             className={`px-4 py-2 text-[11px] font-bold rounded-lg transition-all ${includeEwayBill ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
                           >
                             Goods are Transported
@@ -1861,48 +2008,82 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transaction Type</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Document Type <span className="text-red-500 ml-1">*</span>
+                              </label>
+                              <select 
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
+                                value={ewayData.documentType}
+                                onChange={e => setEwayData({...ewayData, documentType: e.target.value})}
+                              >
+                                <option value="INV">Tax Invoice</option>
+                                <option value="BIL">Bill of Supply</option>
+                                <option value="BOE">Bill of Entry</option>
+                                <option value="OTH">Others</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Transaction Type <span className="text-red-500 ml-1">*</span>
+                              </label>
                               <select 
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
                                 value={ewayData.transactionType}
                                 onChange={e => setEwayData({...ewayData, transactionType: parseInt(e.target.value) || 1})}
                               >
-                                <option value={1}>1 - Regular</option>
-                                <option value={2}>2 - Bill To - Ship To</option>
-                                <option value={3}>3 - Bill From - Dispatch From</option>
-                                <option value={4}>4 - Combination of 2 and 3</option>
+                                <option value={1}>Regular</option>
+                                <option value={2}>Bill To - Ship To</option>
+                                <option value={3}>Bill From - Dispatch From</option>
+                                <option value={4}>Combination of 2 and 3</option>
                               </select>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Supply Type</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Supply Type <span className="text-red-500 ml-1">*</span>
+                              </label>
                               <select 
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
                                 value={ewayData.supplyType}
                                 onChange={e => setEwayData({...ewayData, supplyType: e.target.value})}
                               >
-                                <option value="O">O - Outward</option>
-                                <option value="I">I - Inward</option>
+                                <option value="O">Outward</option>
+                                <option value="I">Inward</option>
                               </select>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sub Supply Type</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Sub Type <span className="text-red-500 ml-1">*</span>
+                              </label>
                               <select 
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
                                 value={ewayData.subSupplyType}
                                 onChange={e => setEwayData({...ewayData, subSupplyType: e.target.value})}
                               >
-                                <option value="1">1 - Supply</option>
-                                <option value="2">2 - Import</option>
-                                <option value="3">3 - Export</option>
-                                <option value="4">4 - Job Work</option>
-                                <option value="5">5 - For Own Use</option>
-                                <option value="6">6 - SKD/CKD</option>
-                                <option value="7">7 - Recipient Not Known</option>
-                                <option value="8">8 - Exhibition or Fairs</option>
-                                <option value="9">9 - Line Sales</option>
-                                <option value="10">10 - Others</option>
+                                <option value="1">Supply</option>
+                                <option value="2">Export</option>
+                                <option value="3">Job Work</option>
+                                <option value="4">SKD/CKD/Lots</option>
+                                <option value="5">Recipient Not Known</option>
+                                <option value="6">For Own Use</option>
+                                <option value="7">Exhibition or Fairs</option>
+                                <option value="8">Line Sales</option>
+                                <option value="9">Others</option>
                               </select>
                             </div>
+                            {(ewayData.subSupplyType === '8' || ewayData.subSupplyType === '9') && (
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                  Sub Supply Desc <span className="text-red-500 ml-1">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
+                                  placeholder="Description"
+                                  value={ewayData.subSupplyDesc}
+                                  onChange={e => setEwayData({...ewayData, subSupplyDesc: e.target.value})}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -1953,20 +2134,24 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trans Mode</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Mode <span className="text-red-500 ml-1">*</span>
+                              </label>
                               <select 
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
                                 value={ewayData.transMode}
                                 onChange={e => setEwayData({...ewayData, transMode: e.target.value})}
                               >
-                                <option value="1">1 - Road</option>
-                                <option value="2">2 - Rail</option>
-                                <option value="3">3 - Air</option>
-                                <option value="4">4 - Ship</option>
+                                <option value="1">Road</option>
+                                <option value="2">Rail</option>
+                                <option value="3">Air</option>
+                                <option value="4">Ship or Ship Cum Road/Rail</option>
                               </select>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Distance (in km)</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Approx Distance (in KM) <span className="text-red-500 ml-1">*</span>
+                              </label>
                               <input 
                                 type="number" 
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
@@ -1986,7 +2171,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                             <div className="space-y-1">
                               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Trans Doc Date</label>
                               <input 
-                                type="date" 
+                                type="text" 
+                                placeholder="DD/MM/YYYY"
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all"
                                 value={ewayData.transDocDate}
                                 onChange={e => setEwayData({...ewayData, transDocDate: e.target.value})}
@@ -2003,7 +2189,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Number</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Vehicle Number {ewayData.transMode === '1' && <span className="text-red-500 ml-1">*</span>}
+                              </label>
                               <input 
                                 type="text" 
                                 placeholder="e.g. GJ01AA1234"
@@ -2013,14 +2201,16 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Type</label>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                                Vehicle Type <span className="text-red-500 ml-1">*</span>
+                              </label>
                               <select 
                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none text-[12px] font-medium transition-all cursor-pointer"
                                 value={ewayData.vehicleType}
                                 onChange={e => setEwayData({...ewayData, vehicleType: e.target.value})}
                               >
-                                <option value="R">R - Regular</option>
-                                <option value="O">O - ODC</option>
+                                <option value="R">Regular</option>
+                                <option value="O">Over Dimensional Cargo</option>
                               </select>
                             </div>
                           </div>
@@ -2205,6 +2395,15 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h2 className="text-lg font-bold text-slate-900">Invoice Preview</h2>
                 <div className="flex space-x-3">
+                  {includeEwayBill && (
+                    <button 
+                      onClick={handleDownloadEway}
+                      className="px-4 h-10 sm:h-9 bg-white border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-50 transition-all shadow-sm active:scale-95 flex items-center"
+                    >
+                      <Download size={14} className="mr-2" />
+                      E-way Bill
+                    </button>
+                  )}
                   <button 
                     onClick={() => setViewMode('edit')}
                     className="px-4 h-10 sm:h-9 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
@@ -2246,7 +2445,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         )}
       </AnimatePresence>
 
-      <MessageModal
+      </motion.div>
+
+    <MessageModal
         isOpen={modal.isOpen}
         onClose={() => setModal({ ...modal, isOpen: false })}
         title={modal.title}
@@ -2402,7 +2603,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </>
   );
 }
 
@@ -2517,6 +2718,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                 <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
                   <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Particular</th>
                   <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">HSN</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Unit</th>
                   <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Qty</th>
                   <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24">Rate</th>
                   <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-28 text-right">Amount</th>
@@ -2549,6 +2751,21 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                         placeholder="HSN"
                       />
+                    </td>
+                    <td className="px-3 py-2">
+                      <select 
+                        className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 transition-all outline-none text-center"
+                        value={item.unitType || 'NUMBERS'}
+                        onChange={e => {
+                          const newItems = [...editedData.items];
+                          newItems[idx].unitType = e.target.value;
+                          setEditedData({ ...editedData, items: newItems });
+                        }}
+                      >
+                        {UNIT_TYPES.map(unit => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-3 py-2">
                       <input 
