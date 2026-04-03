@@ -78,6 +78,27 @@ export default function Customers() {
   useEffect(() => {
     if (businessId) {
       fetchCustomers();
+
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('customers-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'customers',
+            filter: `business_id=eq.${businessId}`
+          },
+          () => {
+            fetchCustomers();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [businessId, filterType, customRange, day, year]);
 

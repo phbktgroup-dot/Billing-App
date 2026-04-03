@@ -157,6 +157,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const seriesListRef = useRef<HTMLDivElement>(null);
   const customerListRef = useRef<HTMLDivElement>(null);
 
@@ -478,7 +479,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None');
       
-      const prompt = "Extract invoice details: invoice number, customer name, customer phone, customer email, customer gst, customer address line 1, customer address line 2, customer city, customer pincode, supplier name, supplier gst, items (name, quantity, price, gst, hsn code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress1: string, customerAddress2: string, customerCity: string, customerPincode: string, supplierName: string, supplierGst: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, hsnCode: string }] }";
+      const prompt = "This is a SALES INVOICE. The business name on the invoice is the SUPPLIER. Extract the CUSTOMER details: invoice number, customer name, customer phone, customer email, customer gst, customer address line 1, customer address line 2, customer city, customer pincode, supplier name, supplier gst, items (name, quantity, price, gst, hsn code). Return as JSON format: { invoiceNumber: string, customerName: string, customerPhone: string, customerEmail: string, customerGst: string, customerAddress1: string, customerAddress2: string, customerCity: string, customerPincode: string, supplierName: string, supplierGst: string, items: [{ name: string, quantity: number, rate: number, gstRate: number, hsnCode: string }] }";
 
       let extractedText = '';
 
@@ -672,18 +673,6 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             (data.supplierName && businessProfile?.name && data.supplierName.trim().toLowerCase() === businessProfile.name.trim().toLowerCase())
           );
 
-          // If the scanned CUSTOMER is me, it's a purchase bill.
-          // If the scanned SUPPLIER is NOT me, it's also likely a purchase bill.
-          if (isScannedCustomerMe || (!isScannedSupplierMe && data.supplierName)) {
-            setModal({
-              isOpen: true,
-              title: 'Wrong Document Type',
-              message: 'This appears to be a Purchase Bill (you are the customer). Scanning a purchase bill in the Sales Invoice section is wrong. Please use the Purchases page for this document.',
-              type: 'error'
-            });
-            return;
-          }
-          
           const scannedItems = (data.items || []).map((item: any) => {
             const itemName = item.name || 'Custom Item';
             const itemHsnCode = item.hsnCode || item.productCode || '';
@@ -1373,6 +1362,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
         )}
         <input 
           type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileSelect} 
+          accept="image/*,application/pdf" 
+          className="hidden" 
+        />
+        <input 
+          type="file" 
           ref={cameraInputRef} 
           onChange={handleFileSelect} 
           accept="image/*" 
@@ -1871,7 +1867,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
                   {/* Items List */}
                   <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm bg-white">
-                    <table className="w-full text-[11px] text-left">
+                    <table className="w-full text-[11px] text-left min-w-[800px]">
                       <thead className="text-[10px] text-slate-500 uppercase tracking-wider bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
                         <tr>
                           <th className="px-3 py-2.5 font-bold">Item Description</th>
@@ -2253,7 +2249,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
             {/* Sidebar Summary */}
             <div className="space-y-4 xl:col-span-1">
-              <div className="bg-gradient-to-b from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 sticky top-4 relative overflow-hidden">
+              <div className="bg-gradient-to-b from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none"></div>
                 <h3 className="text-[10px] font-black text-slate-400 mb-5 uppercase tracking-widest relative z-10">Invoice Summary</h3>
                 
@@ -2524,7 +2520,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100001]"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2572,6 +2568,13 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   <span>Entity Extraction...</span>
                 </div>
               </div>
+
+              <button
+                onClick={() => setIsScanning(false)}
+                className="mt-8 px-6 py-2 text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors"
+              >
+                Cancel Scan
+              </button>
             </motion.div>
           </motion.div>
         )}
@@ -2584,7 +2587,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100001]"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}

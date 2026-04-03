@@ -134,6 +134,35 @@ export default function Dashboard() {
   useEffect(() => {
     if (businessId) {
       fetchDashboardData();
+
+      // Set up real-time subscription for multiple tables
+      const channel = supabase
+        .channel('dashboard-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'invoices', filter: `business_id=eq.${businessId}` },
+          () => fetchDashboardData()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'purchases', filter: `business_id=eq.${businessId}` },
+          () => fetchDashboardData()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` },
+          () => fetchDashboardData()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'customers', filter: `business_id=eq.${businessId}` },
+          () => fetchDashboardData()
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [businessId, profile?.business_profiles?.gemini_api_key, filterType, customRange, day, year]);
 

@@ -107,6 +107,27 @@ export default function Invoices() {
   useEffect(() => {
     if (businessId) {
       fetchInvoices();
+
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('invoices-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'invoices',
+            filter: `business_id=eq.${businessId}`
+          },
+          () => {
+            fetchInvoices();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [businessId, filterType, customRange, day, year]);
 
@@ -658,8 +679,8 @@ export default function Invoices() {
 
       {/* Invoices Table */}
       <div className="glass-card !overflow-visible">
-        <div className="overflow-x-auto min-h-[450px] !overflow-visible">
-          <table className="w-full text-left">
+        <div className="overflow-x-auto min-h-[450px]">
+          <table className="w-full text-left min-w-[800px]">
             <thead>
               <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                 <th className="px-2.5 py-2 w-10">

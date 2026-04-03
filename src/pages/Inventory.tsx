@@ -96,6 +96,27 @@ export default function Inventory() {
   useEffect(() => {
     if (businessId) {
       fetchProducts();
+
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('products-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'products',
+            filter: `business_id=eq.${businessId}`
+          },
+          () => {
+            fetchProducts();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [businessId, filterType, customRange, day, year]);
 

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn, getDateRange, downloadFile } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -25,42 +26,38 @@ import ExcelJS from 'exceljs';
 type TabType = 'balance-sheet' | 'annexure-a' | 'annexure-b' | 'profit-loss';
 
 const initialBsData = [
-  ['CAPITAL ACCOUNT', '-', 'FIXED ASSETS', '-'],
+  ['CAPITAL ACCOUNT', '0.00', 'FIXED ASSETS', '0.00'],
   ['[As Per Annexure A]', '', '[As Per Annexure B]', ''],
-  ['Loans(liability)', '', 'INVESTMENTS', ''],
-  ['', '', 'Gold', '7,85,816.00'],
+  ['Loans(liability)', '0.00', 'INVESTMENTS', '0.00'],
+  ['', '', 'Gold', '0.00'],
   ['CURRENT LIABILITIES', '', 'CURRENT ASSETS', ''],
-  ['Sundry Creditors', '1,85,013.00', 'LOANS AND ADVANCES', ''],
-  ['Provision', '', 'Cash In Hand & Bank Balance', '2,40,291.25'],
-  ['', '', 'Sundry Debtors', '6,51,225.00'],
-  ['', '', 'Advance to Worker', '35,500.00'],
-  ['', '', 'Stock in Hand', '-'],
-  ['TOTAL', '1,85,013.00', 'TOTAL', '17,12,832.25'],
+  ['Sundry Creditors', '0.00', 'LOANS AND ADVANCES', '0.00'],
+  ['Provision', '0.00', 'Cash In Hand & Bank Balance', '0.00'],
+  ['', '', 'Sundry Debtors', '0.00'],
+  ['', '', 'Advance to Worker', '0.00'],
+  ['', '', 'Stock in Hand', '0.00'],
+  ['TOTAL', '0.00', 'TOTAL', '0.00'],
 ];
 
 const initialAnnexAData = [
-  ['To Drawings', '1,75,500.00', 'By Capital B/F', '52,44,272.00'],
-  ['', '', 'By SB Interest', '80.00'],
-  ['To Closing Balance', '55,66,450.00', 'By Profit & Loss A/c', '4,97,598.00'],
-  ['TOTAL', '57,41,950.00', 'TOTAL', '57,41,950.00'],
+  ['To Drawings', '0.00', 'By Capital B/F', '0.00'],
+  ['', '', 'By SB Interest', '0.00'],
+  ['To Closing Balance', '0.00', 'By Profit & Loss A/c', '0.00'],
+  ['TOTAL', '0.00', 'TOTAL', '0.00'],
 ];
 
 const initialAnnexBData = [
-  ['1', 'Car', '2,76,356.00', '', '2,76,356.00', '10%', '27,635.60', '2,48,720.40'],
-  ['2', 'Dairy Tools', '54,989.00', '', '54,989.00', '15%', '8,248.35', '46,740.65'],
-  ['3', 'Shed/Equip.', '2,75,558.00', '', '2,75,558.00', '15%', '41,333.70', '2,34,224.30'],
-  ['4', 'Two Wheelers', '47,902.00', '', '47,902.00', '15%', '7,185.30', '40,716.70'],
-  ['5', 'BMC', '1,01,322.00', '', '1,01,322.00', '15%', '15,198.30', '86,123.70'],
-  ['', 'TOTAL', '7,56,127.00', '-', '7,56,127.00', '', '99,601.25', '6,56,525.75'],
+  ['1', 'Fixed Asset 1', '0.00', '', '0.00', '10%', '0.00', '0.00'],
+  ['', 'TOTAL', '0.00', '-', '0.00', '', '0.00', '0.00'],
 ];
 
 const initialPlData = [
-  ['To Opening Stock', '36,20,121.00', 'By Sales', '57,48,500.00'],
-  ['To Purchases', '45,01,992.00', 'By Closing Stock', '33,82,105.00'],
-  ['To Hamali & Transport', '19,750.00', 'By Gross Profit b/d', '9,88,742.00'],
-  ['To Salary Expences', '2,70,000.00', '', ''],
-  ['To Profit & Loss A/c', '4,97,598.00', '', ''],
-  ['TOTAL', '9,88,742.00', 'TOTAL', '9,88,742.00'],
+  ['To Opening Stock', '0.00', 'By Sales', '0.00'],
+  ['To Purchases', '0.00', 'By Closing Stock', '0.00'],
+  ['To Hamali & Transport', '0.00', 'By Gross Profit b/d', '0.00'],
+  ['To Salary Expences', '0.00', '', ''],
+  ['To Profit & Loss A/c', '0.00', '', ''],
+  ['TOTAL', '0.00', 'TOTAL', '0.00'],
 ];
 
 export default function ITRReport() {
@@ -69,6 +66,7 @@ export default function ITRReport() {
   const [loading, setLoading] = useState(false);
 
   const business = profile?.business_profiles;
+  const businessId = business?.id;
   const initialBusinessName = business?.name || appSettings?.app_name || 'Your Business Name';
   const initialProprietorName = business?.owner_name || profile?.name || 'Proprietor Name';
   const initialFullAddress = [
@@ -136,6 +134,103 @@ export default function ITRReport() {
 
   const currentDate = new Date().toLocaleDateString('en-IN');
   const [financialYear, setFinancialYear] = useState(initialFY);
+
+  // Fetch live data from Supabase
+  const fetchLiveData = async () => {
+    if (!businessId) return;
+    setLoading(true);
+    try {
+      const [startYear, endYearShort] = financialYear.split('-');
+      const startFullYear = parseInt(startYear);
+      const endFullYear = startFullYear + 1;
+      
+      const startDate = `${startFullYear}-04-01`;
+      const endDate = `${endFullYear}-03-31`;
+
+      const [invoicesRes, purchasesRes, expensesRes, productsRes] = await Promise.all([
+        supabase.from('invoices').select('*').eq('business_id', businessId).gte('date', startDate).lte('date', endDate).neq('status', 'cancelled'),
+        supabase.from('purchases').select('*').eq('business_id', businessId).gte('bill_date', startDate).lte('bill_date', endDate).neq('status', 'cancelled'),
+        supabase.from('expenses').select('*').eq('business_id', businessId).gte('date', startDate).lte('date', endDate),
+        supabase.from('products').select('*').eq('business_id', businessId)
+      ]);
+
+      if (invoicesRes.error) throw invoicesRes.error;
+      if (purchasesRes.error) throw purchasesRes.error;
+      if (expensesRes.error) throw expensesRes.error;
+      if (productsRes.error) throw productsRes.error;
+
+      const invoices = invoicesRes.data || [];
+      const purchases = purchasesRes.data || [];
+      const expenses = expensesRes.data || [];
+      const products = productsRes.data || [];
+
+      // Aggregations
+      const totalSales = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+      const totalPurchases = purchases.reduce((sum, pur) => sum + (pur.total_amount || 0), 0);
+      const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const closingStockValue = products.reduce((sum, prod) => sum + ((prod.stock || 0) * (prod.purchase_price || 0)), 0);
+      
+      const sundryDebtors = invoices
+        .filter(inv => ['pending', 'unpaid', 'partial', 'overdue'].includes(inv.status))
+        .reduce((sum, inv) => sum + (inv.total || 0), 0);
+      
+      const sundryCreditors = purchases
+        .filter(pur => ['pending'].includes(pur.status))
+        .reduce((sum, pur) => sum + (pur.total_amount || 0), 0);
+
+      // Update P&L Data
+      setPlData(prev => {
+        const next = prev.map(r => [...r]);
+        // To Sales
+        const salesIdx = next.findIndex(r => r[2]?.toUpperCase().includes('SALES'));
+        if (salesIdx !== -1) next[salesIdx][3] = formatCurrency(totalSales);
+        
+        // To Closing Stock
+        const csIdx = next.findIndex(r => r[2]?.toUpperCase().includes('CLOSING STOCK'));
+        if (csIdx !== -1) next[csIdx][3] = formatCurrency(closingStockValue);
+        
+        // To Purchases
+        const purIdx = next.findIndex(r => r[0]?.toUpperCase().includes('PURCHASES'));
+        if (purIdx !== -1) next[purIdx][1] = formatCurrency(totalPurchases);
+        
+        // To Expenses (Other than Salary)
+        const expIdx = next.findIndex(r => r[0]?.toUpperCase().includes('HAMALI & TRANSPORT'));
+        if (expIdx !== -1) next[expIdx][1] = formatCurrency(totalExpenses);
+
+        return next;
+      });
+
+      // Update Balance Sheet Data
+      setBsData(prev => {
+        const next = prev.map(r => [...r]);
+        
+        // Sundry Creditors
+        const scIdx = next.findIndex(r => r[0]?.toUpperCase().includes('SUNDRY CREDITORS'));
+        if (scIdx !== -1) next[scIdx][1] = formatCurrency(sundryCreditors);
+        
+        // Sundry Debtors
+        const sdIdx = next.findIndex(r => r[2]?.toUpperCase().includes('SUNDRY DEBTORS'));
+        if (sdIdx !== -1) next[sdIdx][3] = formatCurrency(sundryDebtors);
+        
+        // Stock in Hand
+        const sihIdx = next.findIndex(r => r[2]?.toUpperCase().includes('STOCK IN HAND'));
+        if (sihIdx !== -1) next[sihIdx][3] = formatCurrency(closingStockValue);
+
+        return next;
+      });
+
+    } catch (err: any) {
+      console.error('Error fetching live ITR data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (businessId) {
+      fetchLiveData();
+    }
+  }, [businessId, financialYear]);
 
   // Sync with profile data when it changes
   useEffect(() => {

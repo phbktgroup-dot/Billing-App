@@ -44,7 +44,30 @@ export default function Suppliers() {
   });
 
   useEffect(() => {
-    if (businessId) fetchSuppliers();
+    if (businessId) {
+      fetchSuppliers();
+
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('suppliers-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'suppliers',
+            filter: `business_id=eq.${businessId}`
+          },
+          () => {
+            fetchSuppliers();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [businessId, filterType, customRange, day, year]);
 
   const toggleSelectAll = () => {

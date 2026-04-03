@@ -10,7 +10,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-background-soft">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0 pb-28 lg:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 pb-28 lg:pb-0 pt-safe lg:pt-0">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="flex-1 p-0">
           <Outlet />

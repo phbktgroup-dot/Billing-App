@@ -792,11 +792,11 @@ export default function AdminPanel() {
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-full md:w-fit overflow-x-auto no-scrollbar">
         <button 
           onClick={() => setActiveTab('users')}
           className={cn(
-            "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 whitespace-nowrap",
             activeTab === 'users' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
           )}
         >
@@ -806,7 +806,7 @@ export default function AdminPanel() {
         <button 
           onClick={() => setActiveTab('notifications')}
           className={cn(
-            "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+            "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 whitespace-nowrap",
             activeTab === 'notifications' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
           )}
         >
@@ -817,7 +817,7 @@ export default function AdminPanel() {
           <button 
             onClick={() => setActiveTab('settings')}
             className={cn(
-              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2",
+              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 whitespace-nowrap",
               activeTab === 'settings' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >

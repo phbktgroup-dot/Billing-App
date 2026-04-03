@@ -112,7 +112,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Mobile Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[19999] lg:hidden"
           onClick={onClose}
         />
       )}
@@ -124,13 +124,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         variants={sidebarVariants}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen bg-[#4D2152] z-[70] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
+          "fixed lg:sticky top-0 left-0 h-screen bg-[#4D2152] z-[20000] flex flex-col shadow-2xl lg:shadow-none overflow-hidden",
           !isOpen && "lg:translate-x-0"
         )}
       >
         {/* Logo Section / Top Left Menu */}
         <div className={cn(
-          "h-16 md:h-16 flex items-center transition-all duration-300 relative",
+          "h-auto min-h-[4rem] flex items-center transition-all duration-300 relative pt-[env(safe-area-inset-top,0px)]",
           (isCollapsed && !isOpen) ? "justify-center px-0" : "px-4"
         )}>
           <div className={cn("flex items-center w-full overflow-hidden", (isCollapsed && !isOpen) ? "justify-center" : "gap-3")}>
@@ -152,19 +152,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <Menu size={20} />
+                isOpen ? <X size={20} /> : <Menu size={20} />
               )}
             </button>
 
             {(!isCollapsed || isOpen) && (
               <div className="flex items-center justify-between flex-1 min-w-0">
-                <motion.span 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="font-bold text-white text-sm truncate pr-2"
-                >
+                <span className="font-bold text-white text-sm truncate pr-2">
                   {appSettings?.app_name || 'Billing Pro+'}
-                </motion.span>
+                </span>
               </div>
             )}
           </div>

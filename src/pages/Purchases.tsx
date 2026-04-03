@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingCart, Plus, Search, Edit, Trash2, Loader2, X, Download, Scan, Camera, Package, ShieldCheck, Filter, MoreVertical, User, FileText, Image as ImageIcon, Zap, UserPlus, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
@@ -27,6 +27,8 @@ export default function Purchases() {
   const [isBulkDelete, setIsBulkDelete] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showScanOptions, setShowScanOptions] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [modal, setModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
     isOpen: false,
@@ -302,6 +304,27 @@ export default function Purchases() {
       fetchPurchases();
       fetchSuppliers();
       fetchProducts();
+
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('purchases-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'purchases',
+            filter: `business_id=eq.${businessId}`
+          },
+          () => {
+            fetchPurchases();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [businessId, filterType, customRange, day, year]);
 
@@ -730,7 +753,7 @@ export default function Purchases() {
       const apiKey = profile?.business_profiles?.gemini_api_key || import.meta.env.VITE_GEMINI_API_KEY;
       console.log('Using API Key for scan:', apiKey ? 'Provided' : 'None (falling back to backend default)');
       
-      const prompt = `Extract purchase invoice details: 
+      const prompt = `This is a PURCHASE INVOICE. The business name on the invoice is the CUSTOMER. Extract the SUPPLIER details: 
 - supplier name
 - supplier GST number
 - supplier email
@@ -885,18 +908,6 @@ Return as JSON format: {
             (scannedCustomerName && businessProfile?.name && scannedCustomerName.trim().toLowerCase() === businessProfile.name.trim().toLowerCase())
           );
 
-          // If the scanned SUPPLIER is me, it's a sales invoice.
-          // If the scanned CUSTOMER is NOT me, it's also likely a sales invoice.
-          if (isScannedSupplierMe || (!isScannedCustomerMe && scannedCustomerName)) {
-            setModal({
-              isOpen: true,
-              title: 'Wrong Document Type',
-              message: 'This appears to be a Sales Invoice (you are the supplier). Scanning a sales invoice in the Purchases section is wrong. Please use the Create Invoice page for this document.',
-              type: 'error'
-            });
-            return;
-          }
-
           setScannedData({
             supplier: {
               name: data.supplierName || data.supplier_name || '',
@@ -1032,7 +1043,7 @@ Return as JSON format: {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-slate-900 text-white border-b border-slate-800">
                 <th className="px-6 py-5 w-12">
@@ -1659,8 +1670,24 @@ Return as JSON format: {
         />
       )}
 
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileSelect} 
+        accept="image/*,application/pdf" 
+        className="hidden" 
+      />
+      <input 
+        type="file" 
+        ref={cameraInputRef} 
+        onChange={handleFileSelect} 
+        accept="image/*" 
+        capture="environment" 
+        className="hidden" 
+      />
+
       {isScanning && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100001]">
           <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center">
             <div className="relative w-24 h-24 mb-4">
               <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -1686,6 +1713,13 @@ Return as JSON format: {
               </div>
             </div>
             <p className="text-slate-600 font-medium">Processing Bill...</p>
+            
+            <button
+              onClick={() => setIsScanning(false)}
+              className="mt-6 px-6 py-2 text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors"
+            >
+              Cancel Scan
+            </button>
           </div>
         </div>
       )}

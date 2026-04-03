@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, User, LogOut, Search, Settings, ShieldCheck, HelpCircle, Lock, Menu, X, CheckCircle2, LogIn, RefreshCw, Calendar, FileText, Users, Package, Loader2 } from 'lucide-react';
 import { cn, FilterType } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { DateFilter } from './DateFilter';
 
@@ -19,9 +19,11 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const { user, profile, signOut, isImpersonating, stopImpersonating, originalProfile } = useAuth();
+  const { user, profile, signOut, isImpersonating, stopImpersonating, originalProfile, appSettings } = useAuth();
   const targetUserId = profile?.id || user?.id;
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminPanel = location.pathname.startsWith('/admin');
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -223,7 +225,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   return (
     <>
       {isImpersonating && (
-        <div className="bg-emerald-600 text-white px-4 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider z-[60] sticky top-0">
+        <div className="bg-emerald-600 text-white px-4 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider z-[10001] sticky top-0 md:pt-2">
           <div className="flex items-center">
             <ShieldCheck size={14} className="mr-2" />
             <span>Impersonating: {profile?.name || profile?.email}</span>
@@ -240,17 +242,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       )}
       <header className={cn(
-        "h-12 md:h-12 bg-white/80 backdrop-blur-xl sticky z-[60] px-4 md:px-8 flex items-center justify-between border-b border-slate-100",
+        "h-auto min-h-[3rem] sticky px-1 md:px-8 flex items-center justify-between border-b border-slate-100 pb-1 md:pb-0",
+        showNotifications ? "z-[30000]" : "z-[10000]",
         isImpersonating ? "top-[34px]" : "top-0"
       )}>
-        <div className="absolute inset-0 -z-10 pointer-events-none" />
+        <div className="absolute inset-0 -z-10 bg-white/80 backdrop-blur-xl pointer-events-none" />
       {/* Left Section: Menu Toggle (Mobile) & Search (Desktop) */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-1">
           <button 
             onClick={onMenuClick}
-            className="lg:hidden p-2 text-primary hover:bg-slate-100 rounded-xl transition-all"
+            className="lg:hidden p-2 text-[#7c2d12] hover:bg-slate-100 rounded-xl transition-all"
           >
-            <Menu size={20} />
+            <Menu size={22} />
           </button>
 
           <div className="hidden md:flex items-center relative" ref={searchRef}>
@@ -346,12 +349,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <>
               {/* Mobile Backdrop */}
               <div 
-                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 sm:hidden" 
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[20001] sm:hidden" 
                 onClick={() => setShowNotifications(false)}
               />
               
-              <div className="fixed inset-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full h-full sm:h-auto sm:w-96 !bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-200 z-[110] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden opacity-100">
-                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+              <div className="fixed inset-0 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full h-[100dvh] sm:h-auto sm:w-96 !bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-200 z-[20002] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden opacity-100">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 pt-[calc(env(safe-area-inset-top,0px)+1rem)] sm:pt-4">
                   <div className="flex items-center space-x-3">
                     <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
                   </div>
@@ -361,12 +364,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         Mark all as read
                       </button>
                     )}
-                    <button onClick={() => setShowNotifications(false)} className="p-2 -mr-2 text-slate-400 hover:text-slate-600 sm:hidden">
+                    <button onClick={() => setShowNotifications(false)} className="p-2 -mr-2 text-slate-400 hover:text-slate-600">
                       <X size={20} />
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto sm:max-h-[480px]">
+                <div className="flex-1 min-h-0 overflow-y-auto sm:max-h-[480px] bg-white">
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center">
                     <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -437,7 +440,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 )}
               </div>
               {notifications.length > 0 && (
-                <div className="p-3 bg-slate-50/50 border-t border-slate-100 text-center">
+                <div className="p-3 bg-slate-50/50 border-t border-slate-100 text-center pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:pb-3">
                   <button className="text-[10px] font-bold text-primary hover:underline">
                     View All Notifications
                   </button>
