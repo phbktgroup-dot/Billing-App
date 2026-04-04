@@ -14,10 +14,13 @@ import {
   Upload,
   Trash2,
   FileUp,
-  Truck
+  Truck,
+  User,
+  Calendar,
+  Package
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, getDateRange, FilterType, downloadFile } from '../lib/utils';
+import { cn, getDateRange, FilterType, downloadFile, formatCurrency } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateProfitLossExcel, generateGSTExcel } from '../lib/excelGenerator';
@@ -120,7 +123,6 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   const [day, setDay] = useState<string>(getLocalToday());
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [financialYear, setFinancialYear] = useState<string>('2023-24');
-  const [shouldAutoDownload, setShouldAutoDownload] = useState(false);
 
   const businessId = profile?.business_id;
 
@@ -157,11 +159,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         .select('*')
         .eq('business_id', businessId);
 
-      // Filter invoices that have eway bills or need them (e.g. total > 50000)
-      // For simplicity, let's just show invoices that have an eway bill entry or eway_bill_no
-      const ewayInvoices = (invoices || []).filter(inv => {
-        const hasEwayEntry = (ewayBills || []).some(eb => eb.invoice_id === inv.id);
-        return hasEwayEntry || inv.eway_bill_no;
+      // Show all invoices, mapping eway bill info if available
+      const ewayInvoices = (invoices || []).map(inv => {
+        const ewayEntry = (ewayBills || []).find(eb => eb.invoice_id === inv.id);
+        return {
+          ...inv,
+          eway_bill_no: ewayEntry?.eway_bill_no || inv.eway_bill_no
+        };
       });
 
       setEwayBillsList(ewayInvoices);
@@ -245,6 +249,56 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       setFinancialData({ totalSales, totalPurchases, totalExpenses, netProfit });
     } catch (error) {
       console.error("Error fetching financial data:", error);
+    }
+  };
+
+  const handleDownloadSingleEwayBill = async (invoice: any) => {
+    try {
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          customers (*),
+          invoice_items (
+            *,
+            products (name, sku, hsn_code, gst_rate)
+          )
+        `)
+        .eq('id', invoice.id)
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      const { data: businessProfile, error: businessError } = await supabase
+        .from('business_profiles')
+        .select('*')
+        .eq('id', businessId)
+        .single();
+
+      if (businessError) throw businessError;
+
+      const { data: ewayBills, error: ewayError } = await supabase
+        .from('eway_bills')
+        .select('*')
+        .eq('invoice_id', invoice.id);
+      
+      if (ewayError) throw ewayError;
+
+      const ewayBillsData = ewayBills || [];
+      const ewayJson = generateEwayJSON([invoiceData], businessProfile, ewayBillsData, false);
+      
+      const blob = new Blob([JSON.stringify(ewayJson, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eway_bill_${invoiceData.invoice_number}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading E-way Bill JSON:', error);
+      alert('Failed to download E-way Bill JSON. Please try again.');
     }
   };
 
@@ -752,13 +806,6 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     }
   };
 
-  React.useEffect(() => {
-    if (shouldAutoDownload && type === 'eway') {
-      handleGenerateAll();
-      setShouldAutoDownload(false);
-    }
-  }, [filterType, day, customRange, year, shouldAutoDownload]);
-
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -805,11 +852,6 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
             isOpen={isDateFilterOpen}
             setIsOpen={setIsDateFilterOpen}
             allowedTabs={type === 'eway' ? ['date', 'range', 'year'] : undefined}
-            onSelect={() => {
-              if (type === 'eway') {
-                setShouldAutoDownload(true);
-              }
-            }}
           />
         }
       >
@@ -843,42 +885,130 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       {type === 'eway' ? (
         <div className="space-y-6">
           {/* Bills List */}
-          <div className="glass-card overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">E-Way Bills</h3>
-              <span className="text-xs font-bold text-slate-400 uppercase">
-                {filterType === 'thisYear' ? `${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
-              </span>
-            </div>
-            <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
-              {ewayBillsList.length === 0 ? (
-                <div className="p-8 text-center text-slate-500">
-                  No E-Way bills found for the selected period.
-                </div>
-              ) : (
-                ewayBillsList.map((bill, i) => (
-                  <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
-                        <Truck size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900">{bill.invoice_number || 'Draft'}</p>
-                        <p className="text-sm text-slate-500">{bill.customers?.name || 'Walk-in Customer'}</p>
-                        {bill.eway_bill_no && (
-                          <p className="text-xs text-emerald-600 font-medium mt-1">E-Way Bill No: {bill.eway_bill_no}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-4 sm:mt-0 text-left sm:text-right">
-                      <p className="font-bold text-slate-900">₹{bill.total?.toLocaleString()}</p>
-                      <p className="text-sm text-slate-500">{new Date(bill.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                    </div>
+            <div className="glass-card overflow-hidden">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900">E-Way Bills</h3>
+                <span className="text-xs font-bold text-slate-400 uppercase">
+                  {filterType === 'thisYear' ? `${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
+                </span>
+              </div>
+              
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto min-h-[400px]">
+                <table className="w-full text-left min-w-[800px]">
+                  <thead>
+                    <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-4 py-2">Invoice #</th>
+                      <th className="px-4 py-2">Customer</th>
+                      <th className="px-4 py-2">Date</th>
+                      <th className="px-4 py-2 text-right">Amount</th>
+                      <th className="px-4 py-2">E-Way Bill No</th>
+                      <th className="px-4 py-2 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-500">
+                    {ewayBillsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center">
+                          <FileText className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+                          <p className="text-slate-500 font-medium text-xs">No E-Way bills found for the selected period.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      ewayBillsList.map((bill, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-2">
+                            <span className="text-[11px] font-bold text-slate-900">{bill.invoice_number || 'Draft'}</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center">
+                              <User size={12} className="mr-2 text-slate-400" />
+                              <span className="text-[11px] text-slate-600">{bill.customers?.name || 'Walk-in Customer'}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center text-[11px] text-slate-600">
+                              <Calendar size={12} className="mr-2 text-slate-400" />
+                              {new Date(bill.date).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <span className="text-[11px] font-bold text-slate-900">{formatCurrency(bill.total || 0)}</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            {bill.eway_bill_no ? (
+                              <span className="text-[11px] text-emerald-600 font-bold">{bill.eway_bill_no}</span>
+                            ) : (
+                              <span className="text-[11px] text-slate-400">Not Generated</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <button 
+                                onClick={() => handleDownloadSingleEwayBill(bill)}
+                                className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all h-7 w-7 flex items-center justify-center"
+                                title="Download E-way Bill JSON"
+                              >
+                                <Package size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile List View */}
+              <div className="lg:hidden divide-y divide-slate-100">
+                {ewayBillsList.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <FileText className="w-12 h-12 mx-auto text-slate-200 mb-2" />
+                    <p className="text-slate-500 font-medium text-xs">No E-Way bills found</p>
                   </div>
-                ))
-              )}
+                ) : (
+                  ewayBillsList.map((bill, i) => (
+                    <div key={i} className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-bold text-slate-900">{bill.invoice_number || 'Draft'}</span>
+                              {bill.eway_bill_no ? (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-emerald-100 text-emerald-700">
+                                  {bill.eway_bill_no}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 text-slate-500">
+                                  Not Generated
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5">{bill.customers?.name || 'Walk-in Customer'}</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">{new Date(bill.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-slate-900">{formatCurrency(bill.total || 0)}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Action Icons Row (Mobile Only) */}
+                      <div className="flex items-center justify-end space-x-2 pt-1">
+                        <button 
+                          onClick={() => handleDownloadSingleEwayBill(bill)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all h-8 w-8 flex items-center justify-center border border-slate-100"
+                          title="Download E-way Bill JSON"
+                        >
+                          <Package size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
 
           {/* Reports in one row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
