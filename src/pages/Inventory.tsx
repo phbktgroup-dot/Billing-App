@@ -481,9 +481,18 @@ export default function Inventory() {
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-1 text-slate-500 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-              <Filter size={12} />
-            </button>
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              allowedTabs={['date', 'range']}
+              iconOnly={true}
+            />
             <div className="h-3 w-[1px] bg-slate-200"></div>
             <p className="text-[10px] text-slate-500">Showing {filteredProducts.length} of {products.length} products</p>
           </div>
@@ -493,8 +502,8 @@ export default function Inventory() {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                <th className="px-2.5 py-1.5">
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="px-4 py-2">
                   <input 
                     type="checkbox" 
                     checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
@@ -507,17 +516,17 @@ export default function Inventory() {
                     }}
                   />
                 </th>
-                <th className="px-2.5 py-1.5">Product Details</th>
-                <th className="px-2.5 py-1.5">HSN Code</th>
-                <th className="px-2.5 py-1.5">Category</th>
-                <th className="px-2.5 py-1.5">Date Added</th>
-                <th className="px-2.5 py-1.5">Stock Level</th>
-                <th className="px-2.5 py-1.5">Selling Price</th>
-                <th className="px-2.5 py-1.5">Status</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+                <th className="px-4 py-2">Product Details</th>
+                <th className="px-4 py-2">HSN Code</th>
+                <th className="px-4 py-2">Category</th>
+                <th className="px-4 py-2">Date Added</th>
+                <th className="px-4 py-2">Stock Level</th>
+                <th className="px-4 py-2">Selling Price</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={9} className="px-3 py-6 text-center">
@@ -536,7 +545,7 @@ export default function Inventory() {
               ) : (
                 filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <input 
                         type="checkbox" 
                         checked={selectedProducts.includes(product.id)}
@@ -549,24 +558,24 @@ export default function Inventory() {
                         }}
                       />
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center">
                         <div className="w-6 h-6 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 mr-2">
                           <Package size={12} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-slate-900">{product.name}</p>
+                          <p className="text-[11px] font-bold text-slate-900">{product.name}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600 font-medium">{product.hsn_code}</td>
-                    <td className="px-2.5 py-1.5 text-[10px] text-slate-600">{product.category}</td>
-                    <td className="px-2.5 py-1.5 text-[8px] text-slate-400">
+                    <td className="px-4 py-0.5 text-[11px] text-slate-600 font-medium">{product.hsn_code}</td>
+                    <td className="px-4 py-0.5 text-[11px] text-slate-600">{product.category}</td>
+                    <td className="px-4 py-0.5 text-[9px] text-slate-400">
                       {product.created_at ? new Date(product.created_at).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="space-y-0.5">
-                        <div className="flex justify-between text-[8px] font-medium">
+                        <div className="flex justify-between text-[9px] font-medium">
                           <span className={cn(
                             product.stock <= product.min_stock ? "text-orange-600" : "text-slate-600"
                           )}>
@@ -586,8 +595,8 @@ export default function Inventory() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-[10px] font-bold text-slate-900">{formatCurrency(product.price)}</td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5 text-[11px] font-bold text-slate-900">{formatCurrency(product.price)}</td>
+                    <td className="px-4 py-0.5">
                       <span className={cn(
                         "px-1 py-0.5 rounded text-[8px] font-bold uppercase",
                         product.stock > product.min_stock ? "bg-emerald-100 text-emerald-700" : 
@@ -597,7 +606,7 @@ export default function Inventory() {
                          product.stock > 0 ? 'Low Stock' : 'Out of Stock'}
                       </span>
                     </td>
-                    <td className="px-2.5 py-1.5 text-right">
+                    <td className="px-4 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(product)}

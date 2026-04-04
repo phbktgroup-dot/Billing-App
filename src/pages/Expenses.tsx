@@ -367,10 +367,18 @@ export default function Expenses() {
           )}
         </div>
         <div className="flex items-center space-x-2">
-          <button className="px-3 h-10 sm:h-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
-            <Filter size={14} className="mr-1.5" />
-            Filter
-          </button>
+          <DateFilter 
+            filterType={filterType}
+            setFilterType={setFilterType}
+            day={day}
+            setDay={setDay}
+            year={year}
+            setYear={setYear}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            allowedTabs={['date', 'range']}
+            iconOnly={true}
+          />
           <button className="px-3 h-10 sm:h-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center shadow-sm">
             <Download size={14} className="mr-1.5" />
             Export
@@ -384,8 +392,8 @@ export default function Expenses() {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-bottom border-slate-100 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
-                <th className="px-2.5 py-1.5 w-10">
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="px-4 py-2 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -393,14 +401,14 @@ export default function Expenses() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-2.5 py-1.5">Date</th>
-                <th className="px-2.5 py-1.5">Category</th>
-                <th className="px-2.5 py-1.5">Description</th>
-                <th className="px-2.5 py-1.5 text-right">Amount</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Category</th>
+                <th className="px-4 py-2">Description</th>
+                <th className="px-4 py-2 text-right">Amount</th>
+                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center">
@@ -427,7 +435,7 @@ export default function Expenses() {
                       selectedExpenses.includes(expense.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -435,25 +443,25 @@ export default function Expenses() {
                         onChange={() => toggleSelectExpense(expense.id)}
                       />
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center space-x-2">
                         <Calendar size={12} className="text-slate-400" />
-                        <span className="text-[10px] text-slate-600 font-medium">{new Date(expense.date).toLocaleDateString()}</span>
+                        <span className="text-[11px] text-slate-600 font-medium">{new Date(expense.date).toLocaleDateString()}</span>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center space-x-2">
                         <Tag size={12} className="text-slate-400" />
-                        <span className="text-[10px] font-bold text-slate-900">{expense.category}</span>
+                        <span className="text-[11px] font-bold text-slate-900">{expense.category}</span>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <span className="text-[10px] text-slate-500 line-clamp-1">{expense.description || '-'}</span>
+                    <td className="px-4 py-0.5">
+                      <span className="text-[11px] text-slate-500 line-clamp-1">{expense.description || '-'}</span>
                     </td>
-                    <td className="px-2.5 py-1.5 text-right">
-                      <span className="text-[10px] font-bold text-red-600">{formatCurrency(expense.amount)}</span>
+                    <td className="px-4 py-0.5 text-right">
+                      <span className="text-[11px] font-bold text-red-600">{formatCurrency(expense.amount)}</span>
                     </td>
-                    <td className="px-2.5 py-1.5 text-right">
+                    <td className="px-4 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => handleEdit(expense)}

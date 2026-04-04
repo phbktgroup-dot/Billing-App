@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency, cn, getDateRange, FilterType } from '../lib/utils';
+import { formatCurrency, cn, getDateRange, FilterType, formatDate, formatDisplayDate } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
 
@@ -49,7 +49,7 @@ export default function Ledger() {
   const [isExporting, setIsExporting] = useState(false);
   const [filterType, setFilterType] = useState<FilterType>('allTime');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
-  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [day, setDay] = useState(formatDate(new Date()));
   const [year, setYear] = useState(new Date().getFullYear());
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
 
@@ -109,8 +109,8 @@ export default function Ledger() {
     console.log(`Ledger: Fetching ledger for ${ledgerType}: partyId=${selectedPartyId}, businessId=${businessId}`);
     try {
       const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
-      const startStr = startDate.toISOString().split('T')[0];
-      const endStr = endDate.toISOString().split('T')[0];
+      const startStr = formatDate(startDate);
+      const endStr = formatDate(endDate);
 
       let entries: LedgerEntry[] = [];
 
@@ -258,12 +258,21 @@ export default function Ledger() {
       const { generateLedgerPDF } = await import('../lib/pdfGenerator');
       const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
       
+      // If All Time, use actual entry dates for better display
+      let finalStart = formatDate(startDate);
+      let finalEnd = formatDate(endDate);
+      
+      if (filterType === 'allTime' && ledgerEntries.length > 0) {
+        finalStart = ledgerEntries[0].date;
+        finalEnd = ledgerEntries[ledgerEntries.length - 1].date;
+      }
+      
       await generateLedgerPDF({
         partyName: party?.name || '',
         partyGstin: party?.gstin,
         partyAddress: party?.address,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: formatDisplayDate(finalStart),
+        endDate: formatDisplayDate(finalEnd),
         entries: ledgerEntries,
         totals,
         type: ledgerType === 'customer' ? 'Customer' : 'Supplier'
@@ -283,10 +292,19 @@ export default function Ledger() {
       const { generateLedgerExcel } = await import('../lib/excelGenerator');
       const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
 
+      // If All Time, use actual entry dates for better display
+      let finalStart = formatDate(startDate);
+      let finalEnd = formatDate(endDate);
+      
+      if (filterType === 'allTime' && ledgerEntries.length > 0) {
+        finalStart = ledgerEntries[0].date;
+        finalEnd = ledgerEntries[ledgerEntries.length - 1].date;
+      }
+
       await generateLedgerExcel({
         partyName: party?.name || '',
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: formatDisplayDate(finalStart),
+        endDate: formatDisplayDate(finalEnd),
         entries: ledgerEntries,
         totals,
         type: ledgerType === 'customer' ? 'Customer' : 'Supplier'
@@ -307,23 +325,6 @@ export default function Ledger() {
       <PageHeader 
         title={`${ledgerType === 'customer' ? 'Customer' : 'Supplier'} Ledger`} 
         description="View detailed transaction history, track outstanding balances, and reconcile accounts for your business partners."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-            allowedTabs={['date', 'range']}
-          />
-        }
       >
         <div className="flex items-center space-x-4">
           <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -368,7 +369,7 @@ export default function Ledger() {
         </div>
       </PageHeader>
 
-      {/* Party Selection */}
+      {/* Party Selection & Date Filter */}
       <div className="glass-card p-4">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
@@ -388,19 +389,37 @@ export default function Ledger() {
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>
           </div>
-          {selectedPartyId && (
-            <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Closing Balance</p>
-                <p className={cn(
-                  "text-sm font-bold",
-                  totals.closingBalance >= 0 ? "text-red-600" : "text-emerald-600"
-                )}>
-                  {formatCurrency(Math.abs(totals.closingBalance))} {totals.closingBalance >= 0 ? 'Dr' : 'Cr'}
-                </p>
+
+          <div className="flex items-center gap-4">
+            {selectedPartyId && (
+              <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Closing Balance</p>
+                  <p className={cn(
+                    "text-sm font-bold",
+                    totals.closingBalance >= 0 ? "text-red-600" : "text-emerald-600"
+                  )}>
+                    {formatCurrency(Math.abs(totals.closingBalance))} {totals.closingBalance >= 0 ? 'Dr' : 'Cr'}
+                  </p>
+                </div>
               </div>
+            )}
+
+            <div className="flex items-center">
+              <DateFilter 
+                filterType={filterType}
+                setFilterType={setFilterType}
+                day={day}
+                setDay={setDay}
+                year={year}
+                setYear={setYear}
+                customRange={customRange}
+                setCustomRange={setCustomRange}
+                allowedTabs={['date', 'range']}
+                iconOnly={true}
+              />
             </div>
-          )}
+          </div>
         </div>
       </div>
 

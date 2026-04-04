@@ -102,6 +102,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
   const [portalDocs, setPortalDocs] = useState<{ [key: string]: { name: string, date: string } }>({});
   const [isUploading, setIsUploading] = useState<string | null>(null);
+  const [ewayBillsList, setEwayBillsList] = useState<any[]>([]);
   const [financialData, setFinancialData] = useState({
     totalSales: 0,
     totalPurchases: 0,
@@ -109,7 +110,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     netProfit: 0
   });
 
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [filterType, setFilterType] = useState<FilterType>(type === 'eway' ? 'today' : 'thisMonth');
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
@@ -129,8 +130,45 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       if (type === 'itr') {
         loadPortalDocs();
       }
+      if (type === 'eway') {
+        fetchEwayBills();
+      }
     }
   }, [businessId, type, filterType, customRange, day, year]);
+
+  const fetchEwayBills = async () => {
+    if (!businessId) return;
+    const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+    
+    try {
+      let query = supabase
+        .from('invoices')
+        .select('*, customers(name)')
+        .eq('business_id', businessId)
+        .order('date', { ascending: false });
+
+      if (startDate) query = query.gte('date', startDate.toISOString());
+      if (endDate) query = query.lte('date', endDate.toISOString());
+
+      const { data: invoices } = await query;
+      
+      const { data: ewayBills } = await supabase
+        .from('eway_bills')
+        .select('*')
+        .eq('business_id', businessId);
+
+      // Filter invoices that have eway bills or need them (e.g. total > 50000)
+      // For simplicity, let's just show invoices that have an eway bill entry or eway_bill_no
+      const ewayInvoices = (invoices || []).filter(inv => {
+        const hasEwayEntry = (ewayBills || []).some(eb => eb.invoice_id === inv.id);
+        return hasEwayEntry || inv.eway_bill_no;
+      });
+
+      setEwayBillsList(ewayInvoices);
+    } catch (error) {
+      console.error("Error fetching eway bills:", error);
+    }
+  };
 
   const loadPortalDocs = () => {
     if (!businessId) return;
@@ -802,209 +840,294 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
         </div>
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Reports List */}
-        <div className="lg:col-span-2 space-y-6">
+      {type === 'eway' ? (
+        <div className="space-y-6">
+          {/* Bills List */}
           <div className="glass-card overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">Available Reports</h3>
+              <h3 className="font-bold text-slate-900">E-Way Bills</h3>
               <span className="text-xs font-bold text-slate-400 uppercase">
-                {filterType === 'thisYear' ? `FY ${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
+                {filterType === 'thisYear' ? `${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
               </span>
             </div>
-            <div className="divide-y divide-slate-100">
-              {current.reports.map((report, i) => (
-                <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/50 transition-colors group gap-4 sm:gap-0">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm shrink-0">
-                      <FileSpreadsheet size={24} />
-                    </div>
-                    <div>
-                      <p className="text-base font-bold text-slate-900">{report.name}</p>
-                      <div className="flex items-center space-x-3 mt-1">
-                        <span className="text-xs text-slate-500 flex items-center">
-                          <FileText size={12} className="mr-1" />
-                          {report.format}
-                        </span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="text-xs text-slate-500">Updated 2h ago</span>
+            <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+              {ewayBillsList.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">
+                  No E-Way bills found for the selected period.
+                </div>
+              ) : (
+                ewayBillsList.map((bill, i) => (
+                  <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
+                        <Truck size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900">{bill.invoice_number || 'Draft'}</p>
+                        <p className="text-sm text-slate-500">{bill.customers?.name || 'Walk-in Customer'}</p>
+                        {bill.eway_bill_no && (
+                          <p className="text-xs text-emerald-600 font-medium mt-1">E-Way Bill No: {bill.eway_bill_no}</p>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end space-x-6 w-full sm:w-auto">
-                    <span className={cn(
-                      "flex items-center text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
-                      report.status === 'Ready' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
-                    )}>
-                      {report.status === 'Ready' ? <CheckCircle2 size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
-                      {report.status}
-                    </span>
-                    <div className="flex items-center space-x-3">
-                      <button 
-                        onClick={() => handleDownloadReport(report.id, report.name, report.format)}
-                        disabled={downloadingReport === report.id}
-                        className="w-10 h-10 sm:h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all disabled:opacity-50 shadow-sm"
-                        title={`Download ${report.format}`}
-                      >
-                        {downloadingReport === report.id ? (
-                          <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                        ) : (
-                          report.format === 'Excel' ? <FileSpreadsheet size={18} className="text-emerald-600" /> : <Download size={18} />
-                        )}
-                      </button>
+                    <div className="mt-4 sm:mt-0 text-left sm:text-right">
+                      <p className="font-bold text-slate-900">₹{bill.total?.toLocaleString()}</p>
+                      <p className="text-sm text-slate-500">{new Date(bill.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          {/* Government Portal Documents Section */}
-          {type === 'itr' && (
-            <div className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
-                    <FileUp size={20} />
+          {/* Reports in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {current.reports.map((report, i) => (
+              <div key={i} className="glass-card p-6 flex flex-col justify-between hover:border-primary/20 transition-all group">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm shrink-0">
+                    <FileCheck size={24} />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">Government Portal Documents</h3>
-                    <p className="text-xs text-slate-500">Upload documents from ITR portal for accurate reporting.</p>
+                  <span className={cn(
+                    "flex items-center text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
+                    report.status === 'Ready' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+                  )}>
+                    {report.status === 'Ready' ? <CheckCircle2 size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                    {report.status}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900 mb-1">{report.name}</h4>
+                  <div className="flex items-center space-x-3 mb-6">
+                    <span className="text-xs text-slate-500 flex items-center">
+                      <FileText size={12} className="mr-1" />
+                      {report.format}
+                    </span>
                   </div>
                 </div>
+                <button 
+                  onClick={() => handleDownloadReport(report.id, report.name, report.format)}
+                  disabled={downloadingReport === report.id}
+                  className="w-full h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-600 transition-all disabled:opacity-50 shadow-sm font-medium text-sm"
+                >
+                  {downloadingReport === report.id ? (
+                    <div className="w-5 h-5 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      {report.format === 'Excel' ? <FileSpreadsheet size={16} className="mr-2" /> : <Download size={16} className="mr-2" />}
+                      Download {report.format}
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Reports List */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="glass-card overflow-hidden">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900">Available Reports</h3>
+                <span className="text-xs font-bold text-slate-400 uppercase">
+                  {filterType === 'thisYear' ? `${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
+                </span>
               </div>
               <div className="divide-y divide-slate-100">
-                {[
-                  { id: '26as', name: 'Form 26AS (Annual Tax Statement)', desc: 'Contains details of tax deducted/collected at source.' },
-                  { id: 'ais', name: 'AIS (Annual Information Statement)', desc: 'Comprehensive view of all financial transactions.' },
-                  { id: 'tis', name: 'TIS (Taxpayer Information Summary)', desc: 'Simplified summary of AIS for easy filing.' }
-                ].map((doc) => (
-                  <div key={doc.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                {current.reports.map((report, i) => (
+                  <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/50 transition-colors group gap-4 sm:gap-0">
                     <div className="flex items-center space-x-4">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                        portalDocs[doc.id] ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"
-                      )}>
-                        {portalDocs[doc.id] ? <CheckCircle2 size={20} /> : <FileText size={20} />}
+                      <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm shrink-0">
+                        <FileSpreadsheet size={24} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">{doc.name}</p>
-                        <p className="text-[10px] text-slate-500 max-w-xs">{doc.desc}</p>
-                        {portalDocs[doc.id] && (
-                          <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center">
-                            <CheckCircle2 size={10} className="mr-1" />
-                            Uploaded: {portalDocs[doc.id].name} ({portalDocs[doc.id].date})
-                          </p>
-                        )}
+                        <p className="text-base font-bold text-slate-900">{report.name}</p>
+                        <div className="flex items-center space-x-3 mt-1">
+                          <span className="text-xs text-slate-500 flex items-center">
+                            <FileText size={12} className="mr-1" />
+                            {report.format}
+                          </span>
+                          <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                          <span className="text-xs text-slate-500">Updated 2h ago</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {portalDocs[doc.id] ? (
+                    <div className="flex items-center justify-between sm:justify-end space-x-6 w-full sm:w-auto">
+                      <span className={cn(
+                        "flex items-center text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
+                        report.status === 'Ready' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+                      )}>
+                        {report.status === 'Ready' ? <CheckCircle2 size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                        {report.status}
+                      </span>
+                      <div className="flex items-center space-x-3">
                         <button 
-                          onClick={() => removePortalDoc(doc.id)}
-                          className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
-                          title="Remove Document"
+                          onClick={() => handleDownloadReport(report.id, report.name, report.format)}
+                          disabled={downloadingReport === report.id}
+                          className="w-10 h-10 sm:h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all disabled:opacity-50 shadow-sm"
+                          title={`Download ${report.format}`}
                         >
-                          <Trash2 size={18} />
-                        </button>
-                      ) : (
-                        <label className="cursor-pointer p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center space-x-2">
-                          {isUploading === doc.id ? (
+                          {downloadingReport === report.id ? (
                             <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
                           ) : (
-                            <>
-                              <Upload size={18} />
-                              <span className="text-xs font-bold uppercase tracking-wider">Upload</span>
-                            </>
+                            report.format === 'Excel' ? <FileSpreadsheet size={18} className="text-emerald-600" /> : <Download size={18} />
                           )}
-                          <input 
-                            type="file" 
-                            className="hidden" 
-                            accept=".pdf,.json,.txt"
-                            onChange={(e) => handlePortalDocUpload(doc.id, e)}
-                            disabled={isUploading !== null}
-                          />
-                        </label>
-                      )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Info Panel */}
-        <div className="space-y-6">
-          {type === 'gst' && (
-            <div className="glass-card p-6 border-primary/20 bg-primary/5">
-              <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-                <Calculator size={18} className="mr-2 text-primary" />
-                Tax Estimation
-              </h4>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Estimated Net Profit</span>
-                  <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
+            {/* Government Portal Documents Section */}
+            {type === 'itr' && (
+              <div className="glass-card overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
+                      <FileUp size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">Government Portal Documents</h3>
+                      <p className="text-xs text-slate-500">Upload documents from ITR portal for accurate reporting.</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Taxable Income</span>
-                  <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
+                <div className="divide-y divide-slate-100">
+                  {[
+                    { id: '26as', name: 'Form 26AS (Annual Tax Statement)', desc: 'Contains details of tax deducted/collected at source.' },
+                    { id: 'ais', name: 'AIS (Annual Information Statement)', desc: 'Comprehensive view of all financial transactions.' },
+                    { id: 'tis', name: 'TIS (Taxpayer Information Summary)', desc: 'Simplified summary of AIS for easy filing.' }
+                  ].map((doc) => (
+                    <div key={doc.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-center space-x-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                          portalDocs[doc.id] ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"
+                        )}>
+                          {portalDocs[doc.id] ? <CheckCircle2 size={20} /> : <FileText size={20} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{doc.name}</p>
+                          <p className="text-[10px] text-slate-500 max-w-xs">{doc.desc}</p>
+                          {portalDocs[doc.id] && (
+                            <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center">
+                              <CheckCircle2 size={10} className="mr-1" />
+                              Uploaded: {portalDocs[doc.id].name} ({portalDocs[doc.id].date})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {portalDocs[doc.id] ? (
+                          <button 
+                            onClick={() => removePortalDoc(doc.id)}
+                            className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors h-10 sm:h-9 w-10 flex items-center justify-center"
+                            title="Remove Document"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        ) : (
+                          <label className="cursor-pointer p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center space-x-2">
+                            {isUploading === doc.id ? (
+                              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                            ) : (
+                              <>
+                                <Upload size={18} />
+                                <span className="text-xs font-bold uppercase tracking-wider">Upload</span>
+                              </>
+                            )}
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept=".pdf,.json,.txt"
+                              onChange={(e) => handlePortalDocUpload(doc.id, e)}
+                              disabled={isUploading !== null}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                  <span className="font-bold text-slate-900">Estimated Tax</span>
-                  <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
-                </div>
-                <p className="text-[10px] text-slate-400 italic">
-                  *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
-                </p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {type === 'itr' && (
-            <>
-              <div className="glass-card p-6 bg-slate-900 text-white">
-                <h4 className="font-bold mb-4 flex items-center">
-                  <AlertCircle size={18} className="mr-2 text-yellow-400" />
-                  Important Notice
+          {/* Info Panel */}
+          <div className="space-y-6">
+            {type === 'gst' && (
+              <div className="glass-card p-6 border-primary/20 bg-primary/5">
+                <h4 className="font-bold text-slate-900 mb-4 flex items-center">
+                  <Calculator size={18} className="mr-2 text-primary" />
+                  Tax Estimation
                 </h4>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  All reports generated are based on your business data. Please verify with a certified accountant before filing official returns.
-                </p>
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="text-slate-500">Last Sync</span>
-                    <span className="text-slate-300">Today, 10:30 AM</span>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Estimated Net Profit</span>
+                    <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Data Integrity</span>
-                    <span className="text-emerald-400">Verified</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Taxable Income</span>
+                    <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
                   </div>
+                  <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                    <span className="font-bold text-slate-900">Estimated Tax</span>
+                    <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic">
+                    *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
+                  </p>
                 </div>
               </div>
+            )}
 
-              <div className="glass-card p-6">
-                <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
-                <div className="space-y-2">
-                  <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                    Update Tax Rates
-                    <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-                  </button>
-                  <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                    View HSN Codes
-                    <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-                  </button>
-                  <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                    Manage Branches
-                    <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-                  </button>
+            {type === 'itr' && (
+              <>
+                <div className="glass-card p-6 bg-slate-900 text-white">
+                  <h4 className="font-bold mb-4 flex items-center">
+                    <AlertCircle size={18} className="mr-2 text-yellow-400" />
+                    Important Notice
+                  </h4>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    All reports generated are based on your business data. Please verify with a certified accountant before filing official returns.
+                  </p>
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="flex justify-between text-xs mb-2">
+                      <span className="text-slate-500">Last Sync</span>
+                      <span className="text-slate-300">Today, 10:30 AM</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Data Integrity</span>
+                      <span className="text-emerald-400">Verified</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+
+                <div className="glass-card p-6">
+                  <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
+                  <div className="space-y-2">
+                    <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                      Update Tax Rates
+                      <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                    </button>
+                    <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                      View HSN Codes
+                      <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                    </button>
+                    <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                      Manage Branches
+                      <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* How it Works Section - Best Design Improvement */}
       {type === 'gst' && (

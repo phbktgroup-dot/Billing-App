@@ -36,8 +36,9 @@ import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
-import { formatCurrency, cn, resizeImage } from '../lib/utils';
+import { formatCurrency, cn, resizeImage, formatDisplayDate, getDateRange, FilterType } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
 import Drawer from '../components/Drawer';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
@@ -92,6 +93,10 @@ export default function Payments() {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<any>(null);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   // Reconciliation States
   const [isReconcileMode, setIsReconcileMode] = useState(false);
@@ -150,7 +155,7 @@ export default function Payments() {
       fetchParties();
       fetchBusinessProfile();
     }
-  }, [businessId]);
+  }, [businessId, filterType, customRange, day, year]);
 
   useEffect(() => {
     if (isReconcileMode && businessId) {
@@ -793,16 +798,24 @@ export default function Payments() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+      const startStr = startDate.toISOString().split('T')[0];
+      const endStr = endDate.toISOString().split('T')[0];
+
       const [receiptsRes, paymentsRes] = await Promise.all([
         supabase
           .from('customer_payments')
           .select('*, customers(name)')
           .eq('business_id', businessId)
+          .gte('date', startStr)
+          .lte('date', endStr)
           .order('date', { ascending: false }),
         supabase
           .from('supplier_payments')
           .select('*, suppliers(name)')
           .eq('business_id', businessId)
+          .gte('date', startStr)
+          .lte('date', endStr)
           .order('date', { ascending: false })
       ]);
 
@@ -1739,6 +1752,18 @@ export default function Payments() {
               <option value="receipt">Receipts (In)</option>
               <option value="payment">Payments (Out)</option>
             </select>
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              allowedTabs={['date', 'range']}
+              iconOnly={true}
+            />
           </div>
         </div>
       </div>
@@ -1778,7 +1803,7 @@ export default function Payments() {
                 filteredPayments.map((payment) => (
                   <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-4 py-0.5 text-[11px] text-slate-600">
-                      {new Date(payment.date).toLocaleDateString()}
+                      {formatDisplayDate(payment.date)}
                     </td>
                     <td className="px-4 py-0.5">
                       <span className="text-[11px] font-bold text-slate-900">

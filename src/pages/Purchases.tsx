@@ -973,22 +973,6 @@ Return as JSON format: {
       <PageHeader 
         title="Purchases" 
         description="Track your procurement, manage supplier invoices, and monitor purchase costs."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-2">
           
@@ -1030,11 +1014,18 @@ Return as JSON format: {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-              <button className="p-2 text-slate-500 hover:bg-white hover:text-primary hover:shadow-sm rounded-lg transition-all">
-                <Filter size={16} />
-              </button>
-            </div>
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              allowedTabs={['date', 'range']}
+              iconOnly={true}
+            />
             <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
               {filteredPurchases.length} of {purchases.length} Records
@@ -1046,8 +1037,8 @@ Return as JSON format: {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
-              <tr className="bg-slate-900 text-white border-b border-slate-800">
-                <th className="px-6 py-5 w-12">
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-2 w-12">
                   <div className="flex items-center justify-center">
                     <input 
                       type="checkbox" 
@@ -1057,18 +1048,18 @@ Return as JSON format: {
                     />
                   </div>
                 </th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Bill Date</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Upload Date</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Invoice #</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest">Supplier</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">CGST</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">SGST</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">IGST</th>
-                <th className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-right">Total Amount</th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest">Bill Date</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest">Upload Date</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest">Invoice #</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest">Supplier</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-right">CGST</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-right">SGST</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-right">IGST</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-right">Total Amount</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-6 text-center">
@@ -1090,7 +1081,7 @@ Return as JSON format: {
                       selectedPurchases.includes(purchase.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center justify-center">
                         <input 
                           type="checkbox" 
@@ -1100,29 +1091,29 @@ Return as JSON format: {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-5 text-[10px] text-slate-500">
+                    <td className="px-4 py-0.5 text-[11px] text-slate-600">
                       {new Date(purchase.date).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-5 text-[8px] text-slate-400">
+                    <td className="px-4 py-0.5 text-[9px] text-slate-400">
                       {new Date(purchase.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-5 text-[10px] font-medium text-slate-900">{purchase.invoice_number}</td>
-                    <td className="px-4 py-5 text-[10px] text-slate-600">
+                    <td className="px-4 py-0.5 text-[11px] font-bold text-slate-900">{purchase.invoice_number}</td>
+                    <td className="px-4 py-0.5 text-[11px] text-slate-600">
                       {purchase.suppliers?.name || 'Unknown Supplier'}
                     </td>
-                    <td className="px-4 py-5 text-[10px] text-slate-500 text-right">
+                    <td className="px-4 py-0.5 text-[11px] text-slate-500 text-right">
                       {formatCurrency(purchase.cgst_amount || 0)}
                     </td>
-                    <td className="px-4 py-5 text-[10px] text-slate-500 text-right">
+                    <td className="px-4 py-0.5 text-[11px] text-slate-500 text-right">
                       {formatCurrency(purchase.sgst_amount || 0)}
                     </td>
-                    <td className="px-4 py-5 text-[10px] text-slate-500 text-right">
+                    <td className="px-4 py-0.5 text-[11px] text-slate-500 text-right">
                       {formatCurrency(purchase.igst_amount || 0)}
                     </td>
-                    <td className="px-4 py-5 text-[10px] font-bold text-slate-900 text-right">
+                    <td className="px-4 py-0.5 text-[11px] font-bold text-slate-900 text-right">
                       {formatCurrency(purchase.total_amount)}
                     </td>
-                    <td className="px-6 py-5 text-right">
+                    <td className="px-4 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(purchase)}

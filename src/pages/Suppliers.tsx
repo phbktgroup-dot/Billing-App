@@ -231,22 +231,6 @@ export default function Suppliers() {
       <PageHeader 
         title="Suppliers" 
         description="Manage your vendor information, track outstanding balances, and streamline procurement."
-        isDateFilterOpen={isDateFilterOpen}
-        dateFilter={
-          <DateFilter 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            day={day}
-            setDay={setDay}
-            year={year}
-            setYear={setYear}
-            customRange={customRange}
-            setCustomRange={setCustomRange}
-            iconOnly={true}
-            isOpen={isDateFilterOpen}
-            setIsOpen={setIsDateFilterOpen}
-          />
-        }
       >
         <div className="flex items-center space-x-2">
           
@@ -281,9 +265,18 @@ export default function Suppliers() {
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-              <Filter size={16} />
-            </button>
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              allowedTabs={['date', 'range']}
+              iconOnly={true}
+            />
             <div className="h-5 w-[1px] bg-slate-200"></div>
             <p className="text-xs text-slate-500">Showing {filteredSuppliers.length} of {suppliers.length} suppliers</p>
           </div>
@@ -293,8 +286,8 @@ export default function Suppliers() {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[8px] font-bold uppercase tracking-wider">
-                <th className="px-2.5 py-1.5 w-10">
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="px-4 py-2 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -302,14 +295,14 @@ export default function Suppliers() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-2.5 py-1.5">Supplier Name</th>
-                <th className="px-2.5 py-1.5">Contact Info</th>
-                <th className="px-2.5 py-1.5">GST Number</th>
-                <th className="px-2.5 py-1.5">Address</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+                <th className="px-4 py-2">Supplier Name</th>
+                <th className="px-4 py-2">Contact Info</th>
+                <th className="px-4 py-2">GST Number</th>
+                <th className="px-4 py-2">Address</th>
+                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center">
@@ -331,7 +324,7 @@ export default function Suppliers() {
                       selectedSuppliers.includes(supplier.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -339,41 +332,41 @@ export default function Suppliers() {
                         onChange={() => toggleSelectSupplier(supplier.id)}
                       />
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-[10px] mr-3">
                           {supplier.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-slate-900">{supplier.name}</p>
-                          <p className="text-[8px] text-slate-500">{supplier.email || 'No email'}</p>
+                          <p className="text-[11px] font-bold text-slate-900">{supplier.name}</p>
+                          <p className="text-[9px] text-slate-500">{supplier.email || 'No email'}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="space-y-1">
-                        <div className="flex items-center text-[10px] text-slate-600">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Phone size={10} className="mr-1.5 text-slate-400" />
                           {supplier.phone || 'N/A'}
                         </div>
-                        <div className="flex items-center text-[10px] text-slate-600">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Mail size={10} className="mr-1.5 text-slate-400" />
                           {supplier.email || 'N/A'}
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <span className="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
+                    <td className="px-4 py-0.5">
+                      <span className="text-[11px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
                         {supplier.gst_number || 'No GSTIN'}
                       </span>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
+                    <td className="px-4 py-0.5">
+                      <div className="flex items-start text-[11px] text-slate-600 max-w-[200px]">
                         <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{supplier.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-right">
+                    <td className="px-4 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(supplier)}

@@ -47,6 +47,68 @@
   }
 }
 
+/* react-day-picker v9 styling */
+.rdp-root {
+  --rdp-accent-color: #4f46e5;
+  --rdp-accent-background-color: #eef2ff;
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-day-border-radius: 50%;
+  --rdp-font-family: 'Inter', sans-serif;
+  --rdp-font-size: 14px;
+}
+
+.rdp-day {
+  color: var(--rdp-accent-color) !important;
+}
+
+.rdp-head_cell {
+  color: #818cf8 !important;
+  font-weight: normal !important;
+  font-size: 13px;
+}
+
+.rdp-day_selected {
+  background-color: transparent !important;
+  color: var(--rdp-accent-color) !important;
+  border: 1.5px solid var(--rdp-accent-color) !important;
+  font-weight: bold !important;
+}
+
+.rdp-day_today {
+  color: var(--rdp-accent-color) !important;
+  border: 1.5px solid var(--rdp-accent-color) !important;
+  font-weight: bold !important;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: #f1f5f9 !important;
+}
+
+.rdp-caption_label {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  color: #1e293b !important;
+}
+
+.rdp-nav_button {
+  color: var(--rdp-accent-color) !important;
+}
+
+.rdp-day_range_start,
+.rdp-day_range_end {
+  background-color: var(--rdp-accent-color) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.rdp-day_range_middle {
+  background-color: var(--rdp-accent-background-color) !important;
+  color: var(--rdp-accent-color) !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

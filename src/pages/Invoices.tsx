@@ -673,9 +673,18 @@ export default function Invoices() {
               <option value="overdue">Overdue</option>
             </select>
             <div className="flex items-center space-x-2">
-              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all h-10 sm:h-9 w-10 flex items-center justify-center">
-                <Filter size={16} />
-              </button>
+              <DateFilter 
+                filterType={filterType}
+                setFilterType={setFilterType}
+                day={day}
+                setDay={setDay}
+                year={year}
+                setYear={setYear}
+                customRange={customRange}
+                setCustomRange={setCustomRange}
+                allowedTabs={['date', 'range']}
+                iconOnly={true}
+              />
               <div className="h-4 w-[1px] bg-slate-200 mx-2"></div>
               <p className="text-[11px] font-medium text-slate-500">Showing {filteredInvoices.length} of {invoices.length} invoices</p>
             </div>
@@ -689,8 +698,8 @@ export default function Invoices() {
         <div className="hidden lg:block overflow-x-auto min-h-[450px]">
           <table className="w-full text-left min-w-[800px]">
             <thead>
-              <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                <th className="px-2.5 py-2 w-10">
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="px-4 py-2 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -698,16 +707,16 @@ export default function Invoices() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-2.5 py-2">Invoice #</th>
-                <th className="px-2.5 py-2">Customer</th>
-                <th className="px-2.5 py-2">Date</th>
-                <th className="px-2.5 py-2">Amount</th>
-                <th className="px-2.5 py-2">Status</th>
-                <th className="px-2.5 py-2">Payment Mode</th>
-                <th className="px-2.5 py-2 text-right">Actions</th>
+                <th className="px-4 py-2">Invoice #</th>
+                <th className="px-4 py-2">Customer</th>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2 text-right">Amount</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Payment Mode</th>
+                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center">
@@ -741,7 +750,7 @@ export default function Invoices() {
                         selectedInvoices.includes(invoice.id) && "bg-primary/5"
                       )}
                     >
-                      <td className="px-2.5 py-0">
+                    <td className="px-4 py-0.5">
                         <input 
                           type="checkbox" 
                           className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -749,28 +758,28 @@ export default function Invoices() {
                           onChange={() => toggleSelectInvoice(invoice.id)}
                         />
                       </td>
-                      <td className="px-2.5 py-0">
-                        <span className="text-xs font-bold text-slate-900">{invoice.invoice_number}</span>
+                      <td className="px-4 py-0.5">
+                        <span className="text-[11px] font-bold text-slate-900">{invoice.invoice_number}</span>
                       </td>
-                      <td className="px-2.5 py-0">
+                      <td className="px-4 py-0.5">
                         <div className="flex items-center">
                           <User size={12} className="mr-2 text-slate-400" />
-                          <span className="text-xs text-slate-600">{invoice.customers?.name}</span>
+                          <span className="text-[11px] text-slate-600">{invoice.customers?.name}</span>
                         </div>
                       </td>
-                      <td className="px-2.5 py-0">
-                        <div className="flex items-center text-xs text-slate-600">
+                      <td className="px-4 py-0.5">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Calendar size={12} className="mr-2 text-slate-400" />
                           {new Date(invoice.date).toLocaleDateString()}
                         </div>
                       </td>
-                      <td className="px-2.5 py-0">
-                        <span className="text-xs font-bold text-slate-900">{formatCurrency(invoice.total)}</span>
+                      <td className="px-4 py-0.5 text-right">
+                        <span className="text-[11px] font-bold text-slate-900">{formatCurrency(invoice.total)}</span>
                       </td>
-                      <td className="px-2.5 py-0">
+                      <td className="px-4 py-0.5">
                         <select 
                           className={cn(
-                            "px-2 py-0 rounded-full text-[10px] font-bold uppercase outline-none cursor-pointer",
+                            "px-2 py-0 rounded-md text-[9px] font-bold uppercase outline-none cursor-pointer",
                             getStatusColor(invoice.status)
                           )}
                           value={invoice.status}
@@ -781,10 +790,10 @@ export default function Invoices() {
                           <option value="overdue">Overdue</option>
                         </select>
                       </td>
-                      <td className="px-2.5 py-0">
-                        <span className="text-xs text-slate-600">{invoice.payment_mode || 'Cash'}</span>
+                      <td className="px-4 py-0.5">
+                        <span className="text-[11px] text-slate-600">{invoice.payment_mode || 'Cash'}</span>
                       </td>
-                      <td className="px-2.5 py-0 text-right relative">
+                      <td className="px-4 py-0.5 text-right relative">
                         <div className="flex items-center justify-end space-x-1">
                           <button 
                             onClick={() => navigate(`/invoices/edit/${invoice.id}`)}

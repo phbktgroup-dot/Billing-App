@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { FilterIcon } from './icons/FilterIcon';
-import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, subYears, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { cn, FilterType } from '../lib/utils';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface DateFilterProps {
   filterType: FilterType;
@@ -32,13 +33,54 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   const setIsOpen = externalSetIsOpen || setInternalIsOpen;
   const dropdownRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<'presets' | 'date' | 'range' | 'year'>(allowedTabs ? allowedTabs[0] : 'presets');
+  const desktopPortalRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  
+  useEffect(() => {
+    if (isOpen && dropdownRef.current) {
+      const updatePosition = () => {
+        const button = dropdownRef.current?.querySelector('button');
+        if (!button) return;
+        const rect = button.getBoundingClientRect();
+        
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const dropdownHeight = 420; // approximate max height
+        
+        let style: React.CSSProperties = {
+          position: 'fixed',
+          right: window.innerWidth - rect.right,
+          zIndex: 99999,
+        };
+
+        if (spaceBelow < dropdownHeight && rect.top > spaceBelow) {
+          style.bottom = window.innerHeight - rect.top + 8;
+        } else {
+          style.top = rect.bottom + 8;
+        }
+        setDropdownStyle(style);
+      };
+
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isOpen]);
+
+  const [activeTab, setActiveTab] = useState<'presets' | 'date' | 'range' | 'year'>(
+    allowedTabs ? (allowedTabs.includes('date') ? 'date' : allowedTabs[0]) : 'date'
+  );
   
   useEffect(() => {
     if (allowedTabs && !allowedTabs.includes(activeTab)) {
-      setActiveTab(allowedTabs[0]);
+      setActiveTab(allowedTabs.includes('date') ? 'date' : allowedTabs[0]);
     }
-  }, [allowedTabs]);
+  }, [allowedTabs, activeTab]);
+
   const parseDateString = (dateStr: string) => {
     if (!dateStr) return undefined;
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -54,15 +96,16 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!document.contains(target)) return; // Ignore clicks on elements removed from DOM
+      if (!document.contains(target)) return; 
       if (dropdownRef.current && !dropdownRef.current.contains(target) && 
-          portalRef.current && !portalRef.current.contains(target)) {
+          portalRef.current && !portalRef.current.contains(target) &&
+          desktopPortalRef.current && !desktopPortalRef.current.contains(target)) {
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [setIsOpen]);
 
   const handlePresetSelect = (type: FilterType) => {
     setFilterType(type);
@@ -88,7 +131,6 @@ export const DateFilter: React.FC<DateFilterProps> = ({
         end: format(range.to, 'yyyy-MM-dd')
       });
       setFilterType('custom');
-      // Don't close immediately on range select to allow user to see selection
     }
   };
 
@@ -112,7 +154,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       case 'lastYear': return 'Last Year';
       case 'last7Days': return 'Last 7 Days';
       case 'last30Days': return 'Last 30 Days';
-      case 'year': return `Year ${year}`;
+      case 'year': return `${year}-${(year + 1).toString().slice(2)}`;
       case 'day': {
         if (!day) return 'Select Date';
         const [y, m, d] = day.split('-').map(Number);
@@ -138,37 +180,9 @@ export const DateFilter: React.FC<DateFilterProps> = ({
     { id: 'last30Days', label: 'Last 30 Days' },
   ];
 
-  const dialogContent = isOpen && (
-    <div ref={portalRef}>
-      {/* Mobile Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9998] sm:hidden" 
-        onClick={() => setIsOpen(false)}
-      />
-      
-      <div className="fixed inset-0 sm:top-20 sm:right-4 sm:bottom-auto sm:left-auto w-full h-full sm:h-auto sm:w-[340px] bg-white sm:rounded-2xl shadow-2xl border border-slate-200 z-[9999] flex flex-col duration-200 overflow-hidden opacity-100">
-        
-        {/* Mobile Header */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 sm:hidden">
-          <h3 className="text-sm font-bold text-slate-900">Filter by Date</h3>
-          <button onClick={() => setIsOpen(false)} className="p-2 -mr-2 text-slate-400 hover:text-slate-600">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Tabs */}
+  const renderContent = () => (
+    <>
       <div className="flex border-b border-slate-100 p-1 bg-slate-50/50">
-        {(!allowedTabs || allowedTabs.includes('presets')) && (
-          <button 
-            onClick={() => setActiveTab('presets')}
-            className={cn(
-              "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
-              activeTab === 'presets' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-            )}
-          >
-            Presets
-          </button>
-        )}
         {(!allowedTabs || allowedTabs.includes('date')) && (
           <button 
             onClick={() => setActiveTab('date')}
@@ -188,7 +202,18 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               activeTab === 'range' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             )}
           >
-            Range
+            Date Range
+          </button>
+        )}
+        {(!allowedTabs || allowedTabs.includes('presets')) && (
+          <button 
+            onClick={() => setActiveTab('presets')}
+            className={cn(
+              "flex-1 py-2 text-[11px] font-bold rounded-xl transition-all",
+              activeTab === 'presets' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            Presets
           </button>
         )}
         {(!allowedTabs || allowedTabs.includes('year')) && (
@@ -235,6 +260,36 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               startMonth={new Date(1900, 0)}
               endMonth={new Date(2100, 11)}
               captionLayout="dropdown"
+              footer={
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 w-full">
+                  <button 
+                    onClick={() => handleDateSelect(undefined)}
+                    className="text-primary text-xs font-bold hover:underline transition-all"
+                  >
+                    Clear
+                  </button>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => handlePresetSelect('thisMonth')}
+                      className="text-primary text-xs font-bold hover:underline transition-all"
+                    >
+                      This Month
+                    </button>
+                    <button 
+                      onClick={() => handlePresetSelect('thisYear')}
+                      className="text-primary text-xs font-bold hover:underline transition-all"
+                    >
+                      This Year
+                    </button>
+                  </div>
+                  <button 
+                    onClick={() => handleDateSelect(new Date())}
+                    className="text-primary text-xs font-bold hover:underline transition-all"
+                  >
+                    Today
+                  </button>
+                </div>
+              }
             />
           </div>
         )}
@@ -249,16 +304,24 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               startMonth={new Date(1900, 0)}
               endMonth={new Date(2100, 11)}
               captionLayout="dropdown"
+              footer={
+                <div className="w-full mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                  <button 
+                    onClick={() => setSelectedRange(undefined)}
+                    className="text-primary text-xs font-bold hover:underline transition-all"
+                  >
+                    Clear
+                  </button>
+                  <button 
+                    onClick={applyRange}
+                    disabled={!selectedRange?.from || !selectedRange?.to}
+                    className="btn-primary py-2 px-4 text-xs disabled:opacity-50"
+                  >
+                    Apply Range
+                  </button>
+                </div>
+              }
             />
-            <div className="w-full mt-4 pt-4 border-t border-slate-100 flex justify-end">
-              <button 
-                onClick={applyRange}
-                disabled={!selectedRange?.from || !selectedRange?.to}
-                className="btn-primary py-2 px-4 text-xs disabled:opacity-50"
-              >
-                Apply Range
-              </button>
-            </div>
           </div>
         )}
 
@@ -281,15 +344,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                       : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                   )}
                 >
-                  {y}
+                  {y}-{String(y + 1).slice(2)}
                 </button>
               ))}
             </div>
           </div>
         )}
       </div>
-    </div>
-    </div>
+    </>
   );
 
   return (
@@ -307,7 +369,55 @@ export const DateFilter: React.FC<DateFilterProps> = ({
         {!iconOnly && getLabel()}
       </button>
 
-      {createPortal(dialogContent, document.body)}
+      <AnimatePresence>
+        {isOpen && (
+          <React.Fragment key="mobile-portal">
+            {/* Mobile View: Full Screen Portal */}
+            <div className="md:hidden">
+              {createPortal(
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="fixed inset-0 bg-white z-[50000] flex flex-col md:hidden" 
+                  ref={portalRef}
+                >
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                    <h3 className="text-sm font-bold text-slate-900">Filter by Date</h3>
+                    <button onClick={() => setIsOpen(false)} className="p-2 -mr-2 text-slate-400 hover:text-slate-600">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    {renderContent()}
+                  </div>
+                </motion.div>,
+                document.body
+              )}
+            </div>
+          </React.Fragment>
+        )}
+
+        {isOpen && (
+          /* Desktop View: Portal Dropdown */
+          <div className="hidden md:block">
+            {createPortal(
+              <motion.div 
+                key="desktop-dropdown"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                style={dropdownStyle}
+                className="fixed w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[99999] flex flex-col overflow-hidden"
+                ref={desktopPortalRef}
+              >
+                {renderContent()}
+              </motion.div>,
+              document.body
+            )}
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

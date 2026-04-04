@@ -15,11 +15,12 @@ import {
   MapPin,
   IdCard
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, getDateRange, FilterType } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
+import { DateFilter } from '../components/DateFilter';
 import Drawer from '../components/Drawer';
 
 interface Transporter {
@@ -43,6 +44,10 @@ export default function Transporters() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [transporterToDelete, setTransporterToDelete] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const businessId = profile?.business_id;
 
@@ -58,15 +63,19 @@ export default function Transporters() {
     if (businessId) {
       fetchTransporters();
     }
-  }, [businessId]);
+  }, [businessId, filterType, customRange, day, year]);
 
   const fetchTransporters = async () => {
     setLoading(true);
     try {
+      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+
       const { data, error } = await supabase
         .from('transporters')
         .select('*')
         .eq('business_id', businessId)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -190,6 +199,19 @@ export default function Transporters() {
             />
           </div>
           <div className="flex items-center space-x-2">
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              allowedTabs={['date', 'range']}
+              iconOnly={true}
+            />
+            <div className="h-5 w-[1px] bg-slate-200"></div>
             <p className="text-xs text-slate-500">Showing {filteredTransporters.length} of {transporters.length} transporters</p>
           </div>
         </div>
@@ -198,11 +220,11 @@ export default function Transporters() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-2.5 py-2 whitespace-nowrap">Transporter Name</th>
-                <th className="px-2.5 py-2 whitespace-nowrap">Transporter ID / GSTIN</th>
-                <th className="px-2.5 py-2 whitespace-nowrap">Contact Info</th>
-                <th className="px-2.5 py-2 whitespace-nowrap">Address</th>
-                <th className="px-2.5 py-2 text-right whitespace-nowrap">Actions</th>
+                <th className="px-4 py-2 whitespace-nowrap">Transporter Name</th>
+                <th className="px-4 py-2 whitespace-nowrap">Transporter ID / GSTIN</th>
+                <th className="px-4 py-2 whitespace-nowrap">Contact Info</th>
+                <th className="px-4 py-2 whitespace-nowrap">Address</th>
+                <th className="px-4 py-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-500">
@@ -224,7 +246,7 @@ export default function Transporters() {
               ) : (
                 filteredTransporters.map((transporter) => (
                   <tr key={transporter.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2.5 py-0.5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center">
                         <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-2 text-[10px]">
                           {transporter.name.charAt(0).toUpperCase()}
@@ -234,31 +256,31 @@ export default function Transporters() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-0.5">
-                      <div className="flex items-center text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 w-fit">
+                    <td className="px-4 py-0.5">
+                      <div className="flex items-center text-[11px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 w-fit">
                         <IdCard size={10} className="mr-1.5 text-slate-400" />
                         {transporter.transporter_id}
                       </div>
                     </td>
-                    <td className="px-2.5 py-0.5">
+                    <td className="px-4 py-0.5">
                       <div className="space-y-0.5">
-                        <div className="flex items-center text-[10px] text-slate-600">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Phone size={10} className="mr-1.5 text-slate-400" />
                           {transporter.phone || 'N/A'}
                         </div>
-                        <div className="flex items-center text-[10px] text-slate-600">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Mail size={10} className="mr-1.5 text-slate-400" />
                           {transporter.email || 'N/A'}
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-0.5">
-                      <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
+                    <td className="px-4 py-0.5">
+                      <div className="flex items-start text-[11px] text-slate-600 max-w-[200px]">
                         <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{transporter.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-2.5 py-0.5 text-right">
+                    <td className="px-4 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(transporter)}

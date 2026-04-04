@@ -327,9 +327,18 @@ export default function Customers() {
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all">
-              <Filter size={16} />
-            </button>
+            <DateFilter 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              day={day}
+              setDay={setDay}
+              year={year}
+              setYear={setYear}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              allowedTabs={['date', 'range']}
+              iconOnly={true}
+            />
             <div className="h-5 w-[1px] bg-slate-200"></div>
             <p className="text-xs text-slate-500">Showing {filteredCustomers.length} of {customers.length} customers</p>
           </div>
@@ -339,8 +348,8 @@ export default function Customers() {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                <th className="px-2.5 py-1.5 w-10">
+              <tr className="bg-black text-white text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="px-4 py-2 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -348,14 +357,14 @@ export default function Customers() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-2.5 py-1.5">Customer Name</th>
-                <th className="px-2.5 py-1.5">Contact Info</th>
-                <th className="px-2.5 py-1.5">GSTIN</th>
-                <th className="px-2.5 py-1.5">Address</th>
-                <th className="px-2.5 py-1.5 text-right">Actions</th>
+                <th className="px-4 py-2">Customer Name</th>
+                <th className="px-4 py-2">Contact Info</th>
+                <th className="px-4 py-2">GSTIN</th>
+                <th className="px-4 py-2">Address</th>
+                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-500">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
@@ -380,7 +389,7 @@ export default function Customers() {
                       selectedCustomers.includes(customer.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <input 
                         type="checkbox" 
                         className="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
@@ -388,41 +397,41 @@ export default function Customers() {
                         onChange={() => toggleSelectCustomer(customer.id)}
                       />
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 text-[10px]">
                           {customer.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-slate-900">{customer.name}</p>
-                          <p className="text-[8px] text-slate-500">ID: {customer.id.split('-')[0]}</p>
+                          <p className="text-[11px] font-bold text-slate-900">{customer.name}</p>
+                          <p className="text-[9px] text-slate-500">ID: {customer.id.split('-')[0]}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className="px-4 py-0.5">
                       <div className="space-y-1">
-                        <div className="flex items-center text-[10px] text-slate-600">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Phone size={10} className="mr-1.5 text-slate-400" />
                           {customer.phone || 'N/A'}
                         </div>
-                        <div className="flex items-center text-[10px] text-slate-600">
+                        <div className="flex items-center text-[11px] text-slate-600">
                           <Mail size={10} className="mr-1.5 text-slate-400" />
                           {customer.email || 'N/A'}
                         </div>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <span className="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
+                    <td className="px-4 py-0.5">
+                      <span className="text-[11px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
                         {customer.gstin || 'No GSTIN'}
                       </span>
                     </td>
-                    <td className="px-2.5 py-1.5">
-                      <div className="flex items-start text-[10px] text-slate-600 max-w-[200px]">
+                    <td className="px-4 py-0.5">
+                      <div className="flex items-start text-[11px] text-slate-600 max-w-[200px]">
                         <MapPin size={10} className="mr-1.5 text-slate-400 shrink-0 mt-0.5" />
                         <span className="truncate">{customer.address || 'No address provided'}</span>
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-right">
+                    <td className="px-4 py-0.5 text-right">
                       <div className="flex items-center justify-end space-x-1">
                         <button 
                           onClick={() => openModal(customer)}

@@ -1,11 +1,21 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 export type FilterType = 'today' | 'yesterday' | 'last7Days' | 'last30Days' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'lastYear' | 'allTime' | 'custom' | 'day' | 'year';
+
+export function formatDate(date: Date): string {
+  return format(date, 'yyyy-MM-dd');
+}
+
+export function formatDisplayDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return format(d, 'dd-MM-yyyy');
+}
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -88,13 +98,22 @@ export function getDateRange(filter: FilterType, day?: string, year?: number, cu
       start = new Date(now.getFullYear(), lastQuarter * 3, 1);
       end = new Date(now.getFullYear(), (lastQuarter + 1) * 3, 0);
       break;
-    case 'thisYear':
-      start = new Date(now.getFullYear(), 0, 1);
+    case 'thisYear': {
+      const currentMonth = now.getMonth();
+      const fyStartYear = currentMonth >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      start = new Date(fyStartYear, 3, 1);
+      end = new Date(fyStartYear + 1, 2, 31);
+      end.setHours(23, 59, 59, 999);
       break;
-    case 'lastYear':
-      start = new Date(now.getFullYear() - 1, 0, 1);
-      end = new Date(now.getFullYear() - 1, 11, 31);
+    }
+    case 'lastYear': {
+      const currentMonth = now.getMonth();
+      const fyStartYear = currentMonth >= 3 ? now.getFullYear() - 1 : now.getFullYear() - 2;
+      start = new Date(fyStartYear, 3, 1);
+      end = new Date(fyStartYear + 1, 2, 31);
+      end.setHours(23, 59, 59, 999);
       break;
+    }
     case 'allTime':
       start = new Date(2000, 0, 1);
       break;
@@ -109,8 +128,9 @@ export function getDateRange(filter: FilterType, day?: string, year?: number, cu
       break;
     case 'year':
       if (year) {
-        start = new Date(year, 0, 1);
-        end = new Date(year, 11, 31);
+        start = new Date(year, 3, 1);
+        end = new Date(year + 1, 2, 31);
+        end.setHours(23, 59, 59, 999);
       }
       break;
     case 'custom':
