@@ -1628,7 +1628,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-[40]">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                   <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
                     <div className="relative z-[100]" ref={customerListRef}>
@@ -1663,7 +1663,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       
                       {/* Custom Customer Dropdown */}
                       {showCustomerList && customers.length > 0 && (
-                        <div className="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                        <div className="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 md:max-h-64 overflow-y-auto">
                           <div className="p-1 bg-white">
                             <div className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
                               Select Customer
@@ -1769,25 +1769,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     <div className="relative">
                       <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                       <input 
-                        type="text" 
-                        placeholder="DD/MM/YYYY"
+                        type="date" 
                         className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
-                        value={date ? date.split('-').reverse().join('/') : ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          // Basic validation/parsing for DD/MM/YYYY
-                          if (val.length <= 10) {
-                            const parts = val.split('/');
-                            if (parts.length === 3 && parts[2].length === 4) {
-                              const yyyymmdd = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                              setDate(yyyymmdd);
-                            }
-                          }
-                        }}
-                      />
-                      <input 
-                        type="date"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
                         value={date}
                         onChange={e => setDate(e.target.value)}
                       />
@@ -2860,21 +2843,21 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
             <h4 className="text-xs font-black uppercase tracking-widest">Scanned Items</h4>
           </div>
           <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-sm bg-white">
-            <table className="w-full text-left border-collapse min-w-[500px]">
+            <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
-                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Particular</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">HSN</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Unit</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Qty</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-1/3">Particular</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">HSN</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Unit</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Qty</th>
                   <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24">Rate</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-28 text-right">Amount</th>
+                  <th className="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {editedData.items.map((item: any, idx: number) => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 w-1/3">
                       <input 
                         type="text" 
                         className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 transition-all outline-none"
@@ -2886,7 +2869,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 w-20">
                       <input 
                         type="text" 
                         className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 transition-all outline-none text-center"
@@ -2899,7 +2882,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         placeholder="HSN"
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 w-20">
                       <select 
                         className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-600 transition-all outline-none text-center"
                         value={item.unitType || 'NUMBERS'}
@@ -2914,7 +2897,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         ))}
                       </select>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 w-16">
                       <input 
                         type="number" 
                         className="w-full bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 transition-all outline-none text-center"
@@ -2927,7 +2910,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 w-24">
                       <input 
                         type="number" 
                         className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 transition-all outline-none"
@@ -2940,7 +2923,7 @@ const ScannedReviewModal = ({ isOpen, onClose, data, onConfirm }: ScannedReviewM
                         }}
                       />
                     </td>
-                    <td className="px-3 py-2 text-right text-xs font-black text-slate-900 bg-slate-50/50 group-hover:bg-slate-100/50 transition-colors">
+                    <td className="px-3 py-2 w-24 text-right text-xs font-black text-slate-900 bg-slate-50/50 group-hover:bg-slate-100/50 transition-colors">
                       {formatCurrency(item.amount)}
                     </td>
                   </tr>

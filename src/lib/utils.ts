@@ -134,12 +134,18 @@ export function downloadFile(data: string | Blob, filename: string) {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
-  if (typeof data !== 'string') {
-    URL.revokeObjectURL(url);
-  }
+  
+  // Delay removal to ensure the download starts in some WebViews
+  setTimeout(() => {
+    document.body.removeChild(link);
+    if (typeof data !== 'string') {
+      URL.revokeObjectURL(url);
+    }
+  }, 100);
 }
 
 export function formatSeriesNumber(num: number, prefix: string = '', lengthOrName: number | string = 4): string {

@@ -374,7 +374,13 @@ export default function Invoices() {
         
         // Small delay to ensure PDF download starts before opening WhatsApp
         setTimeout(() => {
-          window.open(whatsappUrl, '_blank');
+          // Try whatsapp:// scheme first for Android app
+          window.location.href = `whatsapp://send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+          
+          // Fallback if whatsapp:// doesn't work
+          setTimeout(() => {
+            window.open(whatsappUrl, '_blank');
+          }, 500);
         }, 1000);
       } else {
         alert('Customer phone number not found. Please add a phone number to the customer profile.');

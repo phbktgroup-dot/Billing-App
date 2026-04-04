@@ -1218,16 +1218,15 @@ Return as JSON format: {
 
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-900/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 md:p-8">
             <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="bg-white shadow-2xl overflow-hidden flex flex-col h-full transition-all duration-300"
-              style={{ width: 'calc(100% - var(--sidebar-width))' }}
+              className="bg-white shadow-2xl overflow-hidden flex flex-col h-full md:h-[90vh] w-full max-w-4xl rounded-t-2xl md:rounded-2xl transition-all duration-300"
             >
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center">
                   <ShoppingCart size={20} className="mr-2 text-primary" />
                   {editingPurchase ? 'Edit Purchase' : 'Record Purchase'}

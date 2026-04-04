@@ -982,53 +982,7 @@ export default function Settings() {
                   </div>
                   
                   {/* API Keys */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-900">API Integration Key</p>
-                      {profile?.role === 'Super Admin' && (
-                        <a 
-                          href="https://aistudio.google.com/app/apikey" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-[10px] font-bold text-primary hover:underline"
-                        >
-                          Get API Key
-                        </a>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <input 
-                        type="password" 
-                        placeholder="Paste your API Key here"
-                        className={cn(
-                          "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none",
-                          profile?.role === 'Super Admin' ? "focus:border-primary" : "cursor-not-allowed opacity-70"
-                        )}
-                        value={formData.geminiApiKey}
-                        onChange={e => setFormData({...formData, geminiApiKey: e.target.value})}
-                        readOnly={profile?.role !== 'Super Admin'}
-                      />
-                      <div className="flex space-x-2">
-                        {profile?.role === 'Super Admin' && (
-                          <button 
-                            onClick={handleSubmit}
-                            disabled={isLoading}
-                            className="btn-primary px-4 py-1.5 text-[10px]"
-                          >
-                            {isLoading ? 'Saving...' : 'Save API Key'}
-                          </button>
-                        )}
-                        <button 
-                          onClick={handleTestKey}
-                          disabled={isTestingKey || !formData.geminiApiKey}
-                          className="px-4 h-10 sm:h-9 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center justify-center"
-                        >
-                          {isTestingKey ? <Loader2 size={12} className="animate-spin mr-1.5" /> : <ShieldCheck size={12} className="mr-1.5" />}
-                          Test Connection
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  {/* API Integration Key section hidden for all users */}
 
                   {/* Device Management */}
                   <div className="space-y-2">

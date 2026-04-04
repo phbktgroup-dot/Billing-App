@@ -58,7 +58,7 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
   return (
     <div className={cn("space-y-2", depth > 0 && "pl-4 md:pl-6 border-l-2 border-slate-200 ml-3 md:ml-4 mt-2")}>
       <div className={cn(
-        "glass-card p-2.5 flex items-center justify-between transition-all hover:shadow-md",
+        "glass-card p-2.5 flex flex-wrap items-center justify-between transition-all hover:shadow-md gap-2",
         !isActive && "opacity-60 grayscale",
         user.role === 'Super Admin' ? "bg-slate-900 text-white" : 
         user.role === 'Admin' ? "border-l-4 border-primary bg-white" : "bg-slate-50/80"
@@ -121,7 +121,7 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
             >
               <Edit2 size={14} />
             </button>
-            {isSuperAdmin && onEditApiKey && (
+            {(isSuperAdmin || isAdmin) && onEditApiKey && (
               <button 
                 onClick={() => onEditApiKey(user)}
                 className={cn("p-1 rounded-lg transition-all", user.role === 'Super Admin' ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-amber-500 hover:bg-amber-50")}
@@ -1346,7 +1346,7 @@ export default function AdminPanel() {
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">API Integration Key</label>
               <div className="relative">
                 <input 
-                  type="text" 
+                  type="password" 
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all pr-10" 
                   value={newApiKey}
                   onChange={e => setNewApiKey(e.target.value)}

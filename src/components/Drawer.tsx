@@ -46,7 +46,7 @@ const Drawer: React.FC<DrawerProps> = ({
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div
+            <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -54,20 +54,21 @@ const Drawer: React.FC<DrawerProps> = ({
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[99999]"
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
             className={cn(
-              "fixed bottom-0 right-0 z-[100000] flex items-center justify-center transition-all duration-300",
-              "left-0 md:left-[var(--sidebar-width,0px)]",
-              maxWidth === 'max-w-sm' ? "top-0 p-4 md:p-4 lg:p-8 md:pt-4 lg:pt-8" : "top-16 md:top-0 p-0 md:p-4 lg:p-8"
+              "fixed inset-0 z-[100000] flex items-end md:items-center justify-center p-0 md:p-8",
+              "md:left-[var(--sidebar-width,0px)]"
             )}
           >
             <div 
               className={cn(
                 "bg-white shadow-2xl flex flex-col w-full overflow-hidden",
-                fullScreen ? "h-full max-w-none rounded-none md:rounded-2xl" : cn("max-h-full md:max-h-[90vh] rounded-none md:rounded-2xl", maxWidth),
-                !fullScreen && maxWidth !== 'max-w-sm' ? "h-full md:h-auto" : maxWidth === 'max-w-sm' ? "rounded-2xl" : ""
+                fullScreen 
+                  ? "h-full max-w-none rounded-none" 
+                  : "h-full md:h-auto max-h-full md:max-h-[90vh] rounded-none md:rounded-2xl",
+                !fullScreen && maxWidth
               )}
               ref={drawerRef}
             >
