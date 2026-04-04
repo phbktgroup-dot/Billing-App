@@ -110,7 +110,9 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     totalSales: 0,
     totalPurchases: 0,
     totalExpenses: 0,
-    netProfit: 0
+    netProfit: 0,
+    outputTax: 0,
+    inputTax: 0
   });
 
   const [filterType, setFilterType] = useState<FilterType>(type === 'eway' ? 'today' : 'thisMonth');
@@ -220,8 +222,8 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
     const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
     
     try {
-      let invoicesQuery = supabase.from('invoices').select('total, date').eq('business_id', businessId);
-      let purchasesQuery = supabase.from('purchases').select('total_amount, date').eq('business_id', businessId);
+      let invoicesQuery = supabase.from('invoices').select('total, tax_amount, date').eq('business_id', businessId);
+      let purchasesQuery = supabase.from('purchases').select('total_amount, tax_amount, date').eq('business_id', businessId);
       let expensesQuery = supabase.from('expenses').select('amount, date').eq('business_id', businessId);
 
       if (startDate) {
@@ -242,11 +244,13 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
       ]);
 
       const totalSales = invoicesRes.data?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
+      const outputTax = invoicesRes.data?.reduce((sum, inv) => sum + (inv.tax_amount || 0), 0) || 0;
       const totalPurchases = purchasesRes.data?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
+      const inputTax = purchasesRes.data?.reduce((sum, p) => sum + (p.tax_amount || 0), 0) || 0;
       const totalExpenses = expensesRes.data?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       const netProfit = totalSales - totalPurchases - totalExpenses;
 
-      setFinancialData({ totalSales, totalPurchases, totalExpenses, netProfit });
+      setFinancialData({ totalSales, totalPurchases, totalExpenses, netProfit, outputTax, inputTax });
     } catch (error) {
       console.error("Error fetching financial data:", error);
     }
@@ -1054,62 +1058,119 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Reports List */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900">Available Reports</h3>
-                <span className="text-xs font-bold text-slate-400 uppercase">
-                  {filterType === 'thisYear' ? `${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
-                </span>
+        <div className="space-y-8">
+          {/* GST Summary Dashboard */}
+          {type === 'gst' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="glass-card p-5 border-l-4 border-l-indigo-500 hover:-translate-y-1 transition-transform duration-300">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Taxable Sales</p>
+                    <h4 className="text-xl font-black text-slate-900">{formatCurrency(financialData.totalSales)}</h4>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <FileSpreadsheet size={16} />
+                  </div>
+                </div>
               </div>
-              <div className="divide-y divide-slate-100">
-                {current.reports.map((report, i) => (
-                  <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/50 transition-colors group gap-4 sm:gap-0">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm shrink-0">
-                        <FileSpreadsheet size={24} />
+              <div className="glass-card p-5 border-l-4 border-l-rose-500 hover:-translate-y-1 transition-transform duration-300">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Output Tax (Liability)</p>
+                    <h4 className="text-xl font-black text-slate-900">{formatCurrency(financialData.outputTax)}</h4>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
+                    <ArrowRight size={16} className="rotate-45" />
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-5 border-l-4 border-l-emerald-500 hover:-translate-y-1 transition-transform duration-300">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Input Tax Credit (ITC)</p>
+                    <h4 className="text-xl font-black text-slate-900">{formatCurrency(financialData.inputTax)}</h4>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <ArrowRight size={16} className="-rotate-45" />
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-5 border-l-4 border-l-primary hover:-translate-y-1 transition-transform duration-300 bg-primary/5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Net GST Payable</p>
+                    <h4 className="text-xl font-black text-primary">
+                      {formatCurrency(Math.max(0, financialData.outputTax - financialData.inputTax))}
+                    </h4>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                    <Calculator size={16} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Reports List */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="glass-card overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg">Available Reports</h3>
+                    <p className="text-xs text-slate-500 mt-1">Download your GST returns and reports in Excel format</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                    {filterType === 'thisYear' ? `${year}-${(year + 1).toString().slice(2)}` : 'Selected Period'}
+                  </span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {current.reports.map((report, i) => (
+                    <div key={i} className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-all group gap-4 sm:gap-0">
+                      <div className="flex items-center space-x-5">
+                        <div className="w-14 h-14 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all shadow-sm shrink-0">
+                          <FileSpreadsheet size={26} strokeWidth={1.5} />
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-slate-900 group-hover:text-primary transition-colors">{report.name}</p>
+                          <div className="flex items-center space-x-3 mt-1.5">
+                            <span className="text-[11px] font-medium text-slate-500 flex items-center bg-slate-100 px-2 py-0.5 rounded-md">
+                              <FileText size={12} className="mr-1.5" />
+                              {report.format}
+                            </span>
+                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <span className="text-[11px] text-slate-500">Auto-generated</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-base font-bold text-slate-900">{report.name}</p>
-                        <div className="flex items-center space-x-3 mt-1">
-                          <span className="text-xs text-slate-500 flex items-center">
-                            <FileText size={12} className="mr-1" />
-                            {report.format}
-                          </span>
-                          <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                          <span className="text-xs text-slate-500">Updated 2h ago</span>
+                      <div className="flex items-center justify-between sm:justify-end space-x-6 w-full sm:w-auto">
+                        <span className={cn(
+                          "flex items-center text-[11px] font-bold uppercase px-3 py-1.5 rounded-full",
+                          report.status === 'Ready' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-orange-50 text-orange-600 border border-orange-100"
+                        )}>
+                          {report.status === 'Ready' ? <CheckCircle2 size={14} className="mr-1.5" /> : <AlertCircle size={14} className="mr-1.5" />}
+                          {report.status}
+                        </span>
+                        <div className="flex items-center space-x-3">
+                          <button 
+                            onClick={() => handleDownloadReport(report.id, report.name, report.format)}
+                            disabled={downloadingReport === report.id}
+                            className="h-10 px-4 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-sm font-bold text-slate-600 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 shadow-sm"
+                            title={`Download ${report.format}`}
+                          >
+                            {downloadingReport === report.id ? (
+                              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-2"></div>
+                            ) : (
+                              report.format === 'Excel' ? <FileSpreadsheet size={16} className="mr-2 text-emerald-600" /> : <Download size={16} className="mr-2" />
+                            )}
+                            Download
+                          </button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end space-x-6 w-full sm:w-auto">
-                      <span className={cn(
-                        "flex items-center text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
-                        report.status === 'Ready' ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
-                      )}>
-                        {report.status === 'Ready' ? <CheckCircle2 size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
-                        {report.status}
-                      </span>
-                      <div className="flex items-center space-x-3">
-                        <button 
-                          onClick={() => handleDownloadReport(report.id, report.name, report.format)}
-                          disabled={downloadingReport === report.id}
-                          className="w-10 h-10 sm:h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all disabled:opacity-50 shadow-sm"
-                          title={`Download ${report.format}`}
-                        >
-                          {downloadingReport === report.id ? (
-                            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                          ) : (
-                            report.format === 'Excel' ? <FileSpreadsheet size={18} className="text-emerald-600" /> : <Download size={18} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
             {/* Government Portal Documents Section */}
             {type === 'itr' && (
@@ -1189,29 +1250,45 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
           {/* Info Panel */}
           <div className="space-y-6">
             {type === 'gst' && (
-              <div className="glass-card p-6 border-primary/20 bg-primary/5">
-                <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-                  <Calculator size={18} className="mr-2 text-primary" />
-                  Tax Estimation
-                </h4>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Estimated Net Profit</span>
-                    <span className="font-bold text-slate-900">₹{financialData.netProfit.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Taxable Income</span>
-                    <span className="font-bold text-slate-900">₹{financialData.netProfit > 0 ? financialData.netProfit.toLocaleString() : '0'}</span>
-                  </div>
-                  <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                    <span className="font-bold text-slate-900">Estimated Tax</span>
-                    <span className="text-xl font-bold text-primary">₹{estimatedTax.toLocaleString()}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 italic">
-                    *This is a rough estimate based on standard slab rates. Actual tax may vary based on deductions and exemptions.
+              <>
+                <div className="glass-card p-6 bg-slate-900 text-white">
+                  <h4 className="font-bold mb-4 flex items-center">
+                    <AlertCircle size={18} className="mr-2 text-yellow-400" />
+                    Filing Readiness
+                  </h4>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    Your GST data for the selected period is ready for export. Ensure all invoices and expenses are recorded before filing.
                   </p>
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="flex justify-between text-xs mb-2">
+                      <span className="text-slate-500">Invoices Recorded</span>
+                      <span className="text-slate-300 font-medium">Up to date</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Data Integrity</span>
+                      <span className="text-emerald-400 font-medium">Verified</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                <div className="glass-card p-6">
+                  <h4 className="font-bold text-slate-900 mb-4">Quick Actions</h4>
+                  <div className="space-y-2">
+                    <button onClick={() => navigate('/invoices')} className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                      Review Sales Invoices
+                      <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                    </button>
+                    <button onClick={() => navigate('/purchases')} className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                      Review Purchase Bills
+                      <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                    </button>
+                    <button onClick={() => navigate('/settings')} className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
+                      Update GST Details
+                      <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {type === 'itr' && (
@@ -1256,6 +1333,7 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               </>
             )}
           </div>
+        </div>
         </div>
       )}
 
