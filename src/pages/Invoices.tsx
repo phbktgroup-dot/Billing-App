@@ -38,6 +38,10 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { generateInvoicePDF } from '../lib/pdfGenerator';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { toast } from 'react-hot-toast';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 import PageHeader from '../components/PageHeader';
 import Drawer from '../components/Drawer';
 import { DateFilter } from '../components/DateFilter';
@@ -345,7 +349,36 @@ export default function Invoices() {
       const customerPhone = invoiceData.customers?.phone;
       const message = `Dear ${invoiceData.customers?.name || 'Customer'},\n\nPlease find attached Invoice #${invoiceData.invoice_number} for ${formatCurrency(invoiceData.total)}.\n\nThank you for your business!`;
 
-      // 1. Try Web Share API (Best for mobile - allows attaching the file)
+      // 0. Try Capacitor Share (Best for Android APK)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const reader = new FileReader();
+          const base64Promise = new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+          });
+          reader.readAsDataURL(pdfBlob);
+          const base64Data = (await base64Promise).split(',')[1];
+
+          const fileName = `Invoice_${invoiceData.invoice_number}.pdf`;
+          const result = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Cache
+          });
+
+          await Share.share({
+            title: `Invoice #${invoiceData.invoice_number}`,
+            text: message,
+            url: result.uri,
+            dialogTitle: 'Share Invoice'
+          });
+          return;
+        } catch (capError) {
+          console.error('Capacitor share failed:', capError);
+        }
+      }
+
+      // 1. Try Web Share API (Best for mobile browser)
       if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], `Invoice_${invoiceData.invoice_number}.pdf`, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
@@ -367,6 +400,11 @@ export default function Invoices() {
         // Download the PDF first so the user has it ready to attach
         await generateInvoicePDF(pdfData, businessProfile);
         
+        toast.success('Invoice PDF downloaded. Please attach it manually in WhatsApp.', {
+          duration: 6000,
+          icon: '📎'
+        });
+
         const cleanPhone = customerPhone.replace(/\D/g, '');
         // Add country code if missing (assuming India +91 if 10 digits)
         const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
@@ -397,6 +435,35 @@ export default function Invoices() {
       const pdfBlob = await generateInvoicePDF(pdfData, businessProfile, true) as Blob;
       const message = `Invoice #${invoiceData.invoice_number} for ${formatCurrency(invoiceData.total)}`;
 
+      // 0. Try Capacitor Share (Best for Android APK)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const reader = new FileReader();
+          const base64Promise = new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string);
+          });
+          reader.readAsDataURL(pdfBlob);
+          const base64Data = (await base64Promise).split(',')[1];
+
+          const fileName = `Invoice_${invoiceData.invoice_number}.pdf`;
+          const result = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Cache
+          });
+
+          await Share.share({
+            title: `Invoice #${invoiceData.invoice_number}`,
+            text: message,
+            url: result.uri,
+            dialogTitle: 'Share Invoice'
+          });
+          return;
+        } catch (capError) {
+          console.error('Capacitor share failed:', capError);
+        }
+      }
+
       if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], `Invoice_${invoiceData.invoice_number}.pdf`, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
@@ -414,7 +481,11 @@ export default function Invoices() {
           });
         }
       } else {
-        alert('Web Share not supported on this browser');
+        // Fallback: Download the PDF if Web Share is not supported
+        await handleDownloadPDF(invoice);
+        toast.success('Web Share not supported. Invoice PDF has been downloaded instead.', {
+          duration: 4000
+        });
       }
     } catch (error: any) {
       console.error('Error sharing invoice:', error);
