@@ -408,7 +408,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 style={dropdownStyle}
-                className="fixed w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[99999] flex flex-col overflow-hidden"
+                className="fixed w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[99999] hidden md:flex flex-col overflow-hidden"
                 ref={desktopPortalRef}
               >
                 {renderContent()}

@@ -1,49 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  BarChart as BarChartIcon, 
-  PieChart as PieChartIcon, 
-  TrendingUp, 
   Download, 
-  Calendar, 
-  Filter, 
-  Receipt,
   Calculator,
   ArrowRight,
-  FileCheck,
   Info,
-  TrendingDown,
-  AlertCircle
+  Package, 
+  Users, 
+  Zap,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { formatCurrency, getDateRange, FilterType, cn } from '../lib/utils';
+import { getDateRange, FilterType, cn, downloadFile } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
 import { DateFilter } from '../components/DateFilter';
-import { generateProfitLossPDF } from '../lib/pdfGenerator';
-import { generateProfitLossExcel } from '../lib/excelGenerator';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
-
-const COLORS = ['#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
+import { generateGenericExcel } from '../lib/excelGenerator';
+import { toast } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 export default function Reports() {
   const { profile } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
   
-  const [filterType, setFilterType] = useState<FilterType>('thisMonth');
+  const [filterType, setFilterType] = useState<FilterType>('allTime');
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const getLocalToday = () => {
@@ -53,117 +33,356 @@ export default function Reports() {
   const [day, setDay] = useState<string>(getLocalToday());
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [productData, setProductData] = useState<any[]>([]);
-  const [summary, setSummary] = useState({
-    totalSales: 0,
-    totalPurchases: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    invoiceCount: 0
-  });
-
   const businessId = profile?.business_id;
 
-  useEffect(() => {
-    if (businessId) {
-      fetchReportData();
-    }
-  }, [businessId, filterType, customRange, day, year]);
+  const handleDownloadAdvancedReport = async (reportId: string, reportName: string) => {
+    if (!businessId) return;
+    setDownloadingReport(reportId);
+    const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
 
-  const fetchReportData = async () => {
-    setLoading(true);
     try {
-      const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
-
-      const { data: invoices } = await supabase
-        .from('invoices')
-        .select('id, total, date')
-        .eq('business_id', businessId)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0]);
+      let data: any[] = [];
+      
+      switch (reportId) {
+        case 'invoice-report':
+          const { data: invData } = await supabase
+            .from('invoices')
+            .select('invoice_number, date, customer_name, total, tax_amount, status')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          data = invData || [];
+          break;
         
-      const { data: purchases } = await supabase
-        .from('purchases')
-        .select('total_amount, date')
-        .eq('business_id', businessId)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0]);
+        case 'inventory-report':
+          const { data: prodData } = await supabase
+            .from('products')
+            .select('name, sku, hsn_code, current_stock, sale_price, purchase_price, category')
+            .eq('business_id', businessId);
+          data = prodData || [];
+          break;
 
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('amount, date')
-        .eq('business_id', businessId)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0]);
+        case 'expense-report':
+          const { data: expData } = await supabase
+            .from('expenses')
+            .select('date, category, amount, description, payment_mode')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          data = expData || [];
+          break;
 
-      const totalSales = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
-      const totalPurchases = purchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
-      const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      const invoiceCount = invoices?.length || 0;
-      
-      // Aggregate real monthly data
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const monthlyData = months.map((month, index) => {
-        const monthInvoices = invoices?.filter(inv => new Date(inv.date).getMonth() === index) || [];
-        const monthPurchases = purchases?.filter(p => new Date(p.date).getMonth() === index) || [];
-        const monthExpenses = expenses?.filter(e => new Date(e.date).getMonth() === index) || [];
+        case 'sales-report':
+          const { data: salesItems } = await supabase
+            .from('invoice_items')
+            .select('product_name, quantity, unit_price, total_price, invoices!inner(date, invoice_number)')
+            .eq('invoices.business_id', businessId)
+            .gte('invoices.date', startStr)
+            .lte('invoices.date', endStr);
+          data = (salesItems as any[])?.map(item => ({
+            Date: item.invoices?.date,
+            Invoice: item.invoices?.invoice_number,
+            Product: item.product_name,
+            Qty: item.quantity,
+            Price: item.unit_price,
+            Total: item.total_price
+          })) || [];
+          break;
 
-        return {
-          name: month,
-          sales: monthInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0),
-          purchases: monthPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0),
-          expenses: monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-        };
-      });
+        case 'customer-report':
+          const { data: custData } = await supabase
+            .from('customers')
+            .select('name, email, phone, gstin, city, balance')
+            .eq('business_id', businessId);
+          data = custData || [];
+          break;
 
-      // Filter to show only months with data or the last 6 months
-      const currentMonth = new Date().getMonth();
-      const last6Months = [];
-      for (let i = 5; i >= 0; i--) {
-        const monthIndex = (currentMonth - i + 12) % 12;
-        last6Months.push(monthlyData[monthIndex]);
+        case 'supplier-report':
+          const { data: suppData } = await supabase
+            .from('suppliers')
+            .select('name, email, phone, gstin, city, balance')
+            .eq('business_id', businessId);
+          data = suppData || [];
+          break;
+
+        case 'hsn-report':
+          const { data: hsnItems } = await supabase
+            .from('invoice_items')
+            .select('product_name, hsn_code, quantity, total_price, tax_amount')
+            .eq('invoices.business_id', businessId)
+            .gte('invoices.date', startStr)
+            .lte('invoices.date', endStr);
+          
+          const hsnMap: Record<string, any> = {};
+          hsnItems?.forEach((item: any) => {
+            const key = item.hsn_code || 'N/A';
+            if (!hsnMap[key]) {
+              hsnMap[key] = { HSN: key, Qty: 0, TaxableValue: 0, TaxAmount: 0 };
+            }
+            hsnMap[key].Qty += item.quantity;
+            hsnMap[key].TaxableValue += (item.total_price - item.tax_amount);
+            hsnMap[key].TaxAmount += item.tax_amount;
+          });
+          data = Object.values(hsnMap);
+          break;
+
+        case 'payment-summary':
+          const { data: payData } = await supabase
+            .from('payments')
+            .select('amount, payment_mode, date, type')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          
+          const payMap: Record<string, any> = {};
+          payData?.forEach((p: any) => {
+            const key = p.payment_mode || 'Other';
+            if (!payMap[key]) {
+              payMap[key] = { Mode: key, Inflow: 0, Outflow: 0 };
+            }
+            if (p.type === 'received') payMap[key].Inflow += p.amount;
+            else payMap[key].Outflow += p.amount;
+          });
+          data = Object.values(payMap);
+          break;
+
+        case 'tax-liability':
+          const { data: taxSales } = await supabase
+            .from('invoices')
+            .select('invoice_number, date, total, tax_amount')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          const { data: taxPurchases } = await supabase
+            .from('purchases')
+            .select('bill_number, date, total_amount, tax_amount')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          
+          data = [
+            ... (taxSales?.map(s => ({ Type: 'Output (Sales)', Ref: s.invoice_number, Date: s.date, Amount: s.total, Tax: s.tax_amount })) || []),
+            ... (taxPurchases?.map(p => ({ Type: 'Input (Purchase)', Ref: p.bill_number, Date: p.date, Amount: p.total_amount, Tax: p.tax_amount })) || [])
+          ];
+          break;
+
+        case 'profitability-report':
+          const { data: profItems } = await supabase
+            .from('invoice_items')
+            .select('product_name, total_price, quantity, products(purchase_price)')
+            .eq('invoices.business_id', businessId)
+            .gte('invoices.date', startStr)
+            .lte('invoices.date', endStr);
+          
+          const profMap: Record<string, any> = {};
+          profItems?.forEach((item: any) => {
+            const cost = (item.products?.purchase_price || 0) * item.quantity;
+            const profit = item.total_price - cost;
+            if (!profMap[item.product_name]) {
+              profMap[item.product_name] = { Product: item.product_name, Sales: 0, Cost: 0, Profit: 0 };
+            }
+            profMap[item.product_name].Sales += item.total_price;
+            profMap[item.product_name].Cost += cost;
+            profMap[item.product_name].Profit += profit;
+          });
+          data = Object.values(profMap);
+          break;
+
+        case 'outstanding-receivables':
+          const { data: unpaid } = await supabase
+            .from('invoices')
+            .select('invoice_number, date, customer_name, total, balance')
+            .eq('business_id', businessId)
+            .gt('balance', 0);
+          data = unpaid || [];
+          break;
+
+        case 'cash-flow':
+          const { data: cfInvoices } = await supabase
+            .from('invoices')
+            .select('date, total')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          const { data: cfPurchases } = await supabase
+            .from('purchases')
+            .select('date, total_amount')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          const { data: cfExpenses } = await supabase
+            .from('expenses')
+            .select('date, amount')
+            .eq('business_id', businessId)
+            .gte('date', startStr)
+            .lte('date', endStr);
+          
+          const cfMap: Record<string, any> = {};
+          cfInvoices?.forEach(i => {
+            if (!cfMap[i.date]) cfMap[i.date] = { Date: i.date, Inflow: 0, Outflow: 0 };
+            cfMap[i.date].Inflow += i.total;
+          });
+          cfPurchases?.forEach(p => {
+            if (!cfMap[p.date]) cfMap[p.date] = { Date: p.date, Inflow: 0, Outflow: 0 };
+            cfMap[p.date].Outflow += p.total_amount;
+          });
+          cfExpenses?.forEach(e => {
+            if (!cfMap[e.date]) cfMap[e.date] = { Date: e.date, Inflow: 0, Outflow: 0 };
+            cfMap[e.date].Outflow += e.amount;
+          });
+          data = Object.values(cfMap).sort((a, b) => a.Date.localeCompare(b.Date)).map(item => ({
+            ...item,
+            Net: item.Inflow - item.Outflow
+          }));
+          break;
+
+        case 'audit-log':
+          const { data: auditData } = await supabase
+            .from('notifications')
+            .select('created_at, title, message, type')
+            .eq('created_by', profile?.id)
+            .order('created_at', { ascending: false });
+          data = auditData?.map(a => ({
+            Timestamp: a.created_at,
+            Event: a.title,
+            Details: a.message,
+            Type: a.type
+          })) || [];
+          break;
+
+        default:
+          toast.error("Report type not implemented yet");
+          return;
       }
 
-      setSalesData(last6Months);
-      
-      // Aggregate top products from invoices (this would require invoice_items)
-      // For now, let's keep a more realistic mock or fetch items
-      const { data: items } = await supabase
-        .from('invoice_items')
-        .select('product_name, total_price')
-        .in('invoice_id', invoices?.map(inv => inv.id) || []);
-
-      if (items && items.length > 0) {
-        const productTotals: Record<string, number> = {};
-        items.forEach(item => {
-          productTotals[item.product_name] = (productTotals[item.product_name] || 0) + (item.total_price || 0);
-        });
-        const sortedProducts = Object.entries(productTotals)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 5);
-        setProductData(sortedProducts);
-      } else {
-        setProductData([
-          { name: 'No Data', value: 0 }
-        ]);
+      let headers: string[] | undefined;
+      switch (reportId) {
+        case 'inventory-report': headers = ['name', 'sku', 'hsn_code', 'current_stock', 'sale_price', 'purchase_price', 'category']; break;
+        case 'expense-report': headers = ['date', 'category', 'amount', 'description', 'payment_mode']; break;
+        case 'sales-report': headers = ['Date', 'Invoice', 'Product', 'Qty', 'Price', 'Total']; break;
+        case 'customer-report': headers = ['name', 'email', 'phone', 'gstin', 'city', 'balance']; break;
+        case 'supplier-report': headers = ['name', 'email', 'phone', 'gstin', 'city', 'balance']; break;
+        case 'hsn-report': headers = ['HSN', 'Qty', 'TaxableValue', 'TaxAmount']; break;
+        case 'payment-summary': headers = ['Mode', 'Inflow', 'Outflow']; break;
+        case 'tax-liability': headers = ['Type', 'Ref', 'Date', 'Amount', 'Tax']; break;
+        case 'profitability-report': headers = ['Product', 'Sales', 'Cost', 'Profit']; break;
+        case 'outstanding-receivables': headers = ['invoice_number', 'date', 'customer_name', 'total', 'balance']; break;
+        case 'cash-flow': headers = ['Date', 'Inflow', 'Outflow', 'Net']; break;
+        case 'audit-log': headers = ['Timestamp', 'Event', 'Details', 'Type']; break;
+        case 'invoice-report': headers = ['invoice_number', 'date', 'customer_name', 'total', 'tax_amount', 'status']; break;
       }
 
-      setSummary({
-        totalSales,
-        totalPurchases,
-        totalExpenses,
-        netProfit: totalSales - totalPurchases - totalExpenses,
-        invoiceCount
-      });
-
+      await generateGenericExcel(data, reportName, 'Report', headers);
+      toast.success(`${reportName} downloaded successfully`);
     } catch (error) {
-      console.error("Error fetching report data:", error);
+      console.error("Error generating report:", error);
+      toast.error("Failed to generate report");
     } finally {
-      setLoading(false);
+      setDownloadingReport(null);
     }
   };
+
+  const handleDownloadAll = async () => {
+    if (!businessId) return;
+    setDownloadingReport('all');
+    const { startDate, endDate } = getDateRange(filterType, day, year, customRange);
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    try {
+      const [
+        { data: invoices },
+        { data: products },
+        { data: expenses },
+        { data: customers },
+        { data: suppliers },
+        { data: purchases },
+        { data: payments },
+        { data: invoiceItems },
+        { data: auditLogs }
+      ] = await Promise.all([
+        supabase.from('invoices').select('*').eq('business_id', businessId).gte('date', startStr).lte('date', endStr),
+        supabase.from('products').select('*').eq('business_id', businessId),
+        supabase.from('expenses').select('*').eq('business_id', businessId).gte('date', startStr).lte('date', endStr),
+        supabase.from('customers').select('*').eq('business_id', businessId),
+        supabase.from('suppliers').select('*').eq('business_id', businessId),
+        supabase.from('purchases').select('*').eq('business_id', businessId).gte('date', startStr).lte('date', endStr),
+        supabase.from('payments').select('*').eq('business_id', businessId).gte('date', startStr).lte('date', endStr),
+        supabase.from('invoice_items').select('*, invoices!inner(business_id, date)').eq('invoices.business_id', businessId).gte('invoices.date', startStr).lte('invoices.date', endStr),
+        supabase.from('notifications').select('*').eq('created_by', profile?.id)
+      ]);
+
+      const workbook = XLSX.utils.book_new();
+      
+      const appendSheet = (data: any[], sheetName: string, headers: string[]) => {
+        const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      };
+
+      appendSheet(invoices || [], 'Invoices', ['invoice_number', 'date', 'customer_name', 'total', 'tax_amount', 'status']);
+      appendSheet(products || [], 'Products', ['name', 'sku', 'hsn_code', 'current_stock', 'sale_price', 'purchase_price', 'category']);
+      appendSheet(expenses || [], 'Expenses', ['date', 'category', 'amount', 'description', 'payment_mode']);
+      appendSheet(customers || [], 'Customers', ['name', 'email', 'phone', 'gstin', 'city', 'balance']);
+      appendSheet(suppliers || [], 'Suppliers', ['name', 'email', 'phone', 'gstin', 'city', 'balance']);
+      appendSheet(purchases || [], 'Purchases', ['bill_number', 'date', 'total_amount', 'tax_amount', 'status']);
+      appendSheet(payments || [], 'Payments', ['amount', 'payment_mode', 'date', 'type']);
+      appendSheet(invoiceItems || [], 'Invoice_Items', ['invoice_id', 'product_name', 'quantity', 'unit_price', 'total_price']);
+      appendSheet(auditLogs || [], 'Audit_Trail', ['created_at', 'title', 'message', 'type']);
+
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      await downloadFile(blob, `Consolidated_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success("Consolidated report downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading all reports:", error);
+      toast.error("Failed to download consolidated report");
+    } finally {
+      setDownloadingReport(null);
+    }
+  };
+
+  const reportCategories = [
+    {
+      title: "Financial Reports",
+      icon: <Calculator size={20} className="text-indigo-600" />,
+      reports: [
+        { id: 'invoice-report', name: 'Invoice Detailed Report', desc: 'Complete list of invoices with tax breakdown' },
+        { id: 'sales-report', name: 'Sales Item-wise Report', desc: 'Detailed breakdown of items sold' },
+        { id: 'expense-report', name: 'Expense Summary', desc: 'Categorized business expenses' },
+        { id: 'tax-liability', name: 'Tax Liability Report', desc: 'GST Output vs Input tax summary' },
+        { id: 'hsn-report', name: 'HSN-wise Summary', desc: 'GST HSN-wise sales aggregation' },
+      ]
+    },
+    {
+      title: "Inventory & Operations",
+      icon: <Package size={20} className="text-emerald-600" />,
+      reports: [
+        { id: 'inventory-report', name: 'Inventory Valuation', desc: 'Current stock levels and asset value' },
+        { id: 'profitability-report', name: 'Product Profitability', desc: 'Profit margin analysis by product' },
+      ]
+    },
+    {
+      title: "Party & Ledgers",
+      icon: <Users size={20} className="text-blue-600" />,
+      reports: [
+        { id: 'customer-report', name: 'Customer Directory', desc: 'List of all customers and their balances' },
+        { id: 'supplier-report', name: 'Supplier Directory', desc: 'List of all suppliers and their balances' },
+        { id: 'outstanding-receivables', name: 'Outstanding Receivables', desc: 'Aging report for unpaid invoices' },
+        { id: 'ledger-report', name: 'General Ledger', desc: 'Consolidated account statements', link: '/ledger' },
+      ]
+    },
+    {
+      title: "Advanced Analytics",
+      icon: <Zap size={20} className="text-amber-600" />,
+      reports: [
+        { id: 'payment-summary', name: 'Payment Mode Analysis', desc: 'Summary of cash, online, and credit inflows' },
+        { id: 'cash-flow', name: 'Cash Flow Forecast', desc: 'Projected cash movements based on invoices and expenses' },
+        { id: 'audit-log', name: 'Audit Trail', desc: 'History of business notifications and events' },
+      ]
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -171,12 +390,12 @@ export default function Reports() {
         title={
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary">
-              <BarChartIcon size={24} />
+              <FileSpreadsheet size={24} />
             </div>
-            <span>Reports & Analytics</span>
+            <span>Business Reports</span>
           </div>
         }
-        description="Analyze your business performance with detailed reports on sales, expenses, and inventory."
+        description="Download comprehensive business reports for accounting, inventory, and tax compliance."
         isDateFilterOpen={isDateFilterOpen}
         dateFilter={
           <DateFilter 
@@ -194,202 +413,73 @@ export default function Reports() {
           />
         }
       >
-        <div className="flex items-center space-x-2">
-          
-          <button 
-            onClick={() => generateProfitLossPDF(summary, profile?.business_profiles || { name: 'Business' })}
-            className="btn-secondary h-10 sm:h-9"
-          >
-            <Download size={14} className="mr-1.5" />
-            Export PDF
-          </button>
-          <button 
-            onClick={() => generateProfitLossExcel(summary, profile?.business_profiles || { name: 'Business' })}
-            className="btn-secondary h-10 sm:h-9"
-          >
-            <Download size={14} className="mr-1.5" />
-            Export Excel
-          </button>
-        </div>
+        <button 
+          onClick={handleDownloadAll}
+          disabled={downloadingReport === 'all'}
+          className="btn-primary h-10 sm:h-9"
+        >
+          {downloadingReport === 'all' ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          ) : (
+            <>
+              <Download size={14} className="mr-1.5" />
+              Download All Data
+            </>
+          )}
+        </button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-slate-50/30 border border-blue-200 border-l-[6px] border-l-blue-600 rounded-2xl shadow-sm p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                  <TrendingUp size={14} />
-                </div>
-                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+12.5%</span>
-              </div>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Sales</p>
-              <h3 className="text-base font-bold text-slate-900">{formatCurrency(summary.totalSales)}</h3>
-            </div>
-            
-            <div className="bg-slate-50/30 border border-blue-200 border-l-[6px] border-l-orange-600 rounded-2xl shadow-sm p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
-                  <BarChartIcon size={14} />
-                </div>
-                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+5.2%</span>
-              </div>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Purchases</p>
-              <h3 className="text-base font-bold text-slate-900">{formatCurrency(summary.totalPurchases)}</h3>
-            </div>
-
-            <div className="bg-slate-50/30 border border-blue-200 border-l-[6px] border-l-red-600 rounded-2xl shadow-sm p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                  <Receipt size={14} />
-                </div>
-                <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">+2.1%</span>
-              </div>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Expenses</p>
-              <h3 className="text-base font-bold text-slate-900">{formatCurrency(summary.totalExpenses)}</h3>
-            </div>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">Report Repository</h2>
+            <p className="text-xs text-slate-500 mt-1">Select a report to download in Excel format</p>
           </div>
+        </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="glass-card p-4">
-              <h3 className="text-sm font-bold text-slate-900 mb-4">Sales vs Purchases</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
-                      formatter={(value: any) => formatCurrency(value)}
-                    />
-                    <Line type="monotone" dataKey="sales" stroke="#7c3aed" strokeWidth={2} dot={{r: 3, strokeWidth: 1.5}} activeDot={{r: 5}} />
-                    <Line type="monotone" dataKey="purchases" stroke="#f59e0b" strokeWidth={2} dot={{r: 3, strokeWidth: 1.5}} activeDot={{r: 5}} />
-                    <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} dot={{r: 3, strokeWidth: 1.5}} activeDot={{r: 5}} />
-                  </LineChart>
-                </ResponsiveContainer>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {reportCategories.map((category, idx) => (
+            <div key={idx} className="glass-card overflow-hidden border-slate-200/60">
+              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                  {category.icon}
+                </div>
+                <h3 className="font-bold text-slate-900">{category.title}</h3>
               </div>
-            </div>
-
-            <div className="glass-card p-4">
-              <h3 className="text-sm font-bold text-slate-900 mb-4">Top Products</h3>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={productData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {productData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-3 space-y-2">
-                {productData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-[10px]">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="text-slate-600 truncate max-w-[120px]">{item.name}</span>
+              <div className="divide-y divide-slate-100">
+                {category.reports.map((report) => (
+                  <div key={report.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                    <div className="flex-1 pr-4">
+                      <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{report.name}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{report.desc}</p>
                     </div>
-                    <span className="font-bold text-slate-900">{formatCurrency(item.value)}</span>
+                    {report.link ? (
+                      <Link 
+                        to={report.link}
+                        className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary transition-all shadow-sm"
+                      >
+                        <ArrowRight size={16} />
+                      </Link>
+                    ) : (
+                      <button 
+                        onClick={() => handleDownloadAdvancedReport(report.id, report.name)}
+                        disabled={downloadingReport === report.id}
+                        className={cn(
+                          "w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center transition-all shadow-sm text-slate-400 hover:text-primary hover:border-primary"
+                        )}
+                      >
+                        {downloadingReport === report.id ? (
+                          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                        ) : (
+                          <Download size={16} />
+                        )}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="glass-card p-6 border-primary/20 bg-primary/5">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-              <Calculator size={18} className="mr-2 text-primary" />
-              Financial Summary
-            </h4>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Gross Sales</span>
-                <span className="font-bold text-slate-900">{formatCurrency(summary.totalSales)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500">Net Profit</span>
-                <span className={cn("font-bold", summary.netProfit >= 0 ? "text-emerald-600" : "text-red-600")}>
-                  {formatCurrency(summary.netProfit)}
-                </span>
-              </div>
-              <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                <span className="font-bold text-slate-900">Profit Margin</span>
-                <span className="text-xl font-bold text-primary">
-                  {summary.totalSales > 0 ? ((summary.netProfit / summary.totalSales) * 100).toFixed(1) : '0'}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-              <TrendingUp size={18} className="mr-2 text-primary" />
-              Growth Insights
-            </h4>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0">
-                  <TrendingUp size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Sales are up</p>
-                  <p className="text-[10px] text-slate-500">12% increase from last month</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-red-600 flex-shrink-0">
-                  <TrendingDown size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Expenses rising</p>
-                  <p className="text-[10px] text-slate-500">2% increase in operational costs</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/10">
-            <h4 className="font-bold text-slate-900 mb-3 flex items-center">
-              <FileCheck size={18} className="mr-2 text-primary" />
-              Pro Tip
-            </h4>
-            <p className="text-xs text-slate-600 leading-relaxed italic">
-              "Regularly reviewing your top products helps you focus on high-margin items and optimize your inventory."
-            </p>
-          </div>
-
-          <div className="glass-card p-6">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center">
-              <AlertCircle size={18} className="mr-2 text-primary" />
-              Quick Actions
-            </h4>
-            <div className="space-y-2">
-              <button className="w-full text-left px-4 h-10 sm:h-9 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                View Detailed P&L
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </button>
-              <Link to="/ledger" className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-600 flex items-center justify-between group">
-                Download Ledger
-                <ArrowRight size={16} className="text-slate-300 group-hover:text-primary transition-all" />
-              </Link>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 

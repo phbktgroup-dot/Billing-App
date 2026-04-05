@@ -82,3 +82,13 @@ export const generateLedgerExcel = async (data: {
   const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   await downloadFile(blob, `ledger-${data.partyName.replace(/\s+/g, '_')}-${new Date().toISOString().split('T')[0]}.xlsx`);
 };
+
+export const generateGenericExcel = async (data: any[], fileName: string, sheetName: string = 'Report', headers?: string[]) => {
+  const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await downloadFile(blob, `${fileName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+};
