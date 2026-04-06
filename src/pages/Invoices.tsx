@@ -360,17 +360,24 @@ export default function Invoices() {
           const base64Data = (await base64Promise).split(',')[1];
 
           const fileName = `Invoice_${invoiceData.invoice_number}.pdf`;
+          // Save to Documents for "Directly save to device"
           const result = await Filesystem.writeFile({
             path: fileName,
             data: base64Data,
-            directory: Directory.Cache
+            directory: Directory.Documents,
+            recursive: true
+          });
+
+          toast.success(`Invoice saved to Documents and ready to share.`, {
+            duration: 4000,
+            icon: '💾'
           });
 
           await Share.share({
             title: `Invoice #${invoiceData.invoice_number}`,
             text: message,
             url: result.uri,
-            dialogTitle: 'Share Invoice'
+            dialogTitle: 'Share to WhatsApp'
           });
           return;
         } catch (capError) {
@@ -378,7 +385,7 @@ export default function Invoices() {
         }
       }
 
-      // 1. Try Web Share API (Best for mobile browser)
+      // 1. Try Web Share API
       if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], `Invoice_${invoiceData.invoice_number}.pdf`, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
@@ -446,10 +453,17 @@ export default function Invoices() {
           const base64Data = (await base64Promise).split(',')[1];
 
           const fileName = `Invoice_${invoiceData.invoice_number}.pdf`;
+          // Save to Documents for "Directly save to device"
           const result = await Filesystem.writeFile({
             path: fileName,
             data: base64Data,
-            directory: Directory.Cache
+            directory: Directory.Documents,
+            recursive: true
+          });
+
+          toast.success(`Invoice saved to Documents and ready to share.`, {
+            duration: 4000,
+            icon: '💾'
           });
 
           await Share.share({

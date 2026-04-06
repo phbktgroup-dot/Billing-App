@@ -1,6 +1,10 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format } from "date-fns"
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+import { toast } from 'react-hot-toast';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -149,7 +153,54 @@ export function getDateRange(filter: FilterType, day?: string, year?: number, cu
   };
 }
 
-export function downloadFile(data: string | Blob, filename: string) {
+export async function downloadFile(data: string | Blob, filename: string) {
+  // Handle Capacitor Native Platforms (Android APK)
+  if (Capacitor.isNativePlatform()) {
+    try {
+      let base64Data = '';
+      if (typeof data === 'string') {
+        // If it's already a data URL or base64
+        if (data.includes('base64,')) {
+          base64Data = data.split('base64,')[1];
+        } else {
+          base64Data = btoa(data);
+        }
+      } else {
+        // Convert Blob to Base64
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+        });
+        reader.readAsDataURL(data);
+        base64Data = (await base64Promise).split(',')[1];
+      }
+
+      // Save the file to the Documents directory for permanent storage
+      const result = await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Documents,
+        recursive: true
+      });
+
+      toast.success(`File saved to Documents: ${filename}`, {
+        duration: 5000,
+        icon: '💾'
+      });
+
+      // Also offer to share it immediately as a convenience
+      await Share.share({
+        title: filename,
+        url: result.uri,
+      });
+      
+      return;
+    } catch (error) {
+      console.error('Capacitor download failed:', error);
+      // Fallback to standard method if native fails
+    }
+  }
+
   const url = typeof data === 'string' ? data : URL.createObjectURL(data);
   const link = document.createElement('a');
   link.href = url;
