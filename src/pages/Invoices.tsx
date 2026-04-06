@@ -600,7 +600,7 @@ export default function Invoices() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 pt-2 relative"
+      className="flex flex-col gap-2 pt-2 pb-32 relative w-full"
     >
       <PageHeader 
         title="Invoices" 

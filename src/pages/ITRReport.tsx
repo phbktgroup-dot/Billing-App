@@ -135,101 +135,117 @@ export default function ITRReport() {
   const currentDate = new Date().toLocaleDateString('en-IN');
   const [financialYear, setFinancialYear] = useState(initialFY);
 
-  // Fetch live data from Supabase
-  const fetchLiveData = async () => {
-    if (!businessId) return;
-    setLoading(true);
-    try {
-      const [startYear, endYearShort] = financialYear.split('-');
-      const startFullYear = parseInt(startYear);
-      const endFullYear = startFullYear + 1;
-      
-      const startDate = `${startFullYear}-04-01`;
-      const endDate = `${endFullYear}-03-31`;
-
-      const [invoicesRes, purchasesRes, expensesRes, productsRes] = await Promise.all([
-        supabase.from('invoices').select('*').eq('business_id', businessId).gte('date', startDate).lte('date', endDate).neq('status', 'cancelled'),
-        supabase.from('purchases').select('*').eq('business_id', businessId).gte('bill_date', startDate).lte('bill_date', endDate).neq('status', 'cancelled'),
-        supabase.from('expenses').select('*').eq('business_id', businessId).gte('date', startDate).lte('date', endDate),
-        supabase.from('products').select('*').eq('business_id', businessId)
-      ]);
-
-      if (invoicesRes.error) throw invoicesRes.error;
-      if (purchasesRes.error) throw purchasesRes.error;
-      if (expensesRes.error) throw expensesRes.error;
-      if (productsRes.error) throw productsRes.error;
-
-      const invoices = invoicesRes.data || [];
-      const purchases = purchasesRes.data || [];
-      const expenses = expensesRes.data || [];
-      const products = productsRes.data || [];
-
-      // Aggregations
-      const totalSales = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-      const totalPurchases = purchases.reduce((sum, pur) => sum + (pur.total_amount || 0), 0);
-      const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-      const closingStockValue = products.reduce((sum, prod) => sum + ((prod.stock || 0) * (prod.purchase_price || 0)), 0);
-      
-      const sundryDebtors = invoices
-        .filter(inv => ['pending', 'unpaid', 'partial', 'overdue'].includes(inv.status))
-        .reduce((sum, inv) => sum + (inv.total || 0), 0);
-      
-      const sundryCreditors = purchases
-        .filter(pur => ['pending'].includes(pur.status))
-        .reduce((sum, pur) => sum + (pur.total_amount || 0), 0);
-
-      // Update P&L Data
-      setPlData(prev => {
-        const next = prev.map(r => [...r]);
-        // To Sales
-        const salesIdx = next.findIndex(r => r[2]?.toUpperCase().includes('SALES'));
-        if (salesIdx !== -1) next[salesIdx][3] = formatCurrency(totalSales);
-        
-        // To Closing Stock
-        const csIdx = next.findIndex(r => r[2]?.toUpperCase().includes('CLOSING STOCK'));
-        if (csIdx !== -1) next[csIdx][3] = formatCurrency(closingStockValue);
-        
-        // To Purchases
-        const purIdx = next.findIndex(r => r[0]?.toUpperCase().includes('PURCHASES'));
-        if (purIdx !== -1) next[purIdx][1] = formatCurrency(totalPurchases);
-        
-        // To Expenses (Other than Salary)
-        const expIdx = next.findIndex(r => r[0]?.toUpperCase().includes('HAMALI & TRANSPORT'));
-        if (expIdx !== -1) next[expIdx][1] = formatCurrency(totalExpenses);
-
-        return next;
-      });
-
-      // Update Balance Sheet Data
-      setBsData(prev => {
-        const next = prev.map(r => [...r]);
-        
-        // Sundry Creditors
-        const scIdx = next.findIndex(r => r[0]?.toUpperCase().includes('SUNDRY CREDITORS'));
-        if (scIdx !== -1) next[scIdx][1] = formatCurrency(sundryCreditors);
-        
-        // Sundry Debtors
-        const sdIdx = next.findIndex(r => r[2]?.toUpperCase().includes('SUNDRY DEBTORS'));
-        if (sdIdx !== -1) next[sdIdx][3] = formatCurrency(sundryDebtors);
-        
-        // Stock in Hand
-        const sihIdx = next.findIndex(r => r[2]?.toUpperCase().includes('STOCK IN HAND'));
-        if (sihIdx !== -1) next[sihIdx][3] = formatCurrency(closingStockValue);
-
-        return next;
-      });
-
-    } catch (err: any) {
-      console.error('Error fetching live ITR data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchLiveData = async () => {
+      if (!businessId) return;
+      setLoading(true);
+      try {
+        const [startYear, endYearShort] = financialYear.split('-');
+        const startFullYear = parseInt(startYear);
+        const endFullYear = startFullYear + 1;
+        
+        const startDate = `${startFullYear}-04-01`;
+        const endDate = `${endFullYear}-03-31`;
+
+        const [invoicesRes, purchasesRes, expensesRes, productsRes] = await Promise.all([
+          supabase.from('invoices').select('*').eq('business_id', businessId).gte('date', startDate).lte('date', endDate).neq('status', 'cancelled'),
+          supabase.from('purchases').select('*').eq('business_id', businessId).gte('bill_date', startDate).lte('bill_date', endDate).neq('status', 'cancelled'),
+          supabase.from('expenses').select('*').eq('business_id', businessId).gte('date', startDate).lte('date', endDate),
+          supabase.from('products').select('*').eq('business_id', businessId)
+        ]);
+
+        if (!isMounted) return;
+
+        if (invoicesRes.error) throw invoicesRes.error;
+        if (purchasesRes.error) throw purchasesRes.error;
+        if (expensesRes.error) throw expensesRes.error;
+        if (productsRes.error) throw productsRes.error;
+
+        const invoices = invoicesRes.data || [];
+        const purchases = purchasesRes.data || [];
+        const expenses = expensesRes.data || [];
+        const products = productsRes.data || [];
+
+        // Aggregations
+        const totalSales = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+        const totalPurchases = purchases.reduce((sum, pur) => sum + (pur.total_amount || 0), 0);
+        const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        const closingStockValue = products.reduce((sum, prod) => sum + ((prod.stock || 0) * (prod.purchase_price || 0)), 0);
+        
+        const sundryDebtors = invoices
+          .filter(inv => ['pending', 'unpaid', 'partial', 'overdue'].includes(inv.status))
+          .reduce((sum, inv) => sum + (inv.total || 0), 0);
+        
+        const sundryCreditors = purchases
+          .filter(pur => ['pending'].includes(pur.status))
+          .reduce((sum, pur) => sum + (pur.total_amount || 0), 0);
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const actualCurrentFY = currentMonth < 3 
+          ? `${currentYear - 1}-${currentYear.toString().slice(-2)}` 
+          : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+        
+        const isCurrentFY = financialYear === actualCurrentFY;
+
+        // Update P&L Data
+        setPlData(prev => {
+          const next = prev.map(r => [...r]);
+          // To Sales
+          const salesIdx = next.findIndex(r => r[2]?.toUpperCase().includes('SALES'));
+          if (salesIdx !== -1) next[salesIdx][3] = formatCurrency(totalSales);
+          
+          // To Closing Stock
+          const csIdx = next.findIndex(r => r[2]?.toUpperCase().includes('CLOSING STOCK'));
+          if (csIdx !== -1 && isCurrentFY) next[csIdx][3] = formatCurrency(closingStockValue);
+          
+          // To Purchases
+          const purIdx = next.findIndex(r => r[0]?.toUpperCase().includes('PURCHASES'));
+          if (purIdx !== -1) next[purIdx][1] = formatCurrency(totalPurchases);
+          
+          // To Expenses (Other than Salary)
+          const expIdx = next.findIndex(r => r[0]?.toUpperCase().includes('HAMALI & TRANSPORT'));
+          if (expIdx !== -1) next[expIdx][1] = formatCurrency(totalExpenses);
+
+          return next;
+        });
+
+        // Update Balance Sheet Data
+        setBsData(prev => {
+          const next = prev.map(r => [...r]);
+          
+          // Sundry Creditors
+          const scIdx = next.findIndex(r => r[0]?.toUpperCase().includes('SUNDRY CREDITORS'));
+          if (scIdx !== -1) next[scIdx][1] = formatCurrency(sundryCreditors);
+          
+          // Sundry Debtors
+          const sdIdx = next.findIndex(r => r[2]?.toUpperCase().includes('SUNDRY DEBTORS'));
+          if (sdIdx !== -1) next[sdIdx][3] = formatCurrency(sundryDebtors);
+          
+          // Stock in Hand
+          const sihIdx = next.findIndex(r => r[2]?.toUpperCase().includes('STOCK IN HAND'));
+          if (sihIdx !== -1 && isCurrentFY) next[sihIdx][3] = formatCurrency(closingStockValue);
+
+          return next;
+        });
+
+      } catch (err: any) {
+        console.error('Error fetching live ITR data:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     if (businessId) {
       fetchLiveData();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [businessId, financialYear]);
 
   // Sync with profile data when it changes
@@ -285,12 +301,12 @@ export default function ITRReport() {
     });
   }, [financialYear]);
 
-  // Generate years from 1900 to 2100
-  const fyRange = Array.from({ length: 201 }, (_, i) => {
+  // Generate years from 1900 to 2098 (AY 1901-02 to 2099-00)
+  const fyRange = React.useMemo(() => Array.from({ length: 199 }, (_, i) => {
     const startYear = 1900 + i;
     const endYear = startYear + 1;
     return `${startYear}-${endYear.toString().slice(-2)}`;
-  });
+  }), []);
 
   const handleFYChange = (fy: string) => {
     // Save current year's data before switching
@@ -359,15 +375,6 @@ export default function ITRReport() {
     if (y.length === 2) return (num + 1).toString().padStart(2, '0');
     return (num + 1).toString();
   }).join('-');
-
-  const financialYears = [
-    '2022-23',
-    '2023-24',
-    '2024-25',
-    '2025-26',
-    '2026-27',
-    '2027-28'
-  ];
 
   const getAssessmentYear = (fy: string) => {
     return fy.split('-').map(y => {
@@ -894,7 +901,7 @@ export default function ITRReport() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 sm:space-y-8 w-full overflow-x-hidden">
       {/* Header */}
       <PageHeader
         title={
@@ -905,15 +912,15 @@ export default function ITRReport() {
             <div className="flex flex-col">
               <span>ITR Financial Report</span>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Year:</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Financial Year:</span>
                 <select 
                   value={financialYear} 
                   onChange={(e) => handleFYChange(e.target.value)}
                   className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer border-b border-slate-200 hover:border-primary transition-colors"
                 >
-                  {financialYears.map(fy => (
+                  {fyRange.map(fy => (
                     <option key={fy} value={fy}>
-                      AY {getAssessmentYear(fy)}
+                      FY {fy} (AY {getAssessmentYear(fy)})
                     </option>
                   ))}
                 </select>
@@ -965,13 +972,13 @@ export default function ITRReport() {
               </div>
             </div>
             
-            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+            <div className="flex overflow-x-auto pb-1 sm:pb-0 items-center gap-1 p-1 bg-slate-100 rounded-xl scrollbar-hide">
               {(['balance-sheet', 'annexure-a', 'annexure-b', 'profit-loss'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "px-4 h-10 sm:h-9 text-xs font-bold rounded-lg transition-all",
+                    "px-3 sm:px-4 h-9 sm:h-9 text-[10px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap",
                     activeTab === tab
                       ? "bg-white text-primary shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
@@ -985,7 +992,7 @@ export default function ITRReport() {
 
           {/* Content Area */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6 print-container">
-            <div className="p-8 overflow-x-auto print-content">
+            <div className="p-4 sm:p-8 overflow-x-auto print-content scrollbar-thin">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -1196,21 +1203,21 @@ export default function ITRReport() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-center gap-4 mt-8 no-print">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mt-8 no-print">
             <button 
               onClick={() => downloadExcel('single')}
               disabled={loading}
-              className="px-6 h-10 sm:h-9 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+              className="w-full sm:w-auto px-4 sm:px-6 h-10 sm:h-9 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center justify-center shadow-sm transition-all active:scale-95 text-xs sm:text-sm"
             >
-              <FileSpreadsheet size={20} className="mr-2 text-emerald-600" />
+              <FileSpreadsheet size={18} className="mr-2 text-emerald-600" />
               Download Current (Excel)
             </button>
             <button 
               onClick={() => downloadPDF('single')}
               disabled={loading}
-              className="px-6 h-10 sm:h-9 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center shadow-sm transition-all active:scale-95"
+              className="w-full sm:w-auto px-4 sm:px-6 h-10 sm:h-9 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 flex items-center justify-center shadow-sm transition-all active:scale-95 text-xs sm:text-sm"
             >
-              <Download size={20} className="mr-2 text-red-600" />
+              <Download size={18} className="mr-2 text-red-600" />
               Download Current (PDF)
             </button>
           </div>
@@ -1218,28 +1225,28 @@ export default function ITRReport() {
       </div>
 
       {/* Bulk Download Section */}
-      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 no-print">
-        <div className="text-center md:text-left">
-          <h3 className="text-lg font-bold text-slate-900">Download All Reports</h3>
-          <p className="text-sm text-slate-500 mt-1">Get Balance Sheet, Annexures, and P&L in a single file</p>
+      <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200 flex flex-col lg:flex-row items-center justify-between gap-6 no-print">
+        <div className="text-center lg:text-left">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">Download All Reports</h3>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Get Balance Sheet, Annexures, and P&L in a single file</p>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
           <button
             onClick={() => downloadExcel('all')}
-            className="flex items-center gap-2 px-6 h-10 sm:h-9 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 font-bold"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 h-10 sm:h-9 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 font-bold text-xs sm:text-sm"
           >
-            <FileSpreadsheet size={20} />
+            <FileSpreadsheet size={18} />
             All Excel Report
           </button>
           <button
             onClick={() => downloadPDF('all')}
             disabled={loading}
-            className="flex items-center gap-2 px-6 h-10 sm:h-9 bg-primary text-white rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/10 font-bold disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 h-10 sm:h-9 bg-primary text-white rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/10 font-bold disabled:opacity-50 text-xs sm:text-sm"
           >
             {loading ? (
-              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             ) : (
-              <Download size={20} />
+              <Download size={18} />
             )}
             All PDF Report
           </button>

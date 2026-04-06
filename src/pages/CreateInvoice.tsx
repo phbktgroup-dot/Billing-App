@@ -1059,6 +1059,16 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
       return;
     }
 
+    if (!date || !date.includes('-') || date.length !== 10) {
+      setModal({ isOpen: true, title: 'Error', message: 'Please enter a valid invoice date (DD/MM/YYYY).', type: 'error' });
+      return;
+    }
+
+    if (paymentStatus === 'unpaid' && dueDate && (!dueDate.includes('-') || dueDate.length !== 10)) {
+      setModal({ isOpen: true, title: 'Error', message: 'Please enter a valid due date (DD/MM/YYYY).', type: 'error' });
+      return;
+    }
+
     if (isEwayEnabled && includeEwayBill) {
       if (!customer.address1 || !customer.address2 || !customer.city || !customer.pincode || !customer.stateCode) {
         setModal({ isOpen: true, title: 'E-way Bill Error', message: 'Address Line 1, Address Line 2, City, Pincode, and State Code are mandatory for E-way bills.', type: 'error' });
@@ -1477,7 +1487,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-2 pt-2 relative"
+      className="flex flex-col gap-4 pt-2 pb-32 xl:pb-8 relative w-full"
     >
       {/* Header */}
       <PageHeader 
@@ -1604,9 +1614,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start"
+            className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start w-full"
           >
-            <div className="xl:col-span-2 space-y-6 pr-2 xl:h-[calc(100vh-150px)] xl:overflow-y-auto">
+            <div className="xl:col-span-2 space-y-6 pr-2 xl:h-[calc(100vh-60px)] xl:overflow-y-auto">
               {/* Customer & Details Section */}
               <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative z-[60]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
@@ -1631,7 +1641,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                   <div className="md:col-span-6 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Customer Name</label>
-                    <div className="relative z-[100]" ref={customerListRef}>
+                    <div className={cn("relative", showCustomerList ? "z-[1000]" : "z-[100]")} ref={customerListRef}>
                       <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input 
                         type="text" 
@@ -1713,7 +1723,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </div>
                   <div className="md:col-span-3 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Number</label>
-                    <div className="relative z-[100]" ref={seriesListRef}>
+                    <div className={cn("relative", showSeriesList ? "z-[1000]" : "z-[100]")} ref={seriesListRef}>
                       <div className="relative">
                         <input 
                           type="text"
@@ -1766,21 +1776,44 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   </div>
                   <div className="md:col-span-3 space-y-0.5">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Invoice Date</label>
-                    <div className="relative">
-                      <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <div className="relative flex items-center">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 z-10 overflow-hidden">
+                        <Calendar size={12} className="absolute inset-0 text-slate-400 pointer-events-none" />
+                        <input 
+                          type="date" 
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          value={date.includes('-') ? date : ''}
+                          onChange={e => setDate(e.target.value)}
+                        />
+                      </div>
                       <input 
-                        type="date" 
+                        type="text" 
+                        placeholder="DD/MM/YYYY"
+                        maxLength={10}
                         className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
-                        value={date}
-                        onChange={e => setDate(e.target.value)}
+                        value={date.includes('-') ? date.split('-').reverse().join('/') : date}
+                        onChange={e => {
+                          let val = e.target.value.replace(/[^\d/]/g, '');
+                          if (val.length === 2 && !val.includes('/')) val += '/';
+                          if (val.length === 5 && val.split('/').length === 2) val += '/';
+                          
+                          if (val.length === 10) {
+                            const [d, m, y] = val.split('/');
+                            if (d && m && y && d.length === 2 && m.length === 2 && y.length === 4) {
+                              setDate(`${y}-${m}-${d}`);
+                              return;
+                            }
+                          }
+                          setDate(val);
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-3 relative z-[30]">
-                  <div className="md:col-span-6 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-4 relative z-10">
+                  <div className="md:col-span-6 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
                     <div className="relative">
                       <Phone size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input 
@@ -1796,8 +1829,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       />
                     </div>
                   </div>
-                  <div className="md:col-span-6 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">GSTIN</label>
+                  <div className="md:col-span-6 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GSTIN</label>
                     <input 
                       type="text" 
                       placeholder="GSTIN"
@@ -1810,9 +1843,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                 </div>
                 
                 {/* Customer Address Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-slate-100 relative z-[20]">
-                  <div className="md:col-span-8 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-6 pt-6 border-t border-slate-100 relative z-10">
+                  <div className="md:col-span-8 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Line 1 {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Building, Street, etc."
@@ -1821,8 +1854,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('address1', e.target.value)}
                     />
                   </div>
-                  <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                  <div className="md:col-span-4 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Line 2 {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Area, Locality, etc."
@@ -1831,8 +1864,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('address2', e.target.value)}
                     />
                   </div>
-                  <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">City {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                  <div className="md:col-span-4 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">City {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="City"
@@ -1841,8 +1874,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       onChange={e => handleCustomerChange('city', e.target.value)}
                     />
                   </div>
-                  <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                  <div className="md:col-span-4 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pincode {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <input 
                       type="text" 
                       placeholder="Pincode"
@@ -1855,8 +1888,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       }}
                     />
                   </div>
-                  <div className="md:col-span-4 space-y-0.5">
-                    <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
+                  <div className="md:col-span-4 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">State Code {isEwayEnabled && includeEwayBill && <span className="text-red-500">*</span>}</label>
                     <select
                       className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                       value={customer.stateCode || ''}
@@ -1872,9 +1905,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
               </div>
 
               {/* Items Section */}
-              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden z-10 min-h-[600px]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-                <div className="flex items-center justify-between mb-5 relative z-[50]">
+                <div className="flex items-center justify-between mb-5 relative z-20">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100/50 text-emerald-600 rounded-xl shadow-sm border border-emerald-100/50">
                       <Package size={18} strokeWidth={2.5} />
@@ -1899,10 +1932,10 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
                 <div className="space-y-3 relative z-10">
                   {/* Item Input Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
                     {/* First Row */}
-                    <div className="md:col-span-8 space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Product / Service</label>
+                    <div className="md:col-span-8 space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Product / Service</label>
                       <select 
                         className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={newItem.productId || ''}
@@ -1914,8 +1947,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         ))}
                       </select>
                     </div>
-                    <div className="md:col-span-2 space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">HSN Code</label>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">HSN Code</label>
                       <input 
                         type="text" 
                         placeholder="HSN Code"
@@ -1924,8 +1957,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                         value={newItem.hsnCode || ''}
                       />
                     </div>
-                    <div className="md:col-span-2 space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Unit Type</label>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit Type</label>
                       <select 
                         className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-[11px] transition-all text-slate-900 font-medium"
                         value={newItem.unitType || 'NUMBERS'}
@@ -1938,8 +1971,8 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                     </div>
 
                     {/* Second Row */}
-                    <div className="md:col-span-2 space-y-0.5">
-                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Qty</label>
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Qty</label>
                       <input 
                         type="number" 
                         placeholder="0"
@@ -2011,7 +2044,7 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                       <tbody className="divide-y divide-slate-100">
                         {items.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
+                            <td colSpan={9} className="px-4 py-32 text-center text-slate-400">
                               <div className="flex flex-col items-center">
                                 <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-full mb-3 shadow-sm border border-slate-100">
                                   <Package size={24} className="text-slate-300" strokeWidth={1.5} />
@@ -2455,13 +2488,36 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
                   {paymentStatus === 'unpaid' && (
                     <div className="space-y-1 mt-2 col-span-2">
                       <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Due Date</label>
-                      <div className="relative">
-                        <Calendar size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <div className="relative flex items-center">
+                        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 z-10 overflow-hidden">
+                          <Calendar size={12} className="absolute inset-0 text-slate-400 pointer-events-none" />
+                          <input 
+                            type="date" 
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            value={dueDate.includes('-') ? dueDate : ''}
+                            onChange={e => setDueDate(e.target.value)}
+                          />
+                        </div>
                         <input 
-                          type="date" 
+                          type="text" 
+                          placeholder="DD/MM/YYYY"
+                          maxLength={10}
                           className="w-full pl-7 pr-2 py-2 bg-white border border-slate-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-xs transition-all text-slate-900 font-bold shadow-sm"
-                          value={dueDate}
-                          onChange={e => setDueDate(e.target.value)}
+                          value={dueDate.includes('-') ? dueDate.split('-').reverse().join('/') : dueDate}
+                          onChange={e => {
+                            let val = e.target.value.replace(/[^\d/]/g, '');
+                            if (val.length === 2 && !val.includes('/')) val += '/';
+                            if (val.length === 5 && val.split('/').length === 2) val += '/';
+                            
+                            if (val.length === 10) {
+                              const [d, m, y] = val.split('/');
+                              if (d && m && y && d.length === 2 && m.length === 2 && y.length === 4) {
+                                setDueDate(`${y}-${m}-${d}`);
+                                return;
+                              }
+                            }
+                            setDueDate(val);
+                          }}
                         />
                       </div>
                     </div>

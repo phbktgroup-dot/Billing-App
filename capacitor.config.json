@@ -1,6 +1,6 @@
 {
   "appId": "com.phbkt.enterprise",
-  "appName": "PHBKT Group Suite",
+  "appName": "Billing Pro+",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

@@ -12,7 +12,7 @@ export default function Layout() {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 pb-28 lg:pb-0 pt-safe lg:pt-0">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="flex-1 p-0">
+        <main className="flex-1 p-0 w-full overflow-x-hidden">
           <Outlet />
         </main>
         <BottomNav />

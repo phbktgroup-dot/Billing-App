@@ -63,7 +63,7 @@
   },
   "build": {
     "appId": "com.phbkt.enterprise",
-    "productName": "PHBKT Group Suite",
+    "productName": "Billing Pro+",
     "directories": {
       "output": "dist-electron"
     },

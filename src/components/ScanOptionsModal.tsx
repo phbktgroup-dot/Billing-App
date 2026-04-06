@@ -86,7 +86,7 @@ export default function ScanOptionsModal({ onClose, onFileSelect }: ScanOptionsM
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100000] flex items-end justify-center sm:items-center p-0 sm:p-4">
+      <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6">
         {/* Backdrop */}
         <motion.div 
           initial={{ opacity: 0 }}
@@ -98,11 +98,11 @@ export default function ScanOptionsModal({ onClose, onFileSelect }: ScanOptionsM
 
         {/* Modal Content */}
         <motion.div 
-          initial={{ y: "100%", opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "100%", opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden"
+          className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden"
         >
           {/* Header */}
           <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-slate-50">

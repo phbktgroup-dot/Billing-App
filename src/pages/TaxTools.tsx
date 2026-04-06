@@ -823,17 +823,26 @@ export default function TaxTools({ type = 'gst' }: { type?: ToolType }) {
               <span>{current.title}</span>
               {type === 'itr' && (
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Year:</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Financial Year:</span>
                   <select 
                     value={financialYear} 
                     onChange={(e) => setFinancialYear(e.target.value)}
                     className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer border-b border-slate-200 hover:border-primary transition-colors"
                   >
-                    {['2023-24', '2024-25', '2025-26'].map(fy => (
-                      <option key={fy} value={fy}>
-                        AY {fy.split('-')[0].slice(0, 2) + fy.split('-')[1]}
-                      </option>
-                    ))}
+                    {['2023-24', '2024-25', '2025-26', '2026-27', '2027-28'].map(fy => {
+                      const getAy = (f: string) => {
+                        return f.split('-').map(y => {
+                          const num = parseInt(y);
+                          if (y.length === 2) return (num + 1).toString().padStart(2, '0');
+                          return (num + 1).toString();
+                        }).join('-');
+                      };
+                      return (
+                        <option key={fy} value={fy}>
+                          FY {fy} (AY {getAy(fy)})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               )}

@@ -58,7 +58,8 @@ const Drawer: React.FC<DrawerProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             className={cn(
-              "fixed inset-0 z-[100000] flex items-end md:items-center justify-center p-0 md:p-8",
+              "fixed inset-0 z-[100000] flex items-center justify-center",
+              fullScreen ? "p-0" : "p-4 md:p-8",
               "md:left-[var(--sidebar-width,0px)]"
             )}
           >
@@ -66,8 +67,8 @@ const Drawer: React.FC<DrawerProps> = ({
               className={cn(
                 "bg-white shadow-2xl flex flex-col w-full overflow-hidden",
                 fullScreen 
-                  ? "h-full max-w-none rounded-none" 
-                  : "h-full md:h-auto max-h-full md:max-h-[90vh] rounded-none md:rounded-2xl",
+                  ? "h-full w-full max-w-none rounded-none" 
+                  : "w-full h-auto max-h-full md:max-h-[90vh] rounded-2xl",
                 !fullScreen && maxWidth
               )}
               ref={drawerRef}
