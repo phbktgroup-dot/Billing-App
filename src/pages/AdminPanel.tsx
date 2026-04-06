@@ -207,8 +207,8 @@ export default function AdminPanel() {
   const [latestVersion, setLatestVersion] = useState('');
   const [apkUrl, setApkUrl] = useState('');
   const [exeUrl, setExeUrl] = useState('');
+  const [manualExeUrl, setManualExeUrl] = useState('');
   const [isUploadingApk, setIsUploadingApk] = useState(false);
-  const [isUploadingExe, setIsUploadingExe] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -277,6 +277,7 @@ export default function AdminPanel() {
         setLatestVersion(data.latest_version || '');
         setApkUrl(data.apk_url || '');
         setExeUrl(data.exe_url || '');
+        setManualExeUrl(data.exe_url || '');
       } else {
         // Create the global settings row if it doesn't exist
         await supabase.from('app_settings').upsert({ id: 'global', app_name: 'PHBKT Group Suite' });
@@ -307,8 +308,38 @@ export default function AdminPanel() {
     }
   };
 
+  const handleSaveExeLink = async () => {
+    if (!manualExeUrl) {
+      toast.error('Please enter a link');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      // If there was an old file in Supabase, delete it
+      if (exeUrl && exeUrl.includes('/global-logos/')) {
+        await deleteOldFile(exeUrl);
+      }
+
+      const { error } = await supabase
+        .from('app_settings')
+        .update({ exe_url: manualExeUrl })
+        .eq('id', 'global');
+      
+      if (error) throw error;
+      setExeUrl(manualExeUrl);
+      toast.success('EXE link updated');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const deleteOldFile = async (url: string) => {
     if (!url) return;
+    // Only delete if it's a Supabase Storage URL
+    if (!url.includes('/global-logos/')) return;
+    
     try {
       const urlParts = url.split('/global-logos/');
       if (urlParts.length > 1) {
@@ -328,16 +359,14 @@ export default function AdminPanel() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'apk' | 'exe') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'apk') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isApk = type === 'apk';
-    if (isApk) setIsUploadingApk(true);
-    else setIsUploadingExe(true);
+    setIsUploadingApk(true);
 
     try {
-      const oldUrl = isApk ? apkUrl : exeUrl;
+      const oldUrl = apkUrl;
       if (oldUrl) {
         await deleteOldFile(oldUrl);
       }
@@ -356,22 +385,15 @@ export default function AdminPanel() {
         .from('global-logos')
         .getPublicUrl(filePath);
 
-      if (isApk) {
-        setApkUrl(publicUrl);
-        const { error: updateError } = await supabase.from('app_settings').update({ apk_url: publicUrl }).eq('id', 'global');
-        if (updateError) throw updateError;
-      } else {
-        setExeUrl(publicUrl);
-        const { error: updateError } = await supabase.from('app_settings').update({ exe_url: publicUrl }).eq('id', 'global');
-        if (updateError) throw updateError;
-      }
+      setApkUrl(publicUrl);
+      const { error: updateError } = await supabase.from('app_settings').update({ apk_url: publicUrl }).eq('id', 'global');
+      if (updateError) throw updateError;
       
-      toast.success(`${type.toUpperCase()} uploaded successfully`);
+      toast.success(`APK uploaded successfully`);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
-      if (isApk) setIsUploadingApk(false);
-      else setIsUploadingExe(false);
+      setIsUploadingApk(false);
     }
   };
 
@@ -1118,41 +1140,50 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* EXE Upload */}
+                {/* EXE Link */}
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center">
                     <Download size={12} className="mr-1.5" />
-                    Desktop Update (EXE)
+                    Desktop Update (EXE Link)
                   </label>
-                  <div className="p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center space-y-3">
+                  <div className="p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center space-y-4">
                     {exeUrl ? (
                       <div className="space-y-2">
                         <div className="p-2 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-medium break-all border border-blue-100">
                           {exeUrl}
                         </div>
                         <button 
-                          onClick={() => handleDeleteFile('exe')}
+                          onClick={() => {
+                            handleDeleteFile('exe');
+                            setManualExeUrl('');
+                          }}
                           className="text-[10px] text-red-500 font-bold hover:underline flex items-center justify-center mx-auto"
                         >
                           <Trash2 size={12} className="mr-1.5" />
-                          Delete EXE File
+                          Delete EXE Link
                         </button>
                       </div>
                     ) : (
-                      <div className="py-4">
-                        <Upload size={24} className="mx-auto text-slate-300 mb-2" />
-                        <p className="text-[10px] text-slate-500 mb-3">Upload new EXE file</p>
-                        <label className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-all shadow-sm">
-                          {isUploadingExe ? <Loader2 size={12} className="animate-spin mr-2" /> : <Upload size={12} className="mr-2" />}
-                          Choose EXE
-                          <input 
-                            type="file" 
-                            className="hidden" 
-                            accept=".exe"
-                            onChange={(e) => handleFileUpload(e, 'exe')}
-                            disabled={isUploadingExe}
-                          />
-                        </label>
+                      <div className="py-2 space-y-4">
+                        <div className="space-y-2">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Paste Google Drive Link</p>
+                          <div className="flex space-x-2">
+                            <input 
+                              type="text" 
+                              placeholder="https://drive.google.com/..."
+                              value={manualExeUrl}
+                              onChange={(e) => setManualExeUrl(e.target.value)}
+                              className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none text-[10px]"
+                            />
+                            <button 
+                              onClick={handleSaveExeLink}
+                              disabled={isSubmitting}
+                              className="btn-primary px-3 py-2 text-[10px] whitespace-nowrap"
+                            >
+                              Save Link
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

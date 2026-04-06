@@ -65,6 +65,33 @@ export default function Settings() {
     fetchLatestVersion();
   }, []);
 
+  const getDirectDownloadUrl = (url: string) => {
+    if (!url) return url;
+    
+    // Handle Google Drive links
+    if (url.includes('drive.google.com')) {
+      let fileId = '';
+      
+      // Pattern 1: https://drive.google.com/file/d/FILE_ID/view
+      const fileMatch = url.match(/\/file\/d\/([^\/]+)/);
+      if (fileMatch && fileMatch[1]) {
+        fileId = fileMatch[1];
+      } else {
+        // Pattern 2: https://drive.google.com/open?id=FILE_ID
+        const idMatch = url.match(/[?&]id=([^&]+)/);
+        if (idMatch && idMatch[1]) {
+          fileId = idMatch[1];
+        }
+      }
+      
+      if (fileId) {
+        return `https://drive.google.com/uc?export=download&id=${fileId}`;
+      }
+    }
+    
+    return url;
+  };
+
   const handleCheckUpdate = async () => {
     setIsCheckingUpdate(true);
     setError(null);
@@ -89,25 +116,28 @@ export default function Settings() {
 
         if (version && version !== APP_VERSION) {
           // Update available - trigger download
-          if (Capacitor.isNativePlatform()) {
-            if (apkUrl) {
-              window.open(apkUrl, '_blank');
-              setSuccess('Update available! Starting APK download...');
+          const ua = navigator.userAgent.toLowerCase();
+          const isAndroid = /android/.test(ua);
+          const isWindows = /windows/.test(ua);
+          const isMac = /macintosh/.test(ua);
+
+          if (Capacitor.isNativePlatform() || isAndroid) {
+            const url = getDirectDownloadUrl(apkUrl || UPDATE_URL);
+            window.open(url, '_blank');
+            setSuccess('Update available! Starting APK download...');
+          } else if (window.electron || isWindows || isMac) {
+            const url = getDirectDownloadUrl(exeUrl || UPDATE_URL);
+            if (window.electron) {
+              window.electron.downloadAndUpdate(url);
+              setSuccess('Update available! Downloading and updating app...');
             } else {
-              window.open(UPDATE_URL, '_blank');
-              setSuccess('Update available! Redirecting to download page...');
-            }
-          } else if (window.electron) {
-            if (exeUrl) {
-              window.open(exeUrl, '_blank');
+              window.open(url, '_blank');
               setSuccess('Update available! Starting EXE download...');
-            } else {
-              window.open(UPDATE_URL, '_blank');
-              setSuccess('Update available! Redirecting to download page...');
             }
           } else {
-            // Web browser
-            setSuccess(`Update available: Version ${version}. Please download the latest version.`);
+            // Web browser fallback
+            window.open(UPDATE_URL, '_blank');
+            setSuccess(`Update available: Version ${version}. Redirecting to download page...`);
           }
         } else {
           setSuccess('Application is up to date!');

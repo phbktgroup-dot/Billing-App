@@ -1,5 +1,8 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const os = require('os');
 
 function createWindow() {
   const isDev = !app.isPackaged;
@@ -34,6 +37,43 @@ app.whenReady().then(() => {
   ipcMain.on('relaunch', () => {
     app.relaunch();
     app.exit();
+  });
+
+  ipcMain.on('download-and-update', async (event, url) => {
+    if (!url) return;
+    
+    try {
+      const tempDir = os.tmpdir();
+      const fileName = `update_${Date.now()}.exe`;
+      const filePath = path.join(tempDir, fileName);
+      const file = fs.createWriteStream(filePath);
+
+      https.get(url, (response) => {
+        // Handle redirects (important for Google Drive links)
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          https.get(response.headers.location, (redirectResponse) => {
+            redirectResponse.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              shell.openPath(filePath);
+              app.quit();
+            });
+          });
+        } else {
+          response.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            shell.openPath(filePath);
+            app.quit();
+          });
+        }
+      }).on('error', (err) => {
+        fs.unlink(filePath, () => {});
+        console.error('Download failed:', err);
+      });
+    } catch (err) {
+      console.error('Update failed:', err);
+    }
   });
 
   app.on('activate', () => {

@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on(channel, (event, ...args) => func(...args));
   },
   relaunch: () => ipcRenderer.send('relaunch'),
+  downloadAndUpdate: (url) => ipcRenderer.send('download-and-update', url),
 });
