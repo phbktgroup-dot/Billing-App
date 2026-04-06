@@ -6,6 +6,18 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+declare global {
+  interface Window {
+    electron?: {
+      relaunch: () => void;
+      startUpdate: (url: string) => void;
+      onUpdateProgress: (callback: (progress: number) => void) => void;
+      onUpdateError: (callback: (error: string) => void) => void;
+      onUpdateDownloaded: (callback: () => void) => void;
+    };
+  }
+}
+
 export default function UpdateManager() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState('');
@@ -48,6 +60,24 @@ export default function UpdateManager() {
     return () => clearInterval(interval);
   }, [dismissed]);
 
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (window.electron) {
+      window.electron.onUpdateProgress((progress: number) => {
+        setUpdateProgress(progress);
+      });
+      window.electron.onUpdateError((error: string) => {
+        setUpdateError(error);
+        setUpdateProgress(null);
+      });
+      window.electron.onUpdateDownloaded(() => {
+        setUpdateProgress(100);
+      });
+    }
+  }, []);
+
   const getDirectDownloadUrl = (url: string) => {
     if (!url) return url;
     
@@ -81,18 +111,21 @@ export default function UpdateManager() {
     const isWindows = /windows/.test(ua);
     const isMac = /macintosh/.test(ua);
 
-    if (Capacitor.isNativePlatform() || isAndroid) {
+    const directUrl = getDirectDownloadUrl(
+      (Capacitor.isNativePlatform() || isAndroid) ? updateConfig.apk_url || UPDATE_URL : updateConfig.exe_url || UPDATE_URL
+    );
+
+    if (window.electron) {
+      // Use direct update for Electron
+      setUpdateProgress(0);
+      setUpdateError(null);
+      window.electron.startUpdate(directUrl);
+    } else if (Capacitor.isNativePlatform() || isAndroid) {
       // Android / Mobile
-      const url = getDirectDownloadUrl(updateConfig.apk_url || UPDATE_URL);
-      window.open(url, '_blank');
-    } else if (window.electron || isWindows || isMac) {
-      // Desktop (Windows/Mac)
-      const url = getDirectDownloadUrl(updateConfig.exe_url || UPDATE_URL);
-      if (window.electron) {
-        window.electron.downloadAndUpdate(url);
-      } else {
-        window.open(url, '_blank');
-      }
+      window.open(directUrl, '_blank');
+    } else if (isWindows || isMac) {
+      // Desktop Browser
+      window.open(directUrl, '_blank');
     } else {
       // Fallback
       window.open(UPDATE_URL, '_blank');
@@ -107,31 +140,58 @@ export default function UpdateManager() {
         initial={{ opacity: 0, y: -50, x: '-50%' }}
         animate={{ opacity: 1, y: 20, x: '-50%' }}
         exit={{ opacity: 0, y: -50, x: '-50%' }}
-        className="fixed top-0 left-1/2 z-[100001] w-[90%] max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 flex items-center justify-between"
+        className="fixed top-0 left-1/2 z-[100001] w-[90%] max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 flex flex-col space-y-3"
       >
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary animate-bounce">
-            <RefreshCw size={20} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary animate-bounce">
+              <RefreshCw size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900">New Update Available</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">VERSION {latestVersion}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-black text-slate-900">New Update Available</p>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">VERSION {latestVersion}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
           <button
             onClick={() => setDismissed(true)}
             className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
           >
             <X size={16} />
           </button>
+        </div>
+
+        {updateProgress !== null ? (
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px] font-bold text-slate-500">
+              <span>{updateProgress === 100 ? 'Installing...' : 'Downloading...'}</span>
+              <span>{updateProgress}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${updateProgress}%` }}
+              />
+            </div>
+          </div>
+        ) : updateError ? (
+          <div className="p-2 bg-red-50 rounded-lg border border-red-100">
+            <p className="text-[10px] text-red-600 font-medium">{updateError}</p>
+            <button 
+              onClick={handleUpdateNow}
+              className="mt-1 text-[10px] font-bold text-red-700 underline"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : (
           <button
             onClick={handleUpdateNow}
-            className="px-3 py-1.5 bg-primary text-white rounded-lg text-[10px] font-bold shadow-sm active:scale-95 transition-all"
+            className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
           >
             Update Now
           </button>
-        </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

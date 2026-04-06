@@ -29,6 +29,18 @@ import PageHeader from '../components/PageHeader';
 import { APP_VERSION, UPDATE_URL } from '../constants/app';
 import { Capacitor } from '@capacitor/core';
 
+declare global {
+  interface Window {
+    electron?: {
+      relaunch: () => void;
+      startUpdate: (url: string) => void;
+      onUpdateProgress: (callback: (progress: number) => void) => void;
+      onUpdateError: (callback: (error: string) => void) => void;
+      onUpdateDownloaded: (callback: () => void) => void;
+    };
+  }
+}
+
 import { testGeminiConnection } from '../services/aiService';
 
 export default function Settings() {
@@ -92,6 +104,23 @@ export default function Settings() {
     return url;
   };
 
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (window.electron) {
+      window.electron.onUpdateProgress((progress: number) => {
+        setUpdateProgress(progress);
+      });
+      window.electron.onUpdateError((error: string) => {
+        setError(error);
+        setUpdateProgress(null);
+      });
+      window.electron.onUpdateDownloaded(() => {
+        setUpdateProgress(100);
+      });
+    }
+  }, []);
+
   const handleCheckUpdate = async () => {
     setIsCheckingUpdate(true);
     setError(null);
@@ -121,18 +150,29 @@ export default function Settings() {
           const isWindows = /windows/.test(ua);
           const isMac = /macintosh/.test(ua);
 
-          if (Capacitor.isNativePlatform() || isAndroid) {
-            const url = getDirectDownloadUrl(apkUrl || UPDATE_URL);
-            window.open(url, '_blank');
-            setSuccess('Update available! Starting APK download...');
-          } else if (window.electron || isWindows || isMac) {
-            const url = getDirectDownloadUrl(exeUrl || UPDATE_URL);
-            if (window.electron) {
-              window.electron.downloadAndUpdate(url);
-              setSuccess('Update available! Downloading and updating app...');
+          const directUrl = getDirectDownloadUrl(
+            (Capacitor.isNativePlatform() || isAndroid) ? apkUrl || UPDATE_URL : exeUrl || UPDATE_URL
+          );
+
+          if (window.electron) {
+            setUpdateProgress(0);
+            window.electron.startUpdate(directUrl);
+            setSuccess('Update available! Starting direct update...');
+          } else if (Capacitor.isNativePlatform() || isAndroid) {
+            if (apkUrl) {
+              window.open(directUrl, '_blank');
+              setSuccess('Update available! Starting APK download...');
             } else {
-              window.open(url, '_blank');
+              window.open(UPDATE_URL, '_blank');
+              setSuccess('Update available! Redirecting to download page...');
+            }
+          } else if (isWindows || isMac) {
+            if (exeUrl) {
+              window.open(directUrl, '_blank');
               setSuccess('Update available! Starting EXE download...');
+            } else {
+              window.open(UPDATE_URL, '_blank');
+              setSuccess('Update available! Redirecting to download page...');
             }
           } else {
             // Web browser fallback
@@ -1146,6 +1186,25 @@ export default function Settings() {
                         )}
                       </button>
                     </div>
+
+                    {updateProgress !== null && (
+                      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          <span>{updateProgress === 100 ? 'Installing Update...' : 'Downloading Update...'}</span>
+                          <span>{updateProgress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                          <motion.div 
+                            className="h-full bg-primary"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${updateProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-400 italic text-center">
+                          The application will automatically restart after installation.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

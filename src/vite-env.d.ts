@@ -9,10 +9,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
-
-interface Window {
-  electron: {
-    relaunch: () => void;
-    downloadAndUpdate: (url: string) => void;
-  };
-}
