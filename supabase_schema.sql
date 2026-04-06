@@ -723,8 +723,16 @@
         id TEXT PRIMARY KEY DEFAULT 'global',
         logo_url TEXT,
         app_name TEXT DEFAULT 'My App',
+        latest_version TEXT,
+        apk_url TEXT,
+        exe_url TEXT,
         updated_at TIMESTAMPTZ DEFAULT now()
     );
+
+    -- Ensure columns exist if table was created earlier
+    ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS latest_version TEXT;
+    ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS apk_url TEXT;
+    ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS exe_url TEXT;
 
     -- Enable RLS
     ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;

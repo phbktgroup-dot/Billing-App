@@ -27,6 +27,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import BusinessSetup from './pages/BusinessSetup';
 import { Toaster } from 'react-hot-toast';
+import UpdateManager from './components/UpdateManager';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, signOut } = useAuth();
@@ -78,6 +79,7 @@ function App() {
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
+      <UpdateManager />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/business-setup" element={<ProtectedRoute><BusinessSetup /></ProtectedRoute>} />

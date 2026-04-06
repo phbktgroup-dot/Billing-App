@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('electron', {
   onMessage: (channel, func) => {
     ipcRenderer.on(channel, (event, ...args) => func(...args));
   },
+  relaunch: () => ipcRenderer.send('relaunch'),
 });

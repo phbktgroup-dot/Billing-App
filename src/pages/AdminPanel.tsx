@@ -19,7 +19,10 @@ import {
   X,
   LogIn,
   Key,
-  Save
+  Save,
+  RefreshCw,
+  Download,
+  Upload
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -27,6 +30,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
 import PageHeader from '../components/PageHeader';
 import { getApiUrl } from '../lib/api';
+import toast from 'react-hot-toast';
+import { APP_VERSION } from '../constants/app';
 
 interface AppUser {
   id: string;
@@ -172,7 +177,7 @@ const UserNode = ({ user, depth = 0, onEdit, onDelete, onToggleStatus, onImperso
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { user: currentUser, profile: currentProfile, impersonate, originalProfile, appSettings, refreshAppSettings } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'notifications' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'notifications' | 'settings' | 'updates'>('users');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -199,6 +204,11 @@ export default function AdminPanel() {
   const [isLoadingApiKey, setIsLoadingApiKey] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [newAppName, setNewAppName] = useState('');
+  const [latestVersion, setLatestVersion] = useState('');
+  const [apkUrl, setApkUrl] = useState('');
+  const [exeUrl, setExeUrl] = useState('');
+  const [isUploadingApk, setIsUploadingApk] = useState(false);
+  const [isUploadingExe, setIsUploadingExe] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -248,10 +258,146 @@ export default function AdminPanel() {
   }, [currentUser?.id, businessId, isSuperAdmin, activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'settings') {
-      setNewAppName(appSettings?.app_name || 'My App');
+    if (activeTab === 'updates') {
+      fetchUpdateConfig();
     }
-  }, [activeTab, appSettings]);
+  }, [activeTab]);
+
+  const fetchUpdateConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('latest_version, apk_url, exe_url')
+        .eq('id', 'global')
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setLatestVersion(data.latest_version || '');
+        setApkUrl(data.apk_url || '');
+        setExeUrl(data.exe_url || '');
+      } else {
+        // Create the global settings row if it doesn't exist
+        await supabase.from('app_settings').upsert({ id: 'global', app_name: 'PHBKT Group Suite' });
+      }
+    } catch (err) {
+      console.error('Error fetching update config:', err);
+    }
+  };
+
+  const handleUpdateVersion = async () => {
+    if (!latestVersion) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .update({ 
+          latest_version: latestVersion,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 'global');
+      
+      if (error) throw error;
+      toast.success('Latest version updated');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const deleteOldFile = async (url: string) => {
+    if (!url) return;
+    try {
+      const urlParts = url.split('/global-logos/');
+      if (urlParts.length > 1) {
+        let filePath = urlParts[1];
+        // Strip query parameters if any (e.g. ?token=...)
+        filePath = filePath.split('?')[0];
+        // Decode URL encoded characters (e.g. %20 to space)
+        filePath = decodeURIComponent(filePath);
+        
+        const { error } = await supabase.storage
+          .from('global-logos')
+          .remove([filePath]);
+        if (error) console.error('Error deleting old file:', error);
+      }
+    } catch (err) {
+      console.error('Error in deleteOldFile:', err);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'apk' | 'exe') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isApk = type === 'apk';
+    if (isApk) setIsUploadingApk(true);
+    else setIsUploadingExe(true);
+
+    try {
+      const oldUrl = isApk ? apkUrl : exeUrl;
+      if (oldUrl) {
+        await deleteOldFile(oldUrl);
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}_${Date.now()}.${fileExt}`;
+      const filePath = `updates/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('global-logos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('global-logos')
+        .getPublicUrl(filePath);
+
+      if (isApk) {
+        setApkUrl(publicUrl);
+        const { error: updateError } = await supabase.from('app_settings').update({ apk_url: publicUrl }).eq('id', 'global');
+        if (updateError) throw updateError;
+      } else {
+        setExeUrl(publicUrl);
+        const { error: updateError } = await supabase.from('app_settings').update({ exe_url: publicUrl }).eq('id', 'global');
+        if (updateError) throw updateError;
+      }
+      
+      toast.success(`${type.toUpperCase()} uploaded successfully`);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      if (isApk) setIsUploadingApk(false);
+      else setIsUploadingExe(false);
+    }
+  };
+
+  const handleDeleteFile = async (type: 'apk' | 'exe') => {
+    const isApk = type === 'apk';
+    const url = isApk ? apkUrl : exeUrl;
+    if (!url) return;
+
+    try {
+      await deleteOldFile(url);
+      
+      if (isApk) {
+        setApkUrl('');
+        const { error: updateError } = await supabase.from('app_settings').update({ apk_url: null }).eq('id', 'global');
+        if (updateError) throw updateError;
+      } else {
+        setExeUrl('');
+        const { error: updateError } = await supabase.from('app_settings').update({ exe_url: null }).eq('id', 'global');
+        if (updateError) throw updateError;
+      }
+      
+      toast.success(`${type.toUpperCase()} file deleted`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -815,6 +961,18 @@ export default function AdminPanel() {
         </button>
         {isSuperAdmin && (
           <button 
+            onClick={() => setActiveTab('updates')}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 whitespace-nowrap",
+              activeTab === 'updates' ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <RefreshCw size={14} />
+            <span>App Updates</span>
+          </button>
+        )}
+        {isSuperAdmin && (
+          <button 
             onClick={() => setActiveTab('settings')}
             className={cn(
               "px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 whitespace-nowrap",
@@ -868,7 +1026,146 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Settings Management */}
+      {/* App Updates Management */}
+      {activeTab === 'updates' && isSuperAdmin && (
+        <div className="space-y-6">
+          <div className="glass-card p-6">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center">
+              <RefreshCw size={16} className="mr-2 text-primary" />
+              Manage Application Updates
+            </h3>
+            
+            <div className="space-y-8">
+              {/* Version Management */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Latest Version Number</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={latestVersion}
+                        onChange={(e) => setLatestVersion(e.target.value)}
+                        placeholder="e.g., 1.0.1"
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-xs transition-all"
+                      />
+                      <button 
+                        onClick={handleUpdateVersion}
+                        disabled={isSubmitting}
+                        className="btn-primary px-4 py-2 text-[10px] flex items-center whitespace-nowrap"
+                      >
+                        {isSubmitting ? <Loader2 size={12} className="animate-spin mr-1.5" /> : <CheckCircle2 size={12} className="mr-1.5" />}
+                        Set Version
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400">Current version in app: <span className="font-bold text-slate-600">{APP_VERSION}</span></p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                  <h4 className="text-[11px] font-bold text-blue-900 mb-1 flex items-center">
+                    <Shield size={12} className="mr-1.5" />
+                    How Updates Work
+                  </h4>
+                  <p className="text-[10px] text-blue-700 leading-relaxed">
+                    When you set a <span className="font-bold">Latest Version</span> that is different from the version in the user's app, they will see a small popup to update. 
+                    Android users will download the APK, and Desktop users will download the EXE.
+                  </p>
+                </div>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* File Uploads */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* APK Upload */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center">
+                    <Download size={12} className="mr-1.5" />
+                    Android Update (APK)
+                  </label>
+                  <div className="p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center space-y-3">
+                    {apkUrl ? (
+                      <div className="space-y-2">
+                        <div className="p-2 bg-green-50 text-green-700 rounded-lg text-[10px] font-medium break-all border border-green-100">
+                          {apkUrl}
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteFile('apk')}
+                          className="text-[10px] text-red-500 font-bold hover:underline flex items-center justify-center mx-auto"
+                        >
+                          <Trash2 size={12} className="mr-1.5" />
+                          Delete APK File
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-4">
+                        <Upload size={24} className="mx-auto text-slate-300 mb-2" />
+                        <p className="text-[10px] text-slate-500 mb-3">Upload new APK file</p>
+                        <label className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-all shadow-sm">
+                          {isUploadingApk ? <Loader2 size={12} className="animate-spin mr-2" /> : <Upload size={12} className="mr-2" />}
+                          Choose APK
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept=".apk"
+                            onChange={(e) => handleFileUpload(e, 'apk')}
+                            disabled={isUploadingApk}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* EXE Upload */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center">
+                    <Download size={12} className="mr-1.5" />
+                    Desktop Update (EXE)
+                  </label>
+                  <div className="p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center space-y-3">
+                    {exeUrl ? (
+                      <div className="space-y-2">
+                        <div className="p-2 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-medium break-all border border-blue-100">
+                          {exeUrl}
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteFile('exe')}
+                          className="text-[10px] text-red-500 font-bold hover:underline flex items-center justify-center mx-auto"
+                        >
+                          <Trash2 size={12} className="mr-1.5" />
+                          Delete EXE File
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-4">
+                        <Upload size={24} className="mx-auto text-slate-300 mb-2" />
+                        <p className="text-[10px] text-slate-500 mb-3">Upload new EXE file</p>
+                        <label className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-all shadow-sm">
+                          {isUploadingExe ? <Loader2 size={12} className="animate-spin mr-2" /> : <Upload size={12} className="mr-2" />}
+                          Choose EXE
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept=".exe"
+                            onChange={(e) => handleFileUpload(e, 'exe')}
+                            disabled={isUploadingExe}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                {/* Auto-saved on upload */}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {activeTab === 'settings' && isSuperAdmin && (
         <div className="space-y-6">
           <div className="glass-card p-6">

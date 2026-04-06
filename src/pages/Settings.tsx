@@ -18,13 +18,16 @@ import {
   Smartphone,
   History,
   Plus,
-  Trash2
+  Trash2,
+  Leaf
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn, formatSeriesNumber } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
+import { APP_VERSION, UPDATE_URL } from '../constants/app';
+import { Capacitor } from '@capacitor/core';
 
 import { testGeminiConnection } from '../services/aiService';
 
@@ -39,6 +42,84 @@ export default function Settings() {
   const [success, setSuccess] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [updateUrls, setUpdateUrls] = useState<{ apk: string | null; exe: string | null }>({ apk: null, exe: null });
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+  useEffect(() => {
+    const fetchLatestVersion = async () => {
+      try {
+        const { data } = await supabase
+          .from('app_settings')
+          .select('latest_version, apk_url, exe_url')
+          .eq('id', 'global')
+          .single();
+        if (data) {
+          setLatestVersion(data.latest_version);
+          setUpdateUrls({ apk: data.apk_url, exe: data.exe_url });
+        }
+      } catch (err) {
+        console.error('Error fetching latest version:', err);
+      }
+    };
+    fetchLatestVersion();
+  }, []);
+
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('app_settings')
+        .select('latest_version, apk_url, exe_url')
+        .eq('id', 'global')
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (data) {
+        const version = data.latest_version;
+        const apkUrl = data.apk_url;
+        const exeUrl = data.exe_url;
+
+        setLatestVersion(version);
+        setUpdateUrls({ apk: apkUrl, exe: exeUrl });
+
+        if (version && version !== APP_VERSION) {
+          // Update available - trigger download
+          if (Capacitor.isNativePlatform()) {
+            if (apkUrl) {
+              window.open(apkUrl, '_blank');
+              setSuccess('Update available! Starting APK download...');
+            } else {
+              window.open(UPDATE_URL, '_blank');
+              setSuccess('Update available! Redirecting to download page...');
+            }
+          } else if (window.electron) {
+            if (exeUrl) {
+              window.open(exeUrl, '_blank');
+              setSuccess('Update available! Starting EXE download...');
+            } else {
+              window.open(UPDATE_URL, '_blank');
+              setSuccess('Update available! Redirecting to download page...');
+            }
+          } else {
+            // Web browser
+            setSuccess(`Update available: Version ${version}. Please download the latest version.`);
+          }
+        } else {
+          setSuccess('Application is up to date!');
+        }
+      }
+    } catch (err: any) {
+      console.error('Update check failed:', err);
+      setError('Failed to check for updates. Please try again later.');
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
   
   const [formData, setFormData] = useState({
     businessName: '',
@@ -997,6 +1078,42 @@ export default function Settings() {
                         className="px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
                       >
                         Sign Out
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* App Version & Updates */}
+                  <div className="space-y-4 pt-6 border-t border-slate-100">
+                    <h3 className="text-sm font-bold text-slate-900">App Version & Updates</h3>
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100">
+                          <Leaf size={24} className="text-slate-800" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">Version {APP_VERSION}</p>
+                          <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                            {latestVersion && latestVersion !== APP_VERSION ? (
+                              <span className="text-primary font-bold">Update Available: {latestVersion}</span>
+                            ) : (
+                              "Current Version"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleCheckUpdate}
+                        disabled={isCheckingUpdate}
+                        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center space-x-2 disabled:opacity-50"
+                      >
+                        {isCheckingUpdate ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            <span>Checking...</span>
+                          </>
+                        ) : (
+                          <span>Check for Updates</span>
+                        )}
                       </button>
                     </div>
                   </div>
