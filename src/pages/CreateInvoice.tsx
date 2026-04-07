@@ -1614,12 +1614,14 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start w-full"
+            className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start w-full"
           >
-            <div className="xl:col-span-2 space-y-6 pr-2 xl:h-[calc(100vh-60px)] xl:overflow-y-auto">
+            <div className="xl:col-span-2 space-y-6 xl:h-[calc(100vh-60px)] xl:overflow-y-auto min-w-0">
               {/* Customer & Details Section */}
               <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative z-[60]">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                </div>
                 <div className="flex items-center justify-between mb-5 relative z-[50]">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-600 rounded-xl shadow-sm border border-blue-100/50">
@@ -1906,7 +1908,9 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
 
               {/* Items Section */}
               <div className="bg-gradient-to-br from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 relative overflow-hidden z-10 min-h-[600px]">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                </div>
                 <div className="flex items-center justify-between mb-5 relative z-20">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100/50 text-emerald-600 rounded-xl shadow-sm border border-emerald-100/50">
@@ -2408,9 +2412,11 @@ export default function CreateInvoice({ isModal = false, onClose }: CreateInvoic
             </div>
 
             {/* Sidebar Summary */}
-            <div className="space-y-4 xl:col-span-1">
+            <div className="space-y-4 xl:col-span-1 min-w-0">
               <div className="bg-gradient-to-b from-white to-slate-50/50 p-5 rounded-2xl shadow-sm border border-slate-100/60 sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none"></div>
+                <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl -mr-24 -mt-24"></div>
+                </div>
                 <h3 className="text-[10px] font-black text-slate-400 mb-5 uppercase tracking-widest relative z-10">Invoice Summary</h3>
                 
                 <div className="space-y-3 relative z-10">
