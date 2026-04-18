@@ -22,7 +22,11 @@ import {
   Save,
   RefreshCw,
   Download,
-  Upload
+  Upload,
+  Eye,
+  EyeOff,
+  Copy,
+  Check
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -202,6 +206,8 @@ export default function AdminPanel() {
   const [newApiKey, setNewApiKey] = useState('');
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [isLoadingApiKey, setIsLoadingApiKey] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [newAppName, setNewAppName] = useState('');
   const [latestVersion, setLatestVersion] = useState('');
@@ -563,6 +569,8 @@ export default function AdminPanel() {
     setEditingApiKeyUser(user);
     setNewApiKey('');
     setIsLoadingApiKey(true);
+    setShowApiKey(false);
+    setCopied(false);
     // Fetch current API key
     try {
       const { data, error } = await supabase
@@ -605,6 +613,7 @@ export default function AdminPanel() {
           .insert({
             user_id: editingApiKeyUser.id,
             name: `${editingApiKeyUser.name || 'User'}'s Business`,
+            owner_name: editingApiKeyUser.name || 'User',
             gemini_api_key: newApiKey
           });
         if (error) throw error;
@@ -1674,13 +1683,36 @@ export default function AdminPanel() {
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">API Integration Key</label>
               <div className="relative">
                 <input 
-                  type="password" 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all pr-10" 
+                  type={showApiKey ? "text" : "password"} 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary outline-none text-[10px] transition-all pr-20" 
                   value={newApiKey}
                   onChange={e => setNewApiKey(e.target.value)}
                   placeholder={isLoadingApiKey ? "Loading..." : "Paste Gemini API Key here"}
                   disabled={isLoadingApiKey}
                 />
+                {!isLoadingApiKey && (
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+                    <button 
+                      title="Copy API Key"
+                      onClick={() => {
+                        if (!newApiKey) return;
+                        navigator.clipboard.writeText(newApiKey);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-md transition-all"
+                    >
+                      {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    </button>
+                    <button 
+                      title={showApiKey ? "Hide API Key" : "Show API Key"}
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-md transition-all"
+                    >
+                      {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                )}
                 {isLoadingApiKey && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
