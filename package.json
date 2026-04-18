@@ -5,8 +5,8 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "start": "tsx server.ts",
-    "dev": "tsx server.ts",
+    "start": "tsx api/index.ts",
+    "dev": "tsx api/index.ts",
     "dev:electron": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
     "build": "vite build",
     "build:electron": "npm run build && electron-builder",

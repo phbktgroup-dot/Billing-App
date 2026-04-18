@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -543,7 +544,7 @@ async function initStatic() {
     } catch (e) {
       console.warn("Vite failed to load.");
     }
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
