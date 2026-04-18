@@ -564,3 +564,4 @@ async function initStatic() {
 initStatic();
 
 export default app;
+
